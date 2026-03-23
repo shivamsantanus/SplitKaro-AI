@@ -22,7 +22,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-background text-foreground min-h-screen flex flex-col`}>
         <NextAuthProvider>
           <Header />
-          <main className="flex-1 pt-20">
+          <main className="flex-1">
             {children}
           </main>
         </NextAuthProvider>

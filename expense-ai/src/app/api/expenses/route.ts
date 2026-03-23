@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { amount, description, groupId, paidById } = await req.json();
+    const { amount, description, groupId, paidById, splits } = await req.json();
 
     if (!amount || !description || !groupId) {
       return NextResponse.json(
@@ -50,12 +50,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get all members of the group to split equally
+    // Get all members of the group to split equally if splits are NOT declared custom
     const members = await prisma.groupMember.findMany({
       where: { groupId },
     });
 
-    const splitAmount = parseFloat(amount) / members.length;
+    let expenseSplitData: { userId: string, amount: number, expenseId?: string }[] = [];
+
+    if (splits && Array.isArray(splits) && splits.length > 0) {
+      // Validate Custom Splits
+      const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
+      
+      // Allow a small margin of error for floating point calculations (e.g., 0.01)
+      if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
+         return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
+      }
+      
+      expenseSplitData = splits;
+    } else {
+      // Default behavior: completely equal among ALL members
+      const splitAmount = parseFloat(amount) / members.length;
+      expenseSplitData = members.map((member) => ({
+          userId: member.userId,
+          amount: splitAmount,
+      }));
+    }
 
     // Create the expense and splits in a transaction
     const expense = await prisma.$transaction(async (tx) => {
@@ -68,13 +87,24 @@ export async function POST(req: Request) {
         },
       });
 
-      // Create splits for every member
+      // Create splits for every active member
       await tx.expenseSplit.createMany({
-        data: members.map((member) => ({
+        data: expenseSplitData.map((split) => ({
           expenseId: newExpense.id,
-          userId: member.userId,
-          amount: splitAmount,
+          userId: split.userId,
+          amount: split.amount,
         })),
+      });
+
+      // Create activity log
+      await tx.activity.create({
+        data: {
+          type: "EXPENSE_ADDED",
+          message: `${user.name || session.user?.email} added "${description}"`,
+          groupId,
+          userId: user.id,
+          metadata: { amount: parseFloat(amount), description }
+        }
       });
 
       return newExpense;

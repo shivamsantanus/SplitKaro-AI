@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -97,6 +97,12 @@ export async function GET() {
                   include: {
                     splits: true
                   }
+                },
+                settlements: {
+                  include: {
+                    payer: { select: { name: true } },
+                    receiver: { select: { name: true } },
+                  }
                 }
               }
             }
@@ -105,38 +111,93 @@ export async function GET() {
       }
     });
 
+    const { searchParams } = new URL(req.url);
+    const includeArchived = searchParams.get("archived") === "true";
+
     if (!user) {
        return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // Transform for frontend
+    // Transform for frontend with debt calculation
     const groups = user.memberships.map((m) => {
+      // Filter based on archived status
+      if (includeArchived && !(m.group as any).isArchived) return null; // Show only archived
+      if (!includeArchived && (m.group as any).isArchived) return null; // Show only active
+
       const expenses = m.group.expenses;
+      const settlements = m.group.settlements;
       const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       
-      // Balance Calculation Engine
-      // 1. How much did I pay in total for this group?
+      // Pairwise Debt Calculation
+      const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
+      
+      m.group.members.forEach(member => {
+         if (member.userId !== user.id) {
+            pairwiseDebts[member.userId] = {
+               userId: member.userId,
+               name: member.user.name || member.user.email,
+               amount: 0
+            };
+         }
+      });
+
+      // 1. Add Debts from Expenses
+      expenses.forEach(exp => {
+         if (exp.paidById === user.id) {
+            exp.splits.forEach(split => {
+               if (split.userId !== user.id && pairwiseDebts[split.userId]) {
+                  pairwiseDebts[split.userId].amount += split.amount;
+               }
+            });
+         } else {
+            const mySplit = exp.splits.find(s => s.userId === user.id);
+            if (mySplit && pairwiseDebts[exp.paidById]) {
+               pairwiseDebts[exp.paidById].amount -= mySplit.amount;
+            }
+         }
+      });
+
+      // 2. Subtract Settlements (recorded payments)
+      settlements.forEach(sett => {
+         if (sett.payerId === user.id && pairwiseDebts[sett.receiverId]) {
+            // I paid them, reduces what I owe them or increases what they owe me
+            pairwiseDebts[sett.receiverId].amount += sett.amount;
+         } else if (sett.receiverId === user.id && pairwiseDebts[sett.payerId]) {
+            // They paid me, reduces what they owe me or increases what I owe them
+            pairwiseDebts[sett.payerId].amount -= sett.amount;
+         }
+      });
+
+      const debtsArray = Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01);
+
       const paidByMe = expenses
         .filter(exp => exp.paidById === user.id)
         .reduce((sum, exp) => sum + exp.amount, 0);
 
-      // 2. How much was my exact share of all expenses in this group?
       const myShare = expenses
         .flatMap(exp => exp.splits)
         .filter(split => split.userId === user.id)
         .reduce((sum, split) => sum + split.amount, 0);
 
-      // 3. Balance = What I paid - My share
-      const yourBalance = paidByMe - myShare;
+      const mySettledPaid = settlements
+        .filter(s => s.payerId === user.id)
+        .reduce((sum, s) => sum + s.amount, 0);
+
+      const mySettledReceived = settlements
+        .filter(s => s.receiverId === user.id)
+        .reduce((sum, s) => sum + s.amount, 0);
+
+      const yourBalance = (paidByMe - myShare) + (mySettledPaid - mySettledReceived);
 
       return {
         id: m.group.id,
         name: m.group.name,
         totalSpent,
         yourBalance,
+        debts: debtsArray,
         members: m.group.members.map(member => member.user.name?.substring(0, 2).toUpperCase() || "??"),
       };
-    });
+    }).filter(Boolean);
 
     return NextResponse.json(groups);
   } catch (error) {

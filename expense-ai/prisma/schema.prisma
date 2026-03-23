@@ -25,11 +25,13 @@ model User {
   expenseSplits       ExpenseSplit[]
   settlementsSent     Settlement[]    @relation("SettlementPayer")
   settlementsReceived Settlement[]    @relation("SettlementReceiver")
+  activities          Activity[]
 }
 
 model Group {
   id          String   @id @default(uuid())
   name        String
+  isArchived  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -40,6 +42,7 @@ model Group {
   members     GroupMember[]
   expenses    Expense[]
   settlements Settlement[]
+  activities  Activity[]
 }
 
 model GroupMember {
@@ -97,4 +100,18 @@ model Settlement {
 
   receiver    User     @relation("SettlementReceiver", fields: [receiverId], references: [id])
   receiverId  String
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  type      String   // e.g., EXPENSE_ADDED, EXPENSE_EDITED, EXPENSE_DELETED, MEMBER_ADDED
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
 }
