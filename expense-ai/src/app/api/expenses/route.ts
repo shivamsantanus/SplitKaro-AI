@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { publishGroupEvent } from "@/lib/realtime";
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,11 @@ export async function POST(req: Request) {
     // Find the user by email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     });
 
     if (!user) {
@@ -36,10 +42,12 @@ export async function POST(req: Request) {
     }
 
     // Check if group exists and user is a member
-    const membership = await prisma.groupMember.findFirst({
+    const membership = await prisma.groupMember.findUnique({
       where: {
-        groupId,
-        userId: user.id,
+        groupId_userId: {
+          groupId,
+          userId: user.id,
+        },
       },
     });
 
@@ -53,13 +61,36 @@ export async function POST(req: Request) {
     // Get all members of the group to split equally if splits are NOT declared custom
     const members = await prisma.groupMember.findMany({
       where: { groupId },
+      select: {
+        userId: true,
+      },
     });
+    const memberIds = new Set(members.map((member) => member.userId));
 
     let expenseSplitData: { userId: string, amount: number, expenseId?: string }[] = [];
+
+    const payerUserId = paidById || user.id;
+
+    if (!memberIds.has(payerUserId)) {
+      return NextResponse.json(
+        { message: "Payer must be a member of this group" },
+        { status: 400 }
+      );
+    }
 
     if (splits && Array.isArray(splits) && splits.length > 0) {
       // Validate Custom Splits
       const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
+
+      const hasInvalidSplitUser = splits.some(
+        (split) => !split?.userId || !memberIds.has(split.userId)
+      );
+      if (hasInvalidSplitUser) {
+        return NextResponse.json(
+          { message: "All split users must be members of this group" },
+          { status: 400 }
+        );
+      }
       
       // Allow a small margin of error for floating point calculations (e.g., 0.01)
       if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
@@ -83,7 +114,7 @@ export async function POST(req: Request) {
           amount: parseFloat(amount),
           description,
           groupId,
-          paidById: paidById || user.id,
+          paidById: payerUserId,
         },
       });
 
@@ -109,6 +140,8 @@ export async function POST(req: Request) {
 
       return newExpense;
     });
+
+    await publishGroupEvent(groupId, "EXPENSE_ADDED");
 
     return NextResponse.json(expense, { status: 201 });
   } catch (error) {

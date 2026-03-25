@@ -43,6 +43,9 @@ model Group {
   expenses    Expense[]
   settlements Settlement[]
   activities  Activity[]
+
+  @@index([createdById])
+  @@index([isArchived])
 }
 
 model GroupMember {
@@ -57,6 +60,8 @@ model GroupMember {
   userId    String
 
   @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId])
 }
 
 model Expense {
@@ -74,6 +79,9 @@ model Expense {
 
   // Relations
   splits      ExpenseSplit[]
+
+  @@index([groupId, createdAt])
+  @@index([paidById])
 }
 
 model ExpenseSplit {
@@ -85,6 +93,9 @@ model ExpenseSplit {
 
   user      User     @relation(fields: [userId], references: [id])
   userId    String
+
+  @@index([expenseId])
+  @@index([userId])
 }
 
 model Settlement {
@@ -100,6 +111,10 @@ model Settlement {
 
   receiver    User     @relation("SettlementReceiver", fields: [receiverId], references: [id])
   receiverId  String
+
+  @@index([groupId, createdAt])
+  @@index([payerId])
+  @@index([receiverId])
 }
 
 model Activity {
@@ -114,4 +129,7 @@ model Activity {
 
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
+
+  @@index([groupId, createdAt])
+  @@index([userId, createdAt])
 }

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { publishGroupEvent } from "@/lib/realtime";
 
 export async function POST(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function POST(
     }
 
     const { email } = await req.json();
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
 
     if (!email) {
       return NextResponse.json(
@@ -96,6 +97,8 @@ export async function POST(
 
       return member;
     });
+
+    await publishGroupEvent(groupId, "MEMBER_ADDED");
 
     return NextResponse.json(newMember, { status: 201 });
   } catch (error) {

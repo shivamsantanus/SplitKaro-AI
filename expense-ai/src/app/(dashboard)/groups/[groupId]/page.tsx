@@ -86,6 +86,32 @@ export default function GroupDetailPage() {
     if (groupId) fetchGroupData()
   }, [groupId, fetchGroupData])
 
+  useEffect(() => {
+    if (!groupId) return
+
+    const eventSource = new EventSource("/api/events")
+
+    const handleGroupUpdate = (event: Event) => {
+      const messageEvent = event as MessageEvent<string>
+
+      try {
+        const payload = JSON.parse(messageEvent.data)
+        if (payload.groupId === groupId) {
+          fetchGroupData()
+        }
+      } catch (error) {
+        console.error("Failed to process realtime event", error)
+      }
+    }
+
+    eventSource.addEventListener("group-update", handleGroupUpdate)
+
+    return () => {
+      eventSource.removeEventListener("group-update", handleGroupUpdate)
+      eventSource.close()
+    }
+  }, [groupId, fetchGroupData])
+
   const handleUpdateGroup = async () => {
     if (!editGroupName.trim()) return;
     setIsSaving(true);

@@ -2,29 +2,51 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { publishGroupEvent } from "@/lib/realtime";
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { expenseId: string } }
+  { params }: { params: Promise<{ expenseId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const { expenseId } = await (params as any);
+    const { expenseId } = await params;
 
-    // Verify expense exists and belongs to a group the user is in
     const expense = await prisma.expense.findUnique({
       where: { id: expenseId },
-      include: { group: { include: { members: { include: { user: true } } } } },
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        groupId: true,
+      },
     });
 
     if (!expense) return NextResponse.json({ message: "Expense not found" }, { status: 404 });
 
-    const isMember = expense.group.members.some(m => m.user?.email === session?.user?.email);
-    if (!isMember) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+    const membership = await prisma.groupMember.findUnique({
+      where: {
+        groupId_userId: {
+          groupId: expense.groupId,
+          userId: user.id,
+        },
+      },
+    });
+
+    if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
 
     // Mark activity before deletion (since cascade deletes it)
     if (user) {
@@ -44,6 +66,8 @@ export async function DELETE(
       where: { id: expenseId },
     });
 
+    await publishGroupEvent(expense.groupId, "EXPENSE_DELETED");
+
     return NextResponse.json({ message: "Expense deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error("Delete expense error:", error);
@@ -53,13 +77,13 @@ export async function DELETE(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { expenseId: string } }
+  { params }: { params: Promise<{ expenseId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const { expenseId } = await (params as any);
+    const { expenseId } = await params;
     const { amount, description, paidById, splits } = await req.json();
 
     if (!amount || !description) {
@@ -68,18 +92,72 @@ export async function PUT(
 
     const expense = await prisma.expense.findUnique({
       where: { id: expenseId },
-      include: { group: { include: { members: true } } },
+      select: {
+        id: true,
+        groupId: true,
+        paidById: true,
+        group: {
+          select: {
+            members: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!expense) return NextResponse.json({ message: "Expense not found" }, { status: 404 });
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+    const membership = await prisma.groupMember.findUnique({
+      where: {
+        groupId_userId: {
+          groupId: expense.groupId,
+          userId: user.id,
+        },
+      },
+    });
+
+    if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+
     const members = expense.group.members;
+    const memberIds = new Set(members.map((member) => member.userId));
     
     let expenseSplitData: { userId: string, amount: number, expenseId?: string }[] = [];
+    const payerUserId = paidById || expense.paidById;
+
+    if (!memberIds.has(payerUserId)) {
+      return NextResponse.json(
+        { message: "Payer must be a member of this group" },
+        { status: 400 }
+      );
+    }
 
     if (splits && Array.isArray(splits) && splits.length > 0) {
       // Validate Custom Splits
       const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
+
+      const hasInvalidSplitUser = splits.some(
+        (split) => !split?.userId || !memberIds.has(split.userId)
+      );
+      if (hasInvalidSplitUser) {
+        return NextResponse.json(
+          { message: "All split users must be members of this group" },
+          { status: 400 }
+        );
+      }
       
       // Allow a small margin of error for floating point calculations
       if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
@@ -103,7 +181,7 @@ export async function PUT(
         data: {
           amount: parseFloat(amount),
           description,
-          paidById: paidById || expense.paidById,
+          paidById: payerUserId,
         },
       });
 
@@ -122,21 +200,20 @@ export async function PUT(
       });
 
       // Log activity
-      const user = await tx.user.findUnique({ where: { email: session?.user?.email! } });
-      if (user) {
-        await tx.activity.create({
-          data: {
-            type: "EXPENSE_EDITED",
-            message: `${user.name || user.email} updated "${description}"`,
-            groupId: expense.groupId,
-            userId: user.id,
-            metadata: { description, amount: parseFloat(amount) }
-          }
-        });
-      }
+      await tx.activity.create({
+        data: {
+          type: "EXPENSE_EDITED",
+          message: `${user.name || user.email} updated "${description}"`,
+          groupId: expense.groupId,
+          userId: user.id,
+          metadata: { description, amount: parseFloat(amount) }
+        }
+      });
 
       return updated;
     });
+
+    await publishGroupEvent(expense.groupId, "EXPENSE_UPDATED");
 
     return NextResponse.json(updatedExpense, { status: 200 });
   } catch (error) {
