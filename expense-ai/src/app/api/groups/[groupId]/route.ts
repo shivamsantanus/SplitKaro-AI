@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { publishGroupEvent } from "@/lib/realtime";
 
 export async function GET(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,22 +19,26 @@ export async function GET(
     }
 
     // Await params in Next.js 15+ / 16
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
     console.log("Fetching group with ID:", groupId);
 
-    // Check if user is a member of this group
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: {
+        id: true,
+      },
     });
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const membership = await prisma.groupMember.findFirst({
+    const membership = await prisma.groupMember.findUnique({
       where: {
-        groupId,
-        userId: user.id,
+        groupId_userId: {
+          groupId,
+          userId: user.id,
+        },
       },
     });
 
@@ -44,50 +49,101 @@ export async function GET(
       );
     }
 
-    // Fetch group details, members, and expenses
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
+    const [group, members, expenses, settlements] = await Promise.all([
+      prisma.group.findUnique({
+        where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          isArchived: true,
+          createdAt: true,
+          updatedAt: true,
+          createdById: true,
+        },
+      }),
+      prisma.groupMember.findMany({
+        where: {
+          groupId,
+        },
+        select: {
+          id: true,
+          role: true,
+          createdAt: true,
+          groupId: true,
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
-        expenses: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          include: {
-            payer: {
-              select: {
-                name: true,
-              },
+      }),
+      prisma.expense.findMany({
+        where: {
+          groupId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          createdAt: true,
+          updatedAt: true,
+          groupId: true,
+          paidById: true,
+          payer: {
+            select: {
+              name: true,
             },
-            splits: {
-              include: {
-                user: {
-                  select: {
-                    name: true,
-                  },
+          },
+          splits: {
+            select: {
+              id: true,
+              amount: true,
+              expenseId: true,
+              userId: true,
+              user: {
+                select: {
+                  name: true,
                 },
               },
             },
           },
         },
-        settlements: {
-          include: {
-            payer: { select: { id: true, name: true } },
-            receiver: { select: { id: true, name: true } },
-          }
-        }
-      },
-    });
+      }),
+      prisma.settlement.findMany({
+        where: {
+          groupId,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          amount: true,
+          createdAt: true,
+          groupId: true,
+          payerId: true,
+          receiverId: true,
+          payer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          receiver: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+    ]);
 
     if (!group) {
       return NextResponse.json(
@@ -97,11 +153,9 @@ export async function GET(
     }
 
     // Single Group Pairwise Debt Calculation
-    const expenses = (group as any).expenses || [];
-    const settlements = (group as any).settlements || [];
     const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
     
-    group.members.forEach((member: any) => {
+    members.forEach((member) => {
        if (member.userId !== user.id) {
           pairwiseDebts[member.userId] = {
              userId: member.userId,
@@ -111,15 +165,15 @@ export async function GET(
        }
     });
 
-    expenses.forEach((exp: any) => {
+    expenses.forEach((exp) => {
        if (exp.paidById === user.id) {
-          exp.splits.forEach((split: any) => {
+          exp.splits.forEach((split) => {
              if (split.userId !== user.id && pairwiseDebts[split.userId]) {
                 pairwiseDebts[split.userId].amount += split.amount;
              }
           });
        } else {
-          const mySplit = exp.splits.find((s: any) => s.userId === user.id);
+          const mySplit = exp.splits.find((split) => split.userId === user.id);
           if (mySplit && pairwiseDebts[exp.paidById]) {
              pairwiseDebts[exp.paidById].amount -= mySplit.amount;
           }
@@ -127,7 +181,7 @@ export async function GET(
     });
 
     // Subtract/Add Settlements
-    settlements.forEach((settlement: any) => {
+    settlements.forEach((settlement) => {
       if (settlement.payerId === user.id) {
         // You paid: reduces what you owe or increases what they owe you
         if (pairwiseDebts[settlement.receiverId]) {
@@ -145,6 +199,9 @@ export async function GET(
 
     return NextResponse.json({
       ...group,
+      members,
+      expenses,
+      settlements,
       debts: debtsArray
     });
   } catch (error) {
@@ -158,13 +215,13 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
@@ -186,13 +243,13 @@ export async function DELETE(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
     const { name, isArchived } = await req.json();
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
@@ -206,7 +263,7 @@ export async function PUT(
     }
 
     const updatedGroup = await prisma.$transaction(async (tx) => {
-      const updateData: any = {};
+      const updateData: { name?: string; isArchived?: boolean } = {};
       if (name) updateData.name = name.trim();
       if (typeof isArchived === "boolean") updateData.isArchived = isArchived;
 
@@ -240,6 +297,8 @@ export async function PUT(
 
       return updated;
     });
+
+    await publishGroupEvent(groupId, "GROUP_UPDATED");
 
     return NextResponse.json(updatedGroup, { status: 200 });
   } catch (error) {

@@ -13,12 +13,8 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        memberships: {
-          select: {
-            groupId: true,
-          },
-        },
+      select: {
+        id: true,
       },
     });
 
@@ -26,7 +22,20 @@ export async function GET() {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const groupIds = user.memberships.map((m) => m.groupId);
+    const memberships = await prisma.groupMember.findMany({
+      where: {
+        userId: user.id,
+      },
+      select: {
+        groupId: true,
+      },
+    });
+
+    if (memberships.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const groupIds = memberships.map((membership) => membership.groupId);
 
     // Fetch activities for all groups the user is a member of
     const activities = await prisma.activity.findMany({

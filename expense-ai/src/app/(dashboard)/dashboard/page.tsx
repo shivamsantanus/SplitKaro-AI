@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
@@ -33,44 +33,64 @@ export default function DashboardPage() {
   })
   const peopleList = Object.values(consolidatedDebts).filter(p => Math.abs(p.amount) > 0.01)
 
-  useEffect(() => {
-    const fetchGroups = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch(`/api/groups${showArchived ? "?archived=true" : ""}`)
-        if (response.ok) {
-          const data = await response.json()
-          setGroups(data)
-        }
-      } catch (err) {
-        console.error("Failed to fetch groups")
-      } finally {
-        setLoading(false)
+  const fetchGroups = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/groups${showArchived ? "?archived=true" : ""}`)
+      if (response.ok) {
+        const data = await response.json()
+        setGroups(data)
       }
+    } catch (err) {
+      console.error("Failed to fetch groups")
+    } finally {
+      setLoading(false)
     }
-
-    fetchGroups()
   }, [showArchived])
+
+  const fetchActivities = useCallback(async () => {
+    setLoadingActivities(true)
+    try {
+      const response = await fetch("/api/activities")
+      if (response.ok) {
+        const data = await response.json()
+        setActivities(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch activities")
+    } finally {
+      setLoadingActivities(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchGroups()
+  }, [fetchGroups])
 
   useEffect(() => {
     if (activeTab === "activity") {
-      const fetchActivities = async () => {
-        setLoadingActivities(true)
-        try {
-          const response = await fetch("/api/activities")
-          if (response.ok) {
-            const data = await response.json()
-            setActivities(data)
-          }
-        } catch (err) {
-          console.error("Failed to fetch activities")
-        } finally {
-          setLoadingActivities(false)
-        }
-      }
       fetchActivities()
     }
-  }, [activeTab])
+  }, [activeTab, fetchActivities])
+
+  useEffect(() => {
+    const eventSource = new EventSource("/api/events")
+
+    const handleGroupUpdate = () => {
+      fetchGroups()
+
+      if (activeTab === "activity") {
+        fetchActivities()
+      }
+    }
+
+    eventSource.addEventListener("group-update", handleGroupUpdate)
+
+    return () => {
+      eventSource.removeEventListener("group-update", handleGroupUpdate)
+      eventSource.close()
+    }
+  }, [activeTab, fetchActivities, fetchGroups])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
