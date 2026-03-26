@@ -3,3 +3,8 @@ node_modules/
 bin/
 obj/
 .next/
+.env
+
+.vscode/
+
+package-lock.json

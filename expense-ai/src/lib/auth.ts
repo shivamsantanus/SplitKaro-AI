@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -11,6 +12,10 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -18,9 +23,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("Authorize called with:", credentials?.email);
         if (!credentials?.email || !credentials?.password) {
-          console.log("Missing credentials");
           return null;
         }
 
@@ -31,8 +34,7 @@ export const authOptions: NextAuthOptions = {
             },
           });
 
-          if (!user) {
-            console.log("User not found:", credentials.email);
+          if (!user?.password) {
             return null;
           }
 
@@ -42,36 +44,50 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
-            console.log("Invalid password for:", credentials.email);
             return null;
           }
 
-          console.log("Authorize success:", user.email);
           return {
             id: user.id,
             name: user.name,
             email: user.email,
           };
-        } catch (error) {
-          console.error("Authorize error:", error);
-          throw error;
+        } catch {
+          return null;
         }
       },
     }),
   ],
   callbacks: {
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.name = token.name;
-        session.user.email = token.email;
-        // @ts-expect-error - id is added by the authorize callback
-        session.user.id = token.sub;
+      if (session.user) {
+        session.user.name = token.name as string | null | undefined;
+        session.user.email = token.email as string | null | undefined;
+        session.user.id = (token.sub ?? token.id) as string;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
+      if (account?.provider === "google" && profile?.email) {
+        const email = String(profile.email).toLowerCase();
+        const name =
+          typeof profile.name === "string" && profile.name
+            ? profile.name
+            : email.split("@")[0];
+        const dbUser = await prisma.user.upsert({
+          where: { email },
+          create: { email, name, password: null },
+          update: { name },
+        });
+        token.sub = dbUser.id;
+        token.id = dbUser.id;
+        token.email = dbUser.email;
+        token.name = dbUser.name;
+        return token;
+      }
       if (user) {
         token.id = user.id;
+        token.sub = user.id;
       }
       return token;
     },
