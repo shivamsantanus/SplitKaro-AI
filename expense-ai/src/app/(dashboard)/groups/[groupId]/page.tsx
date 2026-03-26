@@ -91,12 +91,12 @@ export default function GroupDetailPage() {
 
     const eventSource = new EventSource("/api/events")
 
-    const handleGroupUpdate = (event: Event) => {
+    const handleUpdate = (event: Event) => {
       const messageEvent = event as MessageEvent<string>
 
       try {
         const payload = JSON.parse(messageEvent.data)
-        if (payload.groupId === groupId) {
+        if (payload.groupId === groupId || (groupId === "solo-transactions" && payload.userId)) {
           fetchGroupData()
         }
       } catch (error) {
@@ -104,10 +104,10 @@ export default function GroupDetailPage() {
       }
     }
 
-    eventSource.addEventListener("group-update", handleGroupUpdate)
+    eventSource.addEventListener("update", handleUpdate)
 
     return () => {
-      eventSource.removeEventListener("group-update", handleGroupUpdate)
+      eventSource.removeEventListener("update", handleUpdate)
       eventSource.close()
     }
   }, [groupId, fetchGroupData])

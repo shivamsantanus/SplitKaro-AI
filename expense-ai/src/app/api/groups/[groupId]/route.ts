@@ -33,6 +33,86 @@ export async function GET(
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // Check if it's the virtual solo-transactions group
+    if (groupId === "solo-transactions") {
+        const [soloExpensesPaid, soloExpensesOwed, soloSettlements] = await Promise.all([
+          prisma.expense.findMany({
+            where: { groupId: null, paidById: user.id },
+            include: { 
+              payer: { select: { id: true, name: true, email: true } },
+              splits: { include: { user: { select: { id: true, name: true, email: true } } } } 
+            }
+          }),
+          prisma.expenseSplit.findMany({
+            where: { userId: user.id, expense: { groupId: null, paidById: { not: user.id } } },
+            include: { expense: { include: { 
+              payer: { select: { id: true, name: true, email: true } },
+              splits: { include: { user: { select: { id: true, name: true, email: true } } } } 
+            } } }
+          }),
+          prisma.settlement.findMany({
+            where: { groupId: null, OR: [{ payerId: user.id }, { receiverId: user.id }] },
+            include: { payer: { select: { id: true, name: true } }, receiver: { select: { id: true, name: true } } }
+          })
+        ]);
+
+        const allSoloExpenses = [
+          ...soloExpensesPaid,
+          ...soloExpensesOwed.map(s => (s as any).expense)
+        ].sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        // Construct unique members
+        const memberMap = new Map();
+        memberMap.set(user.id, { userId: user.id, user: { name: (session?.user as any)?.name || "You", email: session.user.email } });
+        allSoloExpenses.forEach(exp => {
+            memberMap.set(exp.paidById, { userId: exp.paidById, user: exp.payer });
+            exp.splits.forEach((split: any) => {
+                memberMap.set(split.userId, { userId: split.userId, user: split.user });
+            });
+        });
+        soloSettlements.forEach((sett: any) => {
+            memberMap.set(sett.payerId, { userId: sett.payerId, user: sett.payer });
+            memberMap.set(sett.receiverId, { userId: sett.receiverId, user: sett.receiver });
+        });
+
+        // Calculate debts logic similar to group but simplified
+        const pairwiseDebts: Record<string, any> = {};
+        memberMap.forEach((m) => {
+            if (m.userId !== user.id) {
+                pairwiseDebts[m.userId] = { userId: m.userId, name: m.user.name || m.user.email, amount: 0 };
+            }
+        });
+
+        allSoloExpenses.forEach((exp: any) => {
+            if (exp.paidById === user.id) {
+                exp.splits.forEach((split: any) => {
+                    if (split.userId !== user.id && pairwiseDebts[split.userId]) pairwiseDebts[split.userId].amount += split.amount;
+                });
+            } else {
+                const mySplit = exp.splits.find((s: any) => s.userId === user.id);
+                if (mySplit && pairwiseDebts[exp.paidById]) pairwiseDebts[exp.paidById].amount -= mySplit.amount;
+            }
+        });
+
+        soloSettlements.forEach((sett: any) => {
+            if (sett.payerId === user.id) {
+                if (pairwiseDebts[sett.receiverId]) pairwiseDebts[sett.receiverId].amount += sett.amount;
+            } else if (sett.receiverId === user.id) {
+                if (pairwiseDebts[sett.payerId]) pairwiseDebts[sett.payerId].amount -= sett.amount;
+            }
+        });
+
+        return NextResponse.json({
+            id: "solo-transactions",
+            name: "Individual Payments",
+            isSolo: true,
+            members: Array.from(memberMap.values()),
+            expenses: allSoloExpenses,
+            settlements: soloSettlements,
+            debts: Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01)
+        });
+    }
+
     const membership = await prisma.groupMember.findUnique({
       where: {
         groupId_userId: {

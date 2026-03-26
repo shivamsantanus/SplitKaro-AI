@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
-import { Plus, Users, Activity, User, Home, Search, Loader2 } from "lucide-react"
+import { Plus, Users, Activity, User, Home, Search, Loader2, UserPlus } from "lucide-react"
+import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -16,8 +17,9 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<any[]>([])
   const [loadingActivities, setLoadingActivities] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [showSoloModal, setShowSoloModal] = useState(false)
 
-  // Calculate total balance from all groups
+  // Calculate total balance from all groups (including solo)
   const totalBalance = groups.reduce((acc, group) => acc + (group.yourBalance || 0), 0)
 
   // Calculate global pairwise debts (People Tab)
@@ -76,7 +78,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const eventSource = new EventSource("/api/events")
 
-    const handleGroupUpdate = () => {
+    const handleUpdate = () => {
       fetchGroups()
 
       if (activeTab === "activity") {
@@ -84,16 +86,21 @@ export default function DashboardPage() {
       }
     }
 
-    eventSource.addEventListener("group-update", handleGroupUpdate)
+    eventSource.addEventListener("update", handleUpdate)
 
     return () => {
-      eventSource.removeEventListener("group-update", handleGroupUpdate)
+      eventSource.removeEventListener("update", handleUpdate)
       eventSource.close()
     }
   }, [activeTab, fetchActivities, fetchGroups])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
+      <SoloExpenseModal 
+        isOpen={showSoloModal} 
+        onClose={() => setShowSoloModal(false)}
+        onSuccess={fetchGroups}
+      />
       {/* Header */}
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
@@ -137,16 +144,27 @@ export default function DashboardPage() {
       <div className="px-6 pb-6 max-w-4xl mx-auto w-full">
         {activeTab === "groups" && (
            <>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-slate-900">Your Groups</h2>
-              <button 
-                onClick={() => setShowArchived(!showArchived)}
-                className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all ${
-                    showArchived ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm"
-                }`}
-              >
-                {showArchived ? "Showing Archived" : "Show Archived"}
-              </button>
+            <div className="flex flex-col gap-4 mb-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-slate-900">Your Groups</h2>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowSoloModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all border border-primary/20"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    Add Individual
+                  </button>
+                  <button 
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all ${
+                        showArchived ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm"
+                    }`}
+                  >
+                    {showArchived ? "Showing Archived" : "Show Archived"}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {loading ? (
@@ -229,10 +247,12 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                              <p className="text-sm text-slate-900 font-medium leading-tight">{activity.message}</p>
-                             <div className="flex items-center gap-2 mt-1.5">
-                                <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">{activity.group.name}</span>
-                                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">• {new Date(activity.createdAt).toLocaleDateString()}</span>
-                             </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                 <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">
+                                    {activity.group?.name || "Individual Payment"}
+                                 </span>
+                                 <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">• {new Date(activity.createdAt).toLocaleDateString()}</span>
+                              </div>
                           </div>
                           {activity.metadata?.amount && (
                              <div className="text-sm font-black text-slate-900">₹{activity.metadata.amount}</div>

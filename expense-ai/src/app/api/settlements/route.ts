@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { publishGroupEvent } from "@/lib/realtime";
+import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
     const { amount, groupId, payerId, receiverId } = await req.json();
 
-    if (!amount || !groupId || !payerId || !receiverId) {
+    if (!amount || !payerId || !receiverId) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -34,37 +34,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        groupId_userId: {
+    if (groupId) {
+      const membership = await prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId,
+            userId: user.id,
+          },
+        },
+      });
+
+      if (!membership) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+
+      const participants = await prisma.groupMember.findMany({
+        where: {
           groupId,
-          userId: user.id,
+          userId: {
+            in: [payerId, receiverId],
+          },
         },
-      },
-    });
-
-    if (!membership) {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
-
-    const participants = await prisma.groupMember.findMany({
-      where: {
-        groupId,
-        userId: {
-          in: [payerId, receiverId],
+        select: {
+          userId: true,
         },
-      },
-      select: {
-        userId: true,
-      },
-    });
+      });
 
-    const participantIds = new Set(participants.map((participant) => participant.userId));
-    if (!participantIds.has(payerId) || !participantIds.has(receiverId)) {
-      return NextResponse.json(
-        { message: "Payer and receiver must both be members of this group" },
-        { status: 400 }
-      );
+      const participantIds = new Set(participants.map((participant) => participant.userId));
+      if (!participantIds.has(payerId) || !participantIds.has(receiverId)) {
+        return NextResponse.json(
+          { message: "Payer and receiver must both be members of this group" },
+          { status: 400 }
+        );
+      }
     }
 
     // Create settlement and log activity
@@ -72,13 +74,13 @@ export async function POST(req: Request) {
       const newSettlement = await tx.settlement.create({
         data: {
           amount: parseFloat(amount),
-          groupId,
+          groupId: groupId || null,
           payerId,
           receiverId,
         },
         include: {
-          payer: { select: { name: true } },
-          receiver: { select: { name: true } },
+          payer: { select: { id: true, name: true } },
+          receiver: { select: { id: true, name: true } },
         }
       });
 
@@ -86,7 +88,7 @@ export async function POST(req: Request) {
         data: {
           type: "SETTLEMENT_ADDED",
           message: `${newSettlement.payer.name} paid ₹${amount} to ${newSettlement.receiver.name}`,
-          groupId,
+          groupId: groupId || null,
           userId: user.id,
           metadata: { amount: parseFloat(amount), payerId, receiverId }
         }
@@ -95,7 +97,12 @@ export async function POST(req: Request) {
       return newSettlement;
     });
 
-    await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
+    if (groupId) {
+        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
+    } else {
+        await publishUserEvent(payerId, "SETTLEMENT_ADDED");
+        await publishUserEvent(receiverId, "SETTLEMENT_ADDED");
+    }
 
     return NextResponse.json(settlement, { status: 201 });
   } catch (error) {

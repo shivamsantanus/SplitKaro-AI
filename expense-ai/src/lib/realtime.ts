@@ -1,15 +1,16 @@
 import prisma from "@/lib/prisma";
 
-type RealtimeGroupEvent = {
+type RealtimeEvent = {
   type: string;
-  groupId: string;
+  groupId?: string;
+  userId?: string;
   timestamp: string;
 };
 
 type Subscriber = {
   id: string;
   userId: string;
-  send: (event: RealtimeGroupEvent) => void;
+  send: (event: RealtimeEvent) => void;
   close: () => void;
 };
 
@@ -58,7 +59,7 @@ export function createRealtimeStream(userId: string, signal?: AbortSignal) {
         id: subscriberId,
         userId,
         send: (event) => {
-          safeEnqueue(formatSseMessage("group-update", event));
+          safeEnqueue(formatSseMessage("update", event));
         },
         close: cleanup,
       });
@@ -79,6 +80,22 @@ export function createRealtimeStream(userId: string, signal?: AbortSignal) {
   return stream;
 }
 
+export async function publishUserEvent(userId: string, type: string) {
+  if (subscribers.size === 0) return;
+
+  const event: RealtimeEvent = {
+    type,
+    userId,
+    timestamp: new Date().toISOString(),
+  };
+
+  for (const subscriber of subscribers.values()) {
+    if (subscriber.userId === userId) {
+      subscriber.send(event);
+    }
+  }
+}
+
 export async function publishGroupEvent(groupId: string, type: string) {
   if (subscribers.size === 0) {
     return;
@@ -94,7 +111,7 @@ export async function publishGroupEvent(groupId: string, type: string) {
   }
 
   const memberIds = new Set(members.map((member) => member.userId));
-  const event: RealtimeGroupEvent = {
+  const event: RealtimeEvent = {
     type,
     groupId,
     timestamp: new Date().toISOString(),

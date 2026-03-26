@@ -71,8 +71,8 @@ model Expense {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  group       Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId     String
+  group       Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String?
 
   payer       User           @relation("ExpensePayer", fields: [paidById], references: [id])
   paidById    String
@@ -103,8 +103,8 @@ model Settlement {
   amount      Float
   createdAt   DateTime @default(now())
 
-  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId     String
+  group       Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String?
 
   payer       User     @relation("SettlementPayer", fields: [payerId], references: [id])
   payerId     String
@@ -127,8 +127,8 @@ model Activity {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
 
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId   String
+  group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String?
 
   @@index([groupId, createdAt])
   @@index([userId, createdAt])

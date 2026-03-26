@@ -37,30 +37,32 @@ export async function GET() {
 
     const groupIds = memberships.map((membership) => membership.groupId);
 
-    // Fetch activities for all groups the user is a member of
+    // Fetch activities for all groups the user is a member of + solo activities
     const activities = await prisma.activity.findMany({
       where: {
-        groupId: {
-          in: groupIds,
-        },
+        OR: [
+          { groupId: { in: groupIds } },
+          { 
+            groupId: null,
+            OR: [
+              { userId: user.id },
+              // For solo expenses added by OTHERS where you are a participant,
+              // we'd need a way to link activity to participants.
+              // For now, let's fetch solo expenses you are part of and match activities.
+              // Or just fetch all solo activities for now if the privacy risk is low (in this small app).
+              // Better: fetch where user is creator OR metadata contains your ID (if we added it).
+            ]
+          }
+        ]
       },
       orderBy: {
         createdAt: "desc",
       },
       include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        group: {
-          select: {
-            name: true,
-          },
-        },
+        user: { select: { name: true, email: true } },
+        group: { select: { name: true } },
       },
-      take: 20, // Limit to recent 20 for activity feed
+      take: 30, 
     });
 
     return NextResponse.json(activities);

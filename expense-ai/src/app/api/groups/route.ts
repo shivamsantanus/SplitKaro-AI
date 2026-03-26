@@ -418,7 +418,72 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json(groups);
+    // Individual (Group-less) Transactions
+    const [soloExpensesPaid, soloExpensesOwed, soloSettlements] = await Promise.all([
+      prisma.expense.findMany({
+        where: { groupId: null, paidById: user.id },
+        include: { splits: { include: { user: { select: { id: true, name: true, email: true } } } } }
+      }),
+      prisma.expenseSplit.findMany({
+        where: { userId: user.id, expense: { groupId: null, paidById: { not: user.id } } },
+        include: { expense: { include: { payer: { select: { id: true, name: true, email: true } } } } }
+      }),
+      prisma.settlement.findMany({
+        where: { groupId: null, OR: [{ payerId: user.id }, { receiverId: user.id }] },
+        include: { payer: { select: { id: true, name: true } }, receiver: { select: { id: true, name: true } } }
+      })
+    ]);
+
+    // Process Solo Transactions into a virtual "Group" for easier frontend consumption
+    const soloPairwise: Record<string, { userId: string, name: string, amount: number }> = {};
+
+    // 1. Solo Expenses Paid by Me
+    soloExpensesPaid.forEach(exp => {
+      exp.splits.forEach(split => {
+        if (split.userId !== user.id) {
+          if (!soloPairwise[split.userId]) soloPairwise[split.userId] = { userId: split.userId, name: (split as any).user.name || (split as any).user.email, amount: 0 };
+          soloPairwise[split.userId].amount += split.amount;
+        }
+      });
+    });
+
+    // 2. Solo Expenses Owed by Me
+    soloExpensesOwed.forEach(split => {
+      const payerId = (split as any).expense.paidById;
+      const payerName = (split as any).expense.payer.name || (split as any).expense.payer.email;
+      if (!soloPairwise[payerId]) soloPairwise[payerId] = { userId: payerId, name: payerName, amount: 0 };
+      soloPairwise[payerId].amount -= split.amount;
+    });
+
+    // 3. Solo Settlements
+    soloSettlements.forEach(sett => {
+      if (sett.payerId === user.id) {
+        if (!soloPairwise[sett.receiverId]) soloPairwise[sett.receiverId] = { userId: sett.receiverId, name: (sett as any).receiver.name, amount: 0 };
+        soloPairwise[sett.receiverId].amount += sett.amount;
+      } else if (sett.receiverId === user.id) {
+        if (!soloPairwise[sett.payerId]) soloPairwise[sett.payerId] = { userId: sett.payerId, name: (sett as any).payer.name, amount: 0 };
+        soloPairwise[sett.payerId].amount -= sett.amount;
+      }
+    });
+
+    const soloDebts = Object.values(soloPairwise).filter(d => Math.abs(d.amount) > 0.01);
+    const soloBalance = soloDebts.reduce((acc, d) => acc + d.amount, 0);
+
+    const groupList = groups.filter(g => g !== null);
+
+    if (soloDebts.length > 0) {
+      groupList.push({
+        id: "solo-transactions",
+        name: "Individual Payments",
+        totalSpent: soloExpensesPaid.reduce((acc, e) => acc + e.amount, 0),
+        yourBalance: soloBalance,
+        debts: soloDebts,
+        members: ["👤"],
+        isSolo: true
+      });
+    }
+
+    return NextResponse.json(groupList);
   } catch (error) {
     console.error("Failed to fetch groups:", error);
     return NextResponse.json(
