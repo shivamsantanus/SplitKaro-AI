@@ -11,7 +11,7 @@ import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
 export default function DashboardPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
+ const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activities, setActivities] = useState<any[]>([])
@@ -142,6 +142,7 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <div className="px-6 pb-6 max-w-4xl mx-auto w-full">
+
         {activeTab === "groups" && (
            <>
             <div className="flex flex-col gap-4 mb-6">

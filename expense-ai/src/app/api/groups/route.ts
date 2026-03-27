@@ -125,6 +125,33 @@ export async function GET(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      include: {
+        memberships: {
+          include: {
+            group: {
+              include: {
+                members: {
+                  include: {
+                    user: {
+                      select: {
+                        name: true,
+                        email: true,
+                      }
+                    }
+                  }
+                },
+                expenses: {
+                  include: {
+                    splits: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
       select: {
         id: true,
       },

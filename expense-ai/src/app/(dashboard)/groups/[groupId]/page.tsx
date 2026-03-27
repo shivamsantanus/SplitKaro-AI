@@ -451,6 +451,30 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
+      {/* Expense/Chat Feed */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full pb-32">
+        {group.expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+             <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
+                <UtensilsCrossed className="w-8 h-8 text-slate-400" />
+             </div>
+             <p className="text-sm font-bold uppercase tracking-widest">No expenses yet</p>
+             <p className="text-xs font-medium mt-1">Add friends, then add an expense!</p>
+          </div>
+        ) : (
+          group.expenses.map((expense: any) => (
+            <Card
+              key={expense.id}
+              className="p-5 rounded-3xl bg-white shadow-sm border border-slate-100/50 hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 relative group"
+            >
+              <div className="flex items-start justify-between relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center transition-colors">
+                    <UtensilsCrossed className="w-7 h-7 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{expense.description}</h4>
+                    <p className="text-xl font-bold text-primary mt-1">₹{expense.amount.toLocaleString()}</p>
       {/* Local Group Balance Summary */}
       {group.debts && group.debts.length > 0 && (
          <div className="bg-white border-b border-slate-100 flex items-center shrink-0 z-0">
@@ -491,6 +515,28 @@ export default function GroupDetailPage() {
                 <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
                     <UtensilsCrossed className="w-8 h-8 text-slate-400" />
                 </div>
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                  <Clock className="w-3 h-3 mb-1 ml-auto" />
+                  {new Date(expense.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-medium text-slate-500">
+                <p>Paid by <span className="text-slate-900 font-bold">{(
+                    ?.user as any)?.id === expense.paidById ? "You" : expense.payer.name}</span></p>
+                <div className="flex items-center -space-x-1">
+                   <span className="mr-2 opacity-60">Split with {expense.splits.length} people</span>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Bottom Input Bar */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100 bg-white px-6 py-6 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-20">
+        <div className="flex gap-3 items-center max-w-4xl mx-auto w-full">
+           <button
+            onClick={() => setShowExpenseModal(true)}
                 <p className="text-sm font-bold uppercase tracking-widest">No activity yet</p>
                 <p className="text-xs font-medium mt-1">Add friends, then add an expense!</p>
               </div>
@@ -865,6 +911,9 @@ export default function GroupDetailPage() {
                        </div>
                      ))}
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-3 font-medium px-1">
+                    Split will be approximately <span className="text-slate-900 font-bold">₹{(parseFloat(amount || "0") / group.members.length).toFixed(1)}</span> per person.
+                  </p>
                </div>
             </div>
 
