@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,7 @@ export async function POST(
     }
 
     const { message } = await req.json();
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
 
     if (!message || message.trim() === "") {
         return NextResponse.json({ message: "Message is required" }, { status: 400 });

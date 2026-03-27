@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { publishGroupEvent } from "@/lib/realtime";
 
 export async function POST(
   req: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function POST(
     }
 
     const { email } = await req.json();
-    const { groupId } = await (params as any);
+    const { groupId } = await params;
 
     if (!email) {
       return NextResponse.json(
@@ -75,13 +76,29 @@ export async function POST(
       );
     }
 
-    // 4. Add the user
-    const newMember = await prisma.groupMember.create({
-      data: {
-        groupId,
-        userId: targetUser.id,
-      },
+    // 4. Add the user and log activity
+    const newMember = await prisma.$transaction(async (tx) => {
+      const member = await tx.groupMember.create({
+        data: {
+          groupId,
+          userId: targetUser.id,
+        },
+      });
+
+      await tx.activity.create({
+        data: {
+          type: "MEMBER_ADDED",
+          message: `${currentUser?.name || currentUser?.email} added ${targetUser.name || targetUser.email}`,
+          groupId,
+          userId: currentUser?.id!,
+          metadata: { addedUserEmail: targetUser.email }
+        }
+      });
+
+      return member;
     });
+
+    await publishGroupEvent(groupId, "MEMBER_ADDED");
 
     return NextResponse.json(newMember, { status: 201 });
   } catch (error) {
