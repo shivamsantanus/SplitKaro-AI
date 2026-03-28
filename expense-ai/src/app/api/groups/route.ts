@@ -152,10 +152,7 @@ export async function GET(req: Request) {
       }
     });
 
-      select: {
-        id: true,
-      },
-    });
+
 
     const { searchParams } = new URL(req.url);
     const includeArchived = searchParams.get("archived") === "true";
@@ -328,20 +325,30 @@ export async function GET(req: Request) {
     }
 
     for (const expense of expensesPaidByMe) {
-      const groupExpenses = expensesByGroup.get(expense.groupId) ?? [];
+      const groupId = expense.groupId;
+      if (!groupId) {
+        continue;
+      }
+
+      const groupExpenses = expensesByGroup.get(groupId) ?? [];
       groupExpenses.push({
-        groupId: expense.groupId,
+        groupId,
         amount: 0,
         paidById: user.id,
         splits: expense.splits,
       });
-      expensesByGroup.set(expense.groupId, groupExpenses);
+      expensesByGroup.set(groupId, groupExpenses);
     }
 
     for (const expenseSplit of expensesOwedByMe) {
-      const groupExpenses = expensesByGroup.get(expenseSplit.expense.groupId) ?? [];
+      const groupId = expenseSplit.expense.groupId;
+      if (!groupId) {
+        continue;
+      }
+
+      const groupExpenses = expensesByGroup.get(groupId) ?? [];
       groupExpenses.push({
-        groupId: expenseSplit.expense.groupId,
+        groupId,
         amount: 0,
         paidById: expenseSplit.expense.paidById,
         splits: [
@@ -351,13 +358,21 @@ export async function GET(req: Request) {
           },
         ],
       });
-      expensesByGroup.set(expenseSplit.expense.groupId, groupExpenses);
+      expensesByGroup.set(groupId, groupExpenses);
     }
 
     for (const settlement of settlements) {
-      const groupSettlements = settlementsByGroup.get(settlement.groupId) ?? [];
-      groupSettlements.push(settlement);
-      settlementsByGroup.set(settlement.groupId, groupSettlements);
+      const groupId = settlement.groupId;
+      if (!groupId) {
+        continue;
+      }
+
+      const groupSettlements = settlementsByGroup.get(groupId) ?? [];
+      groupSettlements.push({
+        ...settlement,
+        groupId,
+      });
+      settlementsByGroup.set(groupId, groupSettlements);
     }
 
     for (const summary of totalSpentByGroup as GroupTotalSpentSummary[]) {
@@ -373,7 +388,15 @@ export async function GET(req: Request) {
       myShareMap.set(split.expense.groupId, currentAmount + split.amount);
     }
 
-    const groups = memberships.map((membership) => {
+    const groups: Array<{
+      id: string;
+      name: string;
+      totalSpent: number;
+      yourBalance: number;
+      debts: { userId: string; name: string; amount: number }[];
+      members: string[];
+      isSolo?: boolean;
+    }> = memberships.map((membership) => {
       const groupMembers = membersByGroup.get(membership.groupId) ?? [];
       const groupExpenses = expensesByGroup.get(membership.groupId) ?? [];
       const groupSettlements = settlementsByGroup.get(membership.groupId) ?? [];

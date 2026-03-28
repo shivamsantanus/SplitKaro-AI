@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
             : email.split("@")[0];
         const dbUser = await prisma.user.upsert({
           where: { email },
-          create: { email, name, password: null },
+          create: { email, name, password: undefined },
           update: { name },
         });
         token.sub = dbUser.id;

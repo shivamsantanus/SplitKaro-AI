@@ -27,6 +27,7 @@ export default function GroupDetailPage() {
   const params = useParams()
   const { data: session } = useSession()
   const groupId = params.groupId as string
+  const isSoloGroup = groupId === "solo-transactions"
 
   const [group, setGroup] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -183,7 +184,7 @@ export default function GroupDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: parseFloat(settleAmount),
-          groupId,
+          groupId: isSoloGroup ? null : groupId,
           payerId: settlePayerId,
           receiverId: settleReceiverId,
         }),
@@ -404,6 +405,21 @@ export default function GroupDetailPage() {
 
   if (!group) return null
 
+
+  const allTransactions = [
+    ...(group.expenses || []).map((expense: any) => ({
+      ...expense,
+      isSettlement: false,
+    })),
+    ...(group.settlements || []).map((settlement: any) => ({
+      ...settlement,
+      isSettlement: true,
+    })),
+  ].sort(
+    (a: any, b: any) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col overflow-x-hidden">
       {/* Header */}
@@ -420,14 +436,14 @@ export default function GroupDetailPage() {
             <div>
               <h1 className="text-xl font-bold">{group.name}</h1>
               <div className="flex items-center gap-2 mt-0.5 opacity-90">
-                 <div className="flex -space-x-1">
-                    {group.members.slice(0, 3).map((m: any, i: number) => (
-                      <div key={i} className="w-6 h-6 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-[10px] font-bold">
-                        {m.user.name?.substring(0, 2).toUpperCase() || "U"}
-                      </div>
-                    ))}
-                 </div>
-                 <span className="text-xs font-medium">{group.members.length} members</span>
+                <div className="flex -space-x-1">
+                  {group.members.slice(0, 3).map((m: any, i: number) => (
+                    <div key={i} className="w-6 h-6 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-[10px] font-bold">
+                      {m.user.name?.substring(0, 2).toUpperCase() || "U"}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-xs font-medium">{group.members.length} members</span>
               </div>
             </div>
           </div>
@@ -451,105 +467,62 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      {/* Expense/Chat Feed */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full pb-32">
-        {group.expenses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-             <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
-                <UtensilsCrossed className="w-8 h-8 text-slate-400" />
-             </div>
-             <p className="text-sm font-bold uppercase tracking-widest">No expenses yet</p>
-             <p className="text-xs font-medium mt-1">Add friends, then add an expense!</p>
-          </div>
-        ) : (
-          group.expenses.map((expense: any) => (
-            <Card
-              key={expense.id}
-              className="p-5 rounded-3xl bg-white shadow-sm border border-slate-100/50 hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 relative group"
-            >
-              <div className="flex items-start justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center transition-colors">
-                    <UtensilsCrossed className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{expense.description}</h4>
-                    <p className="text-xl font-bold text-primary mt-1">₹{expense.amount.toLocaleString()}</p>
       {/* Local Group Balance Summary */}
       {group.debts && group.debts.length > 0 && (
-         <div className="bg-white border-b border-slate-100 flex items-center shrink-0 z-0">
-            <div className="px-6 py-3 flex gap-2 items-center overflow-x-auto whitespace-nowrap hide-scrollbar max-w-4xl mx-auto w-full">
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2 shrink-0">Balances:</span>
-               {group.debts.filter((d: any) => Math.abs(d.amount) > 0.01).map((debt: any) => (
-                  <div key={debt.userId} className={`inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-xl border text-[11px] font-bold shrink-0 shadow-sm ${
-                     debt.amount > 0 ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-rose-50 border-rose-100 text-rose-600"
-                  }`}>
-                     <span>{debt.name}</span>
-                     <span className="opacity-40">•</span>
-                     <span className="font-black">{debt.amount > 0 ? `+₹${debt.amount.toLocaleString()}` : `-₹${Math.abs(debt.amount).toLocaleString()}`}</span>
-                     <button 
-                        onClick={() => openSettleModal(debt)}
-                        className={`ml-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${
-                        debt.amount > 0 ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
-                        }`}
-                     >
-                        Settle
-                     </button>
-                  </div>
-               ))}
-            </div>
-         </div>
+        <div className="bg-white border-b border-slate-100 flex items-center shrink-0 z-0">
+          <div className="px-6 py-3 flex gap-2 items-center overflow-x-auto whitespace-nowrap hide-scrollbar max-w-4xl mx-auto w-full">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2 shrink-0">
+              Balances:
+            </span>
+            {group.debts
+              .filter((debt: any) => Math.abs(debt.amount) > 0.01)
+              .map((debt: any) => (
+                <div
+                  key={debt.userId}
+                  className={`inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-xl border text-[11px] font-bold shrink-0 shadow-sm ${
+                    debt.amount > 0
+                      ? "bg-emerald-50 border-emerald-100 text-emerald-600"
+                      : "bg-rose-50 border-rose-100 text-rose-600"
+                  }`}
+                >
+                  <span>{debt.name}</span>
+                  <span className="opacity-40">?</span>
+                  <span className="font-black">
+                    {debt.amount > 0
+                      ? `+₹${debt.amount.toLocaleString()}`
+                      : `-₹${Math.abs(debt.amount).toLocaleString()}`}
+                  </span>
+                  <button
+                    onClick={() => openSettleModal(debt)}
+                    className={`ml-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${
+                      debt.amount > 0
+                        ? "bg-emerald-600 text-white"
+                        : "bg-rose-600 text-white"
+                    }`}
+                  >
+                    Settle
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
       )}
 
       {/* Expense/Chat Feed */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full pb-32">
-        {(() => {
-          const allTransactions = [
-            ...(group.expenses || []).map((e: any) => ({ ...e, isSettlement: false })),
-            ...(group.settlements || []).map((s: any) => ({ ...s, isSettlement: true }))
-          ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-          if (allTransactions.length === 0) {
-            return (
-              <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
-                    <UtensilsCrossed className="w-8 h-8 text-slate-400" />
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                  <Clock className="w-3 h-3 mb-1 ml-auto" />
-                  {new Date(expense.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-medium text-slate-500">
-                <p>Paid by <span className="text-slate-900 font-bold">{(
-                    ?.user as any)?.id === expense.paidById ? "You" : expense.payer.name}</span></p>
-                <div className="flex items-center -space-x-1">
-                   <span className="mr-2 opacity-60">Split with {expense.splits.length} people</span>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Bottom Input Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100 bg-white px-6 py-6 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-20">
-        <div className="flex gap-3 items-center max-w-4xl mx-auto w-full">
-           <button
-            onClick={() => setShowExpenseModal(true)}
-                <p className="text-sm font-bold uppercase tracking-widest">No activity yet</p>
-                <p className="text-xs font-medium mt-1">Add friends, then add an expense!</p>
-              </div>
-            );
-          }
-
-          return allTransactions.map((item: any) => {
+        {allTransactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+            <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
+              <UtensilsCrossed className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-sm font-bold uppercase tracking-widest">No activity yet</p>
+            <p className="text-xs font-medium mt-1">Add friends, then add an expense!</p>
+          </div>
+        ) : (
+          allTransactions.map((item: any) => {
             if (item.isSettlement) {
               return (
-                <div 
-                  key={item.id} 
-                  className="flex flex-col items-center py-4 relative"
-                >
+                <div key={item.id} className="flex flex-col items-center py-4 relative">
                   <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-slate-100 z-0" />
                   <div className="bg-white border-2 border-slate-100 rounded-2xl px-5 py-2.5 shadow-sm text-[11px] font-bold text-slate-600 flex items-center gap-3 relative z-10 hover:border-emerald-200 transition-colors">
                     <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -568,7 +541,7 @@ export default function GroupDetailPage() {
                     </span>
                   </div>
                 </div>
-              );
+              )
             }
 
             return (
@@ -582,20 +555,22 @@ export default function GroupDetailPage() {
                       <UtensilsCrossed className="w-7 h-7 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{item.description}</h4>
+                      <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">
+                        {item.description}
+                      </h4>
                       <p className="text-xl font-bold text-primary mt-1">₹{item.amount.toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
+                      <button
                         aria-label="Edit expense"
                         onClick={() => openExpenseModal(item)}
                         className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button 
+                      <button
                         aria-label="Delete expense"
                         onClick={() => handleDeleteExpense(item.id)}
                         className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors"
@@ -610,31 +585,44 @@ export default function GroupDetailPage() {
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-3 text-xs font-medium text-slate-500">
-                  <div className="flex items-center justify-between">
-                    <p>Paid by <span className="text-slate-900 font-bold">{(session?.user as any)?.id === item.paidById ? "You" : item.payer.name}</span></p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p>
+                      Paid by{' '}
+                      <span className="text-slate-900 font-bold">
+                        {(session?.user as any)?.id === item.paidById ? 'You' : item.payer.name}
+                      </span>
+                    </p>
                     <span className="opacity-60 font-bold">Total: ₹{item.amount.toLocaleString()}</span>
                   </div>
                   <div className="flex flex-wrap gap-x-2 gap-y-2 pt-1">
                     {item.splits.map((split: any) => (
-                      <div key={split.id} className="flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100/50">
-                          <span className="text-slate-900 font-bold text-[10px]">
-                            {split.userId === (session?.user as any)?.id ? "You" : split.user?.name}
-                          </span>
-                          <span className="text-primary font-black text-[10px]">₹{split.amount.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                      <div
+                        key={split.id}
+                        className="flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100/50"
+                      >
+                        <span className="text-slate-900 font-bold text-[10px]">
+                          {split.userId === (session?.user as any)?.id ? 'You' : split.user?.name}
+                        </span>
+                        <span className="text-primary font-black text-[10px]">
+                          {"₹"}{split.amount.toLocaleString(undefined, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
               </Card>
-            );
-          });
-        })()}
+            )
+          })
+        )}
       </div>
 
       {/* Bottom Input Bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100 bg-white/90 backdrop-blur-lg px-4 py-4 md:px-12 md:py-6 shrink-0 shadow-[0_-15px_35px_rgba(0,0,0,0.05)] z-20 pb-safe">
         <div className="flex gap-2 sm:gap-4 items-center max-w-4xl mx-auto w-full">
-           <button
+          <button
             onClick={() => openExpenseModal()}
             className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-primary-600 transition-all shadow-lg active:scale-95 shrink-0"
             aria-label="Add expense"
@@ -652,7 +640,7 @@ export default function GroupDetailPage() {
               className="h-14 rounded-3xl bg-slate-50 border-0 focus-visible:ring-1 focus-visible:ring-primary/20 pl-6 pr-14 text-slate-700 font-semibold"
               disabled={isParsing}
             />
-             <button
+            <button
               onClick={handleSendMessage}
               className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${message.trim() && !isParsing ? 'bg-primary text-white scale-100 hover:bg-primary-600' : 'text-slate-300 scale-90'}`}
               disabled={!message.trim() || isParsing}
@@ -663,7 +651,6 @@ export default function GroupDetailPage() {
           </div>
         </div>
       </div>
-
       {/* Add Member Modal */}
       <Modal isOpen={showMemberModal} onClose={() => setShowMemberModal(false)} title="Add Friend">
          <div className="space-y-6">

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { publishGroupEvent } from "@/lib/realtime";
+import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 
 export async function DELETE(
   req: Request,
@@ -21,6 +21,12 @@ export async function DELETE(
         description: true,
         amount: true,
         groupId: true,
+        paidById: true,
+        splits: {
+          select: {
+            userId: true,
+          },
+        },
       },
     });
 
@@ -37,16 +43,26 @@ export async function DELETE(
 
     if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        groupId_userId: {
-          groupId: expense.groupId,
-          userId: user.id,
+    if (expense.groupId) {
+      const membership = await prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: expense.groupId,
+            userId: user.id,
+          },
         },
-      },
-    });
+      });
 
-    if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    } else {
+      const isParticipant =
+        expense.paidById === user.id ||
+        expense.splits.some((split) => split.userId === user.id);
+
+      if (!isParticipant) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+    }
 
     // Mark activity before deletion (since cascade deletes it)
     if (user) {
@@ -66,7 +82,20 @@ export async function DELETE(
       where: { id: expenseId },
     });
 
-    await publishGroupEvent(expense.groupId, "EXPENSE_DELETED");
+    if (expense.groupId) {
+      await publishGroupEvent(expense.groupId, "EXPENSE_DELETED");
+    } else {
+      const participantIds = new Set([
+        expense.paidById,
+        ...expense.splits.map((split) => split.userId),
+      ]);
+
+      for (const participantId of participantIds) {
+        if (participantId !== user.id) {
+          await publishUserEvent(participantId, "EXPENSE_DELETED");
+        }
+      }
+    }
 
     return NextResponse.json({ message: "Expense deleted successfully" }, { status: 200 });
   } catch (error) {
@@ -105,6 +134,11 @@ export async function PUT(
             },
           },
         },
+        splits: {
+          select: {
+            userId: true,
+          },
+        },
       },
     });
 
@@ -121,24 +155,43 @@ export async function PUT(
 
     if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        groupId_userId: {
-          groupId: expense.groupId,
-          userId: user.id,
+    let members: { userId: string }[] = [];
+    let memberIds = new Set<string>();
+
+    if (expense.groupId) {
+      const membership = await prisma.groupMember.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: expense.groupId,
+            userId: user.id,
+          },
         },
-      },
-    });
+      });
 
-    if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      if (!membership) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      if (!expense.group) {
+        return NextResponse.json({ message: "Group not found" }, { status: 404 });
+      }
 
-    const members = expense.group.members;
-    const memberIds = new Set(members.map((member) => member.userId));
+      members = expense.group.members;
+      memberIds = new Set(members.map((member) => member.userId));
+    } else {
+      const participantIds = new Set([
+        expense.paidById,
+        ...expense.splits.map((split) => split.userId),
+      ]);
+
+      if (!participantIds.has(user.id)) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+
+      memberIds = participantIds;
+    }
     
     let expenseSplitData: { userId: string, amount: number, expenseId?: string }[] = [];
     const payerUserId = paidById || expense.paidById;
 
-    if (!memberIds.has(payerUserId)) {
+    if (expense.groupId && !memberIds.has(payerUserId)) {
       return NextResponse.json(
         { message: "Payer must be a member of this group" },
         { status: 400 }
@@ -150,7 +203,8 @@ export async function PUT(
       const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
 
       const hasInvalidSplitUser = splits.some(
-        (split) => !split?.userId || !memberIds.has(split.userId)
+        (split) =>
+          !split?.userId || (expense.groupId && !memberIds.has(split.userId))
       );
       if (hasInvalidSplitUser) {
         return NextResponse.json(
@@ -164,13 +218,18 @@ export async function PUT(
          return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
       }
       expenseSplitData = splits;
-    } else {
+    } else if (expense.groupId) {
       // Default behavior
       const splitAmount = parseFloat(amount) / members.length;
       expenseSplitData = members.map((member) => ({
           userId: member.userId,
           amount: splitAmount,
       }));
+    } else {
+      return NextResponse.json(
+        { message: "Splits are required for individual payments" },
+        { status: 400 }
+      );
     }
 
     // Update expense and recreate splits atomically
@@ -213,7 +272,20 @@ export async function PUT(
       return updated;
     });
 
-    await publishGroupEvent(expense.groupId, "EXPENSE_UPDATED");
+    if (expense.groupId) {
+      await publishGroupEvent(expense.groupId, "EXPENSE_UPDATED");
+    } else {
+      const participantIds = new Set([
+        payerUserId,
+        ...expenseSplitData.map((split) => split.userId),
+      ]);
+
+      for (const participantId of participantIds) {
+        if (participantId !== user.id) {
+          await publishUserEvent(participantId, "EXPENSE_UPDATED");
+        }
+      }
+    }
 
     return NextResponse.json(updatedExpense, { status: 200 });
   } catch (error) {
