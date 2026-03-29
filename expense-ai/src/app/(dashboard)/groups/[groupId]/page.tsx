@@ -486,7 +486,7 @@ export default function GroupDetailPage() {
                   }`}
                 >
                   <span>{debt.name}</span>
-                  <span className="opacity-40">?</span>
+                  <span className="opacity-40">|</span>
                   <span className="font-black">
                     {debt.amount > 0
                       ? `+₹${debt.amount.toLocaleString()}`

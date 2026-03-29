@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { Plus, Users, Activity, User, Home, Search, Loader2, UserPlus } from "lucide-react"
@@ -10,8 +10,9 @@ import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
 
 export default function DashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
- const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
+  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activities, setActivities] = useState<any[]>([])
@@ -70,6 +71,17 @@ export default function DashboardPage() {
   }, [fetchGroups])
 
   useEffect(() => {
+    const tab = searchParams.get("tab")
+
+    if (tab === "groups" || tab === "activity" || tab === "people") {
+      setActiveTab(tab)
+      return
+    }
+
+    setActiveTab("groups")
+  }, [searchParams])
+
+  useEffect(() => {
     if (activeTab === "activity") {
       fetchActivities()
     }
@@ -93,6 +105,11 @@ export default function DashboardPage() {
       eventSource.close()
     }
   }, [activeTab, fetchActivities, fetchGroups])
+
+  const navigateToTab = (tab: "groups" | "activity" | "people") => {
+    setActiveTab(tab)
+    router.push(tab === "groups" ? "/dashboard" : `/dashboard?tab=${tab}`)
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
@@ -331,7 +348,7 @@ export default function DashboardPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
         <div className="flex items-center justify-around max-w-2xl mx-auto">
           <button 
-            onClick={() => setActiveTab("groups")}
+            onClick={() => navigateToTab("groups")}
             className={`flex flex-col items-center gap-1 transition-all ${activeTab === "groups" ? "text-primary" : "text-slate-400 opacity-70"}`}
           >
             <div className={`p-2 rounded-xl transition-colors ${activeTab === "groups" ? "bg-primary/10 shadow-inner" : "hover:bg-slate-50"}`}>
@@ -341,7 +358,7 @@ export default function DashboardPage() {
           </button>
           
           <button 
-            onClick={() => setActiveTab("activity")}
+            onClick={() => navigateToTab("activity")}
             className={`flex flex-col items-center gap-1 transition-all ${activeTab === "activity" ? "text-primary" : "text-slate-400 opacity-70"}`}
           >
             <div className={`p-2 rounded-xl transition-colors ${activeTab === "activity" ? "bg-primary/10 shadow-inner" : "hover:bg-slate-50"}`}>
@@ -351,7 +368,7 @@ export default function DashboardPage() {
           </button>
           
           <button 
-            onClick={() => setActiveTab("people")}
+            onClick={() => navigateToTab("people")}
             className={`flex flex-col items-center gap-1 transition-all ${activeTab === "people" ? "text-primary" : "text-slate-400 opacity-70"}`}
           >
             <div className={`p-2 rounded-xl transition-colors ${activeTab === "people" ? "bg-primary/10 shadow-inner" : "hover:bg-slate-50"}`}>
@@ -361,9 +378,10 @@ export default function DashboardPage() {
           </button>
           
           <button 
-            className="flex flex-col items-center gap-1 text-slate-400 opacity-30 cursor-not-allowed"
+            onClick={() => router.push("/me")}
+            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all hover:text-primary"
           >
-            <div className="p-2 rounded-xl">
+            <div className="p-2 rounded-xl hover:bg-slate-50">
                <User className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Me</span>

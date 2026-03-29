@@ -1,0 +1,217 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { signOut, useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Activity, Home, LogOut, Mail, User, Users } from "lucide-react"
+import { Button } from "@/components/ui/Button"
+import { Card } from "@/components/ui/Card"
+
+type GroupSummary = {
+  id: string
+  name: string
+  yourBalance: number
+}
+
+export default function MePage() {
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const [groups, setGroups] = useState<GroupSummary[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+
+    if (status !== "authenticated") {
+      return
+    }
+
+    const loadGroups = async () => {
+      setLoading(true)
+
+      try {
+        const response = await fetch("/api/groups")
+
+        if (response.ok) {
+          const data = await response.json()
+          setGroups(data)
+        }
+      } catch (error) {
+        console.error("Failed to load profile groups", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadGroups()
+  }, [router, status])
+
+  const initials =
+    session?.user?.name
+      ?.split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U"
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] px-6 pb-32 pt-24">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            aria-label="Back to dashboard"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+
+          <Button
+            variant="outline"
+            className="rounded-2xl border-slate-200 bg-white px-5 font-bold text-slate-700"
+            onClick={() => signOut({ callbackUrl: "/welcome" })}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+
+        <Card className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-lg">
+          <div className="bg-primary px-8 py-10 text-white">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-[1.75rem] border border-white/30 bg-white/15 text-2xl font-black shadow-inner">
+                {initials}
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/70">
+                  Profile
+                </p>
+                <h1 className="mt-1 text-3xl font-black">
+                  {session?.user?.name || "No name set"}
+                </h1>
+                <div className="mt-3 flex items-center gap-2 text-sm text-white/85">
+                  <Mail className="h-4 w-4" />
+                  <span>{session?.user?.email || "No email available"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 border-t border-slate-100 px-6 py-6 md:grid-cols-[0.85fr_1.15fr]">
+            <Card className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-none">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                User Details
+              </p>
+
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Name
+                  </p>
+                  <p className="mt-2 text-base font-bold text-slate-900">
+                    {session?.user?.name || "No name set"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Email
+                  </p>
+                  <p className="mt-2 break-all text-base font-bold text-slate-900">
+                    {session?.user?.email || "No email available"}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-none">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                    Active Groups
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-900">{groups.length}</h2>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Users className="h-6 w-6" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {loading ? (
+                  <p className="text-sm font-medium text-slate-400">Loading your groups...</p>
+                ) : groups.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-500">
+                    You are not part of any active groups yet.
+                  </div>
+                ) : (
+                  groups.map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => router.push(`/groups/${group.id}`)}
+                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition-all hover:border-primary/30 hover:bg-white"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{group.name}</p>
+                        <p className="mt-1 text-xs font-medium text-slate-400">
+                          Tap to open group details
+                        </p>
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">
+                        Open
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        </Card>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
+        <div className="flex items-center justify-around max-w-2xl mx-auto">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
+          >
+            <div className="p-2 rounded-xl hover:bg-slate-50">
+              <Home className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Groups</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard?tab=activity")}
+            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
+          >
+            <div className="p-2 rounded-xl hover:bg-slate-50">
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Activity</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/dashboard?tab=people")}
+            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
+          >
+            <div className="p-2 rounded-xl hover:bg-slate-50">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">People</span>
+          </button>
+
+          <button className="flex flex-col items-center gap-1 text-primary transition-all">
+            <div className="p-2 rounded-xl bg-primary/10 shadow-inner">
+              <User className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Me</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
