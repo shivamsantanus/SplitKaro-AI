@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
+    "@supabase/supabase-js": "^2.100.1",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
