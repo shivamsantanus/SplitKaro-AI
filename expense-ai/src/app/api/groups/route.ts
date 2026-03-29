@@ -125,30 +125,8 @@ export async function GET(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        memberships: {
-          include: {
-            group: {
-              include: {
-                members: {
-                  include: {
-                    user: {
-                      select: {
-                        name: true,
-                        email: true,
-                      }
-                    }
-                  }
-                },
-                expenses: {
-                  include: {
-                    splits: true
-                  }
-                }
-              }
-            }
-          }
-        }
+      select: {
+        id: true,
       }
     });
 
@@ -179,14 +157,10 @@ export async function GET(req: Request) {
       },
     });
 
-    if (memberships.length === 0) {
-      return NextResponse.json([]);
-    }
-
     const groupIds = memberships.map((membership) => membership.groupId);
 
     const [members, expensesPaidByMe, expensesOwedByMe, settlements, totalSpentByGroup, paidByMeByGroup, myShareSplits] = await Promise.all([
-      prisma.groupMember.findMany({
+      groupIds.length > 0 ? prisma.groupMember.findMany({
         where: {
           groupId: {
             in: groupIds,
@@ -202,8 +176,8 @@ export async function GET(req: Request) {
             },
           },
         },
-      }),
-      prisma.expense.findMany({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.expense.findMany({
         where: {
           groupId: {
             in: groupIds,
@@ -224,8 +198,8 @@ export async function GET(req: Request) {
             },
           },
         },
-      }),
-      prisma.expenseSplit.findMany({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.expenseSplit.findMany({
         where: {
           userId: user.id,
           expense: {
@@ -246,8 +220,8 @@ export async function GET(req: Request) {
             },
           },
         },
-      }),
-      prisma.settlement.findMany({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.settlement.findMany({
         where: {
           groupId: {
             in: groupIds,
@@ -267,8 +241,8 @@ export async function GET(req: Request) {
           payerId: true,
           receiverId: true,
         },
-      }),
-      prisma.expense.groupBy({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.expense.groupBy({
         by: ["groupId"],
         where: {
           groupId: {
@@ -278,8 +252,8 @@ export async function GET(req: Request) {
         _sum: {
           amount: true,
         },
-      }),
-      prisma.expense.groupBy({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.expense.groupBy({
         by: ["groupId"],
         where: {
           groupId: {
@@ -290,8 +264,8 @@ export async function GET(req: Request) {
         _sum: {
           amount: true,
         },
-      }),
-      prisma.expenseSplit.findMany({
+      }) : Promise.resolve([]),
+      groupIds.length > 0 ? prisma.expenseSplit.findMany({
         where: {
           userId: user.id,
           expense: {
@@ -308,7 +282,7 @@ export async function GET(req: Request) {
             },
           },
         },
-      }),
+      }) : Promise.resolve([]),
     ]);
 
     const membersByGroup = new Map<string, GroupMemberSummary[]>();
@@ -491,7 +465,13 @@ export async function GET(req: Request) {
     soloExpensesPaid.forEach(exp => {
       exp.splits.forEach(split => {
         if (split.userId !== user.id) {
-          if (!soloPairwise[split.userId]) soloPairwise[split.userId] = { userId: split.userId, name: (split as any).user.name || (split as any).user.email, amount: 0 };
+          if (!soloPairwise[split.userId]) {
+            soloPairwise[split.userId] = {
+              userId: split.userId,
+              name: split.user.name || split.user.email,
+              amount: 0,
+            };
+          }
           soloPairwise[split.userId].amount += split.amount;
         }
       });
@@ -499,8 +479,8 @@ export async function GET(req: Request) {
 
     // 2. Solo Expenses Owed by Me
     soloExpensesOwed.forEach(split => {
-      const payerId = (split as any).expense.paidById;
-      const payerName = (split as any).expense.payer.name || (split as any).expense.payer.email;
+      const payerId = split.expense.paidById;
+      const payerName = split.expense.payer.name || split.expense.payer.email;
       if (!soloPairwise[payerId]) soloPairwise[payerId] = { userId: payerId, name: payerName, amount: 0 };
       soloPairwise[payerId].amount -= split.amount;
     });
@@ -508,10 +488,22 @@ export async function GET(req: Request) {
     // 3. Solo Settlements
     soloSettlements.forEach(sett => {
       if (sett.payerId === user.id) {
-        if (!soloPairwise[sett.receiverId]) soloPairwise[sett.receiverId] = { userId: sett.receiverId, name: (sett as any).receiver.name, amount: 0 };
+        if (!soloPairwise[sett.receiverId]) {
+          soloPairwise[sett.receiverId] = {
+            userId: sett.receiverId,
+            name: sett.receiver.name || "Unknown",
+            amount: 0,
+          };
+        }
         soloPairwise[sett.receiverId].amount += sett.amount;
       } else if (sett.receiverId === user.id) {
-        if (!soloPairwise[sett.payerId]) soloPairwise[sett.payerId] = { userId: sett.payerId, name: (sett as any).payer.name, amount: 0 };
+        if (!soloPairwise[sett.payerId]) {
+          soloPairwise[sett.payerId] = {
+            userId: sett.payerId,
+            name: sett.payer.name || "Unknown",
+            amount: 0,
+          };
+        }
         soloPairwise[sett.payerId].amount -= sett.amount;
       }
     });

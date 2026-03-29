@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { publishGroupEvent } from "@/lib/realtime";
+import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 
 export async function POST(
   req: Request,
@@ -44,6 +44,13 @@ export async function POST(
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
 
     const isMember = await prisma.groupMember.findFirst({
       where: {
@@ -88,9 +95,9 @@ export async function POST(
       await tx.activity.create({
         data: {
           type: "MEMBER_ADDED",
-          message: `${currentUser?.name || currentUser?.email} added ${targetUser.name || targetUser.email}`,
+          message: `${currentUser.name || currentUser.email} added ${targetUser.name || targetUser.email}`,
           groupId,
-          userId: currentUser?.id!,
+          userId: currentUser.id,
           metadata: { addedUserEmail: targetUser.email }
         }
       });
@@ -98,6 +105,7 @@ export async function POST(
       return member;
     });
 
+    await publishUserEvent(targetUser.id, "MEMBER_ADDED");
     await publishGroupEvent(groupId, "MEMBER_ADDED");
 
     return NextResponse.json(newMember, { status: 201 });

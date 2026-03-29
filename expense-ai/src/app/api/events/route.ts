@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "User not found" }, { status: 404 });
   }
 
-  const stream = createRealtimeStream(user.id, req.signal);
+  const stream = await createRealtimeStream(user.id, req.signal);
 
   return new Response(stream, {
     headers: {

@@ -31,41 +31,72 @@ export async function GET() {
       },
     });
 
-    if (memberships.length === 0) {
-      return NextResponse.json([]);
-    }
-
     const groupIds = memberships.map((membership) => membership.groupId);
 
-    // Fetch activities for all groups the user is a member of + solo activities
-    const activities = await prisma.activity.findMany({
-      where: {
-        OR: [
-          { groupId: { in: groupIds } },
-          { 
-            groupId: null,
-            OR: [
-              { userId: user.id },
-              // For solo expenses added by OTHERS where you are a participant,
-              // we'd need a way to link activity to participants.
-              // For now, let's fetch solo expenses you are part of and match activities.
-              // Or just fetch all solo activities for now if the privacy risk is low (in this small app).
-              // Better: fetch where user is creator OR metadata contains your ID (if we added it).
-            ]
-          }
-        ]
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: { select: { name: true, email: true } },
-        group: { select: { name: true } },
-      },
-      take: 30, 
+    const [groupActivities, recentSoloActivities] = await Promise.all([
+      groupIds.length > 0
+        ? prisma.activity.findMany({
+            where: {
+              groupId: { in: groupIds },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            include: {
+              user: { select: { name: true, email: true } },
+              group: { select: { name: true } },
+            },
+            take: 30,
+          })
+        : Promise.resolve([]),
+      prisma.activity.findMany({
+        where: {
+          groupId: null,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          user: { select: { name: true, email: true } },
+          group: { select: { name: true } },
+        },
+        take: 50,
+      }),
+    ]);
+
+    const soloActivities = recentSoloActivities.filter((activity) => {
+      if (activity.userId === user.id) {
+        return true;
+      }
+
+      const metadata =
+        activity.metadata && typeof activity.metadata === "object"
+          ? (activity.metadata as {
+              splitUserIds?: unknown;
+              payerId?: unknown;
+              receiverId?: unknown;
+            })
+          : null;
+
+      if (!metadata) {
+        return false;
+      }
+
+      if (Array.isArray(metadata.splitUserIds) && metadata.splitUserIds.includes(user.id)) {
+        return true;
+      }
+
+      return metadata.payerId === user.id || metadata.receiverId === user.id;
     });
 
-    return NextResponse.json(activities);
+    const dedupedActivities = [...groupActivities, ...soloActivities]
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .filter((activity, index, allActivities) => {
+        return allActivities.findIndex((candidate) => candidate.id === activity.id) === index;
+      })
+      .slice(0, 30);
+
+    return NextResponse.json(dedupedActivities);
   } catch (error) {
     console.error("Activities fetch error:", error);
     return NextResponse.json(

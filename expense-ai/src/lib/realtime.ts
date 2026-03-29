@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { createRedisSubscriber, ensureRedis } from "@/lib/redis";
 
 type RealtimeEvent = {
   type: string;
@@ -7,34 +8,53 @@ type RealtimeEvent = {
   timestamp: string;
 };
 
-type Subscriber = {
-  id: string;
-  userId: string;
-  send: (event: RealtimeEvent) => void;
-  close: () => void;
-};
-
-const subscribers = new Map<string, Subscriber>();
-
 function formatSseMessage(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export function createRealtimeStream(userId: string, signal?: AbortSignal) {
+function getUserChannel(userId: string) {
+  return `user:${userId}`;
+}
+
+function getGroupChannel(groupId: string) {
+  return `group:${groupId}`;
+}
+
+export async function createRealtimeStream(userId: string, signal?: AbortSignal) {
   const encoder = new TextEncoder();
-  let subscriberId = "";
+  const [subscriber, memberships] = await Promise.all([
+    createRedisSubscriber(),
+    prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true },
+    }),
+  ]);
+
+  const channels = [
+    getUserChannel(userId),
+    ...memberships.map((membership) => getGroupChannel(membership.groupId)),
+  ];
+  const uniqueChannels = [...new Set(channels)];
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
+      let closed = false;
+
       const safeEnqueue = (payload: string) => {
         try {
           controller.enqueue(encoder.encode(payload));
         } catch {
-          cleanup();
+          void cleanup();
         }
       };
 
       const closeConnection = () => {
+        if (closed) {
+          return;
+        }
+
+        closed = true;
+
         try {
           controller.close();
         } catch {
@@ -42,38 +62,38 @@ export function createRealtimeStream(userId: string, signal?: AbortSignal) {
         }
       };
 
-      subscriberId = crypto.randomUUID();
-
       const heartbeat = setInterval(() => {
         safeEnqueue(formatSseMessage("ping", { timestamp: new Date().toISOString() }));
       }, 15000);
 
-      const cleanup = () => {
+      const cleanup = async () => {
         clearInterval(heartbeat);
-        subscribers.delete(subscriberId);
+        signal?.removeEventListener("abort", abortHandler);
+
+        if (subscriber.isOpen) {
+          await subscriber.unsubscribe(uniqueChannels);
+          await subscriber.quit();
+        }
+
         closeConnection();
-        signal?.removeEventListener("abort", cleanup);
       };
 
-      subscribers.set(subscriberId, {
-        id: subscriberId,
-        userId,
-        send: (event) => {
-          safeEnqueue(formatSseMessage("update", event));
-        },
-        close: cleanup,
+      const abortHandler = () => {
+        void cleanup();
+      };
+
+      await subscriber.subscribe(uniqueChannels, (message) => {
+        safeEnqueue(formatSseMessage("update", JSON.parse(message) as RealtimeEvent));
       });
 
       safeEnqueue(formatSseMessage("connected", { ok: true }));
-      signal?.addEventListener("abort", cleanup);
+      signal?.addEventListener("abort", abortHandler);
     },
-    cancel() {
-      if (!subscriberId) {
-        return;
+    async cancel() {
+      if (subscriber.isOpen) {
+        await subscriber.unsubscribe(uniqueChannels);
+        await subscriber.quit();
       }
-
-      const subscriber = subscribers.get(subscriberId);
-      subscriber?.close();
     },
   });
 
@@ -81,45 +101,21 @@ export function createRealtimeStream(userId: string, signal?: AbortSignal) {
 }
 
 export async function publishUserEvent(userId: string, type: string) {
-  if (subscribers.size === 0) return;
-
   const event: RealtimeEvent = {
     type,
     userId,
     timestamp: new Date().toISOString(),
   };
-
-  for (const subscriber of subscribers.values()) {
-    if (subscriber.userId === userId) {
-      subscriber.send(event);
-    }
-  }
+  const redis = await ensureRedis();
+  await redis.publish(getUserChannel(userId), JSON.stringify(event));
 }
 
 export async function publishGroupEvent(groupId: string, type: string) {
-  if (subscribers.size === 0) {
-    return;
-  }
-
-  const members = await prisma.groupMember.findMany({
-    where: { groupId },
-    select: { userId: true },
-  });
-
-  if (members.length === 0) {
-    return;
-  }
-
-  const memberIds = new Set(members.map((member) => member.userId));
   const event: RealtimeEvent = {
     type,
     groupId,
     timestamp: new Date().toISOString(),
   };
-
-  for (const subscriber of subscribers.values()) {
-    if (memberIds.has(subscriber.userId)) {
-      subscriber.send(event);
-    }
-  }
+  const redis = await ensureRedis();
+  await redis.publish(getGroupChannel(groupId), JSON.stringify(event));
 }

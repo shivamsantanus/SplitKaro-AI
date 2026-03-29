@@ -43,7 +43,6 @@ export async function POST(req: Request) {
 
     const payerUserId = paidById || user.id;
     let memberIds = new Set<string>();
-    let isIndependent = !groupId;
 
     if (groupId) {
       // Check if group exists and user is a member
@@ -128,7 +127,12 @@ export async function POST(req: Request) {
           message: `${user.name || session.user?.email} added "${description}"`,
           groupId: groupId || null,
           userId: user.id,
-          metadata: { amount: parseFloat(amount), description }
+          metadata: {
+            amount: parseFloat(amount),
+            description,
+            splitUserIds: expenseSplitData.map((split) => split.userId),
+            paidById: payerUserId,
+          }
         }
       });
 
@@ -138,6 +142,7 @@ export async function POST(req: Request) {
     if (groupId) {
         await publishGroupEvent(groupId, "EXPENSE_ADDED");
     } else {
+        await publishUserEvent(user.id, "EXPENSE_ADDED");
         // Individual update: broadcast to all split participants
         for (const split of expenseSplitData) {
             if (split.userId !== user.id) {
