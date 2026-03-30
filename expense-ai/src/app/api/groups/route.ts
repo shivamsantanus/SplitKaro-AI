@@ -375,6 +375,8 @@ export async function GET(req: Request) {
       const groupExpenses = expensesByGroup.get(membership.groupId) ?? [];
       const groupSettlements = settlementsByGroup.get(membership.groupId) ?? [];
       const totalSpent = totalSpentMap.get(membership.groupId) ?? 0;
+      const activeMemberIds = new Set(groupMembers.map((member) => member.userId));
+      activeMemberIds.add(user.id);
       
       // Pairwise Debt Calculation
       const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
@@ -391,12 +393,20 @@ export async function GET(req: Request) {
 
       // 1. Add Debts from Expenses
       groupExpenses.forEach(exp => {
-         if (exp.paidById === user.id) {
-            exp.splits.forEach(split => {
-               if (split.userId !== user.id && pairwiseDebts[split.userId]) {
-                  pairwiseDebts[split.userId].amount += split.amount;
-               }
-            });
+         if (!activeMemberIds.has(exp.paidById)) {
+           return;
+         }
+
+          if (exp.paidById === user.id) {
+             exp.splits.forEach(split => {
+                if (
+                  activeMemberIds.has(split.userId) &&
+                  split.userId !== user.id &&
+                  pairwiseDebts[split.userId]
+                ) {
+                   pairwiseDebts[split.userId].amount += split.amount;
+                }
+             });
          } else {
             const mySplit = exp.splits.find(s => s.userId === user.id);
             if (mySplit && pairwiseDebts[exp.paidById]) {
@@ -407,6 +417,10 @@ export async function GET(req: Request) {
 
       // 2. Subtract Settlements (recorded payments)
       groupSettlements.forEach(sett => {
+         if (!activeMemberIds.has(sett.payerId) || !activeMemberIds.has(sett.receiverId)) {
+           return;
+         }
+
          if (sett.payerId === user.id && pairwiseDebts[sett.receiverId]) {
             // I paid them, reduces what I owe them or increases what they owe me
             pairwiseDebts[sett.receiverId].amount += sett.amount;
@@ -418,19 +432,48 @@ export async function GET(req: Request) {
 
       const debtsArray = Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01);
 
-      const paidByMe = paidByMeMap.get(membership.groupId) ?? 0;
+      const myShare = groupExpenses.reduce((sum, expense) => {
+        if (!activeMemberIds.has(expense.paidById)) {
+          return sum;
+        }
 
-      const myShare = myShareMap.get(membership.groupId) ?? 0;
+        return (
+          sum +
+          expense.splits.reduce((splitSum, split) => {
+            if (split.userId === user.id && activeMemberIds.has(split.userId)) {
+              return splitSum + split.amount;
+            }
+
+            return splitSum;
+          }, 0)
+        );
+      }, 0);
+
+      const adjustedPaidByMe = groupExpenses.reduce((sum, expense) => {
+        if (expense.paidById !== user.id) {
+          return sum;
+        }
+
+        const relevantSplitTotal = expense.splits.reduce((splitSum, split) => {
+          if (activeMemberIds.has(split.userId) && split.userId !== user.id) {
+            return splitSum + split.amount;
+          }
+
+          return splitSum;
+        }, 0);
+
+        return sum + relevantSplitTotal;
+      }, 0);
 
       const mySettledPaid = groupSettlements
-        .filter(s => s.payerId === user.id)
+        .filter(s => s.payerId === user.id && activeMemberIds.has(s.receiverId))
         .reduce((sum, s) => sum + s.amount, 0);
 
       const mySettledReceived = groupSettlements
-        .filter(s => s.receiverId === user.id)
+        .filter(s => s.receiverId === user.id && activeMemberIds.has(s.payerId))
         .reduce((sum, s) => sum + s.amount, 0);
 
-      const yourBalance = (paidByMe - myShare) + (mySettledPaid - mySettledReceived);
+      const yourBalance = (adjustedPaidByMe - myShare) + (mySettledPaid - mySettledReceived);
 
       return {
         id: membership.group.id,

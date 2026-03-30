@@ -35,6 +35,8 @@ export async function createRealtimeStream(userId: string, signal?: AbortSignal)
     ...memberships.map((membership) => getGroupChannel(membership.groupId)),
   ];
   const uniqueChannels = [...new Set(channels)];
+  let cleanupPromise: Promise<void> | null = null;
+  let cleanupHandler: (() => Promise<void>) | null = null;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -66,17 +68,35 @@ export async function createRealtimeStream(userId: string, signal?: AbortSignal)
         safeEnqueue(formatSseMessage("ping", { timestamp: new Date().toISOString() }));
       }, 15000);
 
-      const cleanup = async () => {
-        clearInterval(heartbeat);
-        signal?.removeEventListener("abort", abortHandler);
-
-        if (subscriber.isOpen) {
-          await subscriber.unsubscribe(uniqueChannels);
-          await subscriber.quit();
+      const cleanup = () => {
+        if (cleanupPromise) {
+          return cleanupPromise;
         }
 
-        closeConnection();
+        cleanupPromise = (async () => {
+          clearInterval(heartbeat);
+          signal?.removeEventListener("abort", abortHandler);
+
+          if (subscriber.isOpen) {
+            try {
+              await subscriber.unsubscribe(uniqueChannels);
+            } catch (error) {
+              console.error("Realtime unsubscribe error:", error);
+            }
+
+            try {
+              await subscriber.quit();
+            } catch (error) {
+              console.error("Realtime subscriber close error:", error);
+            }
+          }
+
+          closeConnection();
+        })();
+
+        return cleanupPromise;
       };
+      cleanupHandler = cleanup;
 
       const abortHandler = () => {
         void cleanup();
@@ -90,9 +110,8 @@ export async function createRealtimeStream(userId: string, signal?: AbortSignal)
       signal?.addEventListener("abort", abortHandler);
     },
     async cancel() {
-      if (subscriber.isOpen) {
-        await subscriber.unsubscribe(uniqueChannels);
-        await subscriber.quit();
+      if (cleanupHandler) {
+        await cleanupHandler();
       }
     },
   });
@@ -100,10 +119,15 @@ export async function createRealtimeStream(userId: string, signal?: AbortSignal)
   return stream;
 }
 
-export async function publishUserEvent(userId: string, type: string) {
+export async function publishUserEvent(
+  userId: string,
+  type: string,
+  details?: Partial<Omit<RealtimeEvent, "type" | "userId" | "timestamp">>
+) {
   const event: RealtimeEvent = {
     type,
     userId,
+    ...details,
     timestamp: new Date().toISOString(),
   };
   const redis = await ensureRedis();

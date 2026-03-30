@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile, trigger, session }) {
       if (account?.provider === "google" && profile?.email) {
         const email = String(profile.email).toLowerCase();
         const name =
@@ -89,6 +89,11 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.sub = user.id;
       }
+
+      if (trigger === "update" && session?.name) {
+        token.name = session.name;
+      }
+
       return token;
     },
   },

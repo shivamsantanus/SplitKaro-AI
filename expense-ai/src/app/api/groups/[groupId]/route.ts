@@ -234,6 +234,8 @@ export async function GET(
 
     // Single Group Pairwise Debt Calculation
     const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
+    const activeMemberIds = new Set(members.map((member) => member.userId));
+    activeMemberIds.add(user.id);
     
     members.forEach((member) => {
        if (member.userId !== user.id) {
@@ -246,9 +248,17 @@ export async function GET(
     });
 
     expenses.forEach((exp) => {
+       if (!activeMemberIds.has(exp.paidById)) {
+         return;
+       }
+
        if (exp.paidById === user.id) {
           exp.splits.forEach((split) => {
-             if (split.userId !== user.id && pairwiseDebts[split.userId]) {
+             if (
+               activeMemberIds.has(split.userId) &&
+               split.userId !== user.id &&
+               pairwiseDebts[split.userId]
+             ) {
                 pairwiseDebts[split.userId].amount += split.amount;
              }
           });
@@ -262,6 +272,10 @@ export async function GET(
 
     // Subtract/Add Settlements
     settlements.forEach((settlement) => {
+      if (!activeMemberIds.has(settlement.payerId) || !activeMemberIds.has(settlement.receiverId)) {
+        return;
+      }
+
       if (settlement.payerId === user.id) {
         // You paid: reduces what you owe or increases what they owe you
         if (pairwiseDebts[settlement.receiverId]) {
@@ -309,8 +323,24 @@ export async function DELETE(
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) return NextResponse.json({ message: "Group not found" }, { status: 404 });
 
-    if (group.createdById !== user.id) {
-      return NextResponse.json({ message: "Only the group creator can delete this group" }, { status: 403 });
+    const membership = await prisma.groupMember.findUnique({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId: user.id,
+        },
+      },
+      select: {
+        role: true,
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ message: "You are not a member of this group" }, { status: 403 });
+    }
+
+    if (membership.role !== "ADMIN") {
+      return NextResponse.json({ message: "Only group admins can delete this group" }, { status: 403 });
     }
 
     await prisma.group.delete({ where: { id: groupId } });

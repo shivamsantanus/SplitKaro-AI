@@ -2,14 +2,26 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/Button"
-import { Sparkles } from "lucide-react"
+import { Info, Sparkles } from "lucide-react"
 import Image from "next/image"
 
 export default function WelcomePage() {
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[#F8FAFC] flex flex-col">
+      <div className="px-6 pt-6">
+        <div className="max-w-md mx-auto flex justify-end">
+          <Link
+            href="/about"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <Info className="w-4 h-4 text-primary" />
+            About
+          </Link>
+        </div>
+      </div>
+
       {/* Top Section - Illustration */}
-      <div className="flex-1 flex items-center justify-center px-6 pt-12 pb-6">
+      <div className="flex-1 flex items-center justify-center px-6 pt-8 pb-6">
         <div className="w-full max-w-md">
           {/* App Logo Icon */}
           <div className="flex justify-center mb-8">
@@ -49,7 +61,7 @@ export default function WelcomePage() {
       </div>
 
       {/* Bottom Section - CTA */}
-      <div className="px-6 pb-12 space-y-4 max-w-md mx-auto w-full animate-in delay-200">
+      <div className="px-6 pb-10 space-y-4 max-w-md mx-auto w-full animate-in delay-200">
         <Link href="/signup" className="w-full">
           <Button
             className="w-full h-14 rounded-2xl shadow-lg text-base font-semibold"
@@ -68,6 +80,7 @@ export default function WelcomePage() {
           </Link>
         </div>
       </div>
+
     </div>
   )
 }

@@ -23,6 +23,21 @@ import {
 } from "lucide-react"
 
 export default function GroupDetailPage() {
+  type PendingAction =
+    | {
+        kind: "remove-member";
+        memberId: string;
+        title: string;
+        message: string;
+        confirmLabel: string;
+      }
+    | {
+        kind: "leave-group";
+        title: string;
+        message: string;
+        confirmLabel: string;
+      };
+
   const router = useRouter()
   const params = useParams()
   const { data: session } = useSession()
@@ -50,6 +65,8 @@ export default function GroupDetailPage() {
   // Custom Delete Modals
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null)
   const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [notice, setNotice] = useState<{ title: string; message: string } | null>(null)
 
   // Advanced Splitting State
   const [splitMode, setSplitMode] = useState<"equal" | "custom">("equal")
@@ -70,6 +87,12 @@ export default function GroupDetailPage() {
         const data = await response.json()
         setGroup(data)
         setEditGroupName(data.name)
+        return
+      }
+
+      if (response.status === 403 || response.status === 404) {
+        router.push("/dashboard")
+        return
       } else {
         const errorData = await response.json();
         console.error("Failed to fetch group:", errorData.message);
@@ -126,7 +149,10 @@ export default function GroupDetailPage() {
         setShowSettingsModal(false);
         fetchGroupData();
       } else {
-         alert("Failed to update: You might not be the creator.");
+         setNotice({
+           title: "Couldn’t Update Group",
+           message: "You might not have permission to update this group.",
+         })
       }
     } catch (err) {
       console.error("Failed to update group", err);
@@ -146,7 +172,10 @@ export default function GroupDetailPage() {
       if (response.ok) {
         router.push("/dashboard");
       } else {
-        alert("Failed to delete: You might not be the creator.");
+        setNotice({
+          title: "Couldn’t Delete Group",
+          message: "You might not have permission to delete this group.",
+        })
       }
     } catch (err) {
       console.error("Failed to delete group", err);
@@ -165,13 +194,107 @@ export default function GroupDetailPage() {
         body: JSON.stringify({ isArchived: true }),
       });
       if (response.ok) {
-        alert("Group archived successfully!");
         router.push("/dashboard");
+      } else {
+        const data = await response.json()
+        setNotice({
+          title: "Couldn’t Archive Group",
+          message: data.message || "The group could not be archived right now.",
+        })
       }
     } catch (err) {
       console.error("Failed to archive group", err);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  const handlePromoteMember = async (memberId: string) => {
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/groups/${groupId}/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "ADMIN" }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        fetchGroupData()
+      } else {
+        setNotice({
+          title: "Couldn’t Update Role",
+          message: data.message || "The member role could not be updated.",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to promote member", error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/groups/${groupId}/members/${memberId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        fetchGroupData()
+      } else {
+        setNotice({
+          title: "Couldn’t Remove Member",
+          message: data.message || "The member could not be removed.",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to remove member", error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleLeaveGroup = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/groups/${groupId}/leave`, {
+        method: "POST",
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        router.push("/dashboard")
+      } else {
+        setNotice({
+          title: "Couldn’t Leave Group",
+          message: data.message || "You couldn’t leave the group right now.",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to leave group", error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction) {
+      return
+    }
+
+    const action = pendingAction
+    setPendingAction(null)
+
+    if (action.kind === "remove-member") {
+      await handleRemoveMember(action.memberId)
+      return
+    }
+
+    if (action.kind === "leave-group") {
+      await handleLeaveGroup()
     }
   }
 
@@ -405,6 +528,9 @@ export default function GroupDetailPage() {
 
   if (!group) return null
 
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id
+  const currentMembership = group.members.find((member: { userId: string; role: string }) => member.userId === currentUserId)
+  const isGroupAdmin = currentMembership?.role === "ADMIN"
 
   const allTransactions = [
     ...(group.expenses || []).map((expense: any) => ({
@@ -447,23 +573,25 @@ export default function GroupDetailPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowMemberModal(true)}
-              className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Add member"
-              title="Add Member"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
-            <button
-              onClick={() => setShowSettingsModal(true)}
-              className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Group settings"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
-          </div>
+          {!isSoloGroup && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowMemberModal(true)}
+                className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                aria-label="Add member"
+                title="Add Member"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                aria-label="Group settings"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -889,14 +1017,42 @@ export default function GroupDetailPage() {
                              <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5 truncate">
                                    {m.user.name}
-                                   {(session?.user as any)?.id === m.userId && <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase font-black">You</span>}
+                                    {currentUserId === m.userId && <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase font-black">You</span>}
                                 </span>
                                 <span className="text-[10px] text-slate-400 font-medium truncate">{m.user.email}</span>
                              </div>
                           </div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-2 py-1 rounded-lg border border-slate-100 shrink-0">{m.role}</span>
-                       </div>
-                     ))}
+                           <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-2 py-1 rounded-lg border border-slate-100">{m.role}</span>
+                              {isGroupAdmin && currentUserId !== m.userId && m.role !== "ADMIN" && (
+                                <button
+                                  onClick={() => handlePromoteMember(m.userId)}
+                                  className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg bg-primary/10 text-primary border border-primary/20"
+                                  disabled={isSaving}
+                                >
+                                  Make Admin
+                                </button>
+                              )}
+                              {isGroupAdmin && currentUserId !== m.userId && (
+                                <button
+                                  onClick={() =>
+                                    setPendingAction({
+                                      kind: "remove-member",
+                                      memberId: m.userId,
+                                      title: "Remove Member",
+                                      message: "This member can only be removed after all of their balances in this group are settled.",
+                                      confirmLabel: "Remove Member",
+                                    })
+                                  }
+                                  className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg bg-rose-50 text-rose-600 border border-rose-100"
+                                  disabled={isSaving}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                           </div>
+                        </div>
+                      ))}
                   </div>
                   <p className="text-[10px] text-slate-400 mt-3 font-medium px-1">
                     Split will be approximately <span className="text-slate-900 font-bold">₹{(parseFloat(amount || "0") / group.members.length).toFixed(1)}</span> per person.
@@ -925,8 +1081,69 @@ export default function GroupDetailPage() {
               >
                 Delete Entire Group
               </button>
+              <button
+                className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+                onClick={() =>
+                  setPendingAction({
+                    kind: "leave-group",
+                    title: "Leave Group",
+                    message: "You can only leave this group after all your balances are settled.",
+                    confirmLabel: "Leave Group",
+                  })
+                }
+                disabled={isSaving}
+              >
+                Leave Group
+              </button>
             </div>
-         </div>
+          </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!pendingAction}
+        onClose={() => setPendingAction(null)}
+        title={pendingAction?.title || "Confirm Action"}
+      >
+        <div className="space-y-6">
+          <p className="text-sm font-medium text-slate-600 text-center">
+            {pendingAction?.message}
+          </p>
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+              onClick={confirmPendingAction}
+              disabled={isSaving}
+            >
+              {isSaving ? "Working..." : pendingAction?.confirmLabel}
+            </button>
+            <Button
+              variant="outline"
+              className="w-full h-14 rounded-2xl text-base font-black border-slate-200"
+              onClick={() => setPendingAction(null)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!notice}
+        onClose={() => setNotice(null)}
+        title={notice?.title || "Notice"}
+      >
+        <div className="space-y-6">
+          <p className="text-sm font-medium text-slate-600 text-center">
+            {notice?.message}
+          </p>
+          <Button
+            className="w-full h-14 rounded-2xl text-base font-black"
+            onClick={() => setNotice(null)}
+          >
+            OK
+          </Button>
+        </div>
       </Modal>
 
       {/* Delete Group Confirm Modal */}

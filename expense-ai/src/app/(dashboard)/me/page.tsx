@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Activity, Home, LogOut, Mail, User, Users } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
+import { Input } from "@/components/ui/Input"
 
 type GroupSummary = {
   id: string
@@ -15,9 +16,12 @@ type GroupSummary = {
 
 export default function MePage() {
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const [groups, setGroups] = useState<GroupSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [name, setName] = useState("")
+  const [isSavingName, setIsSavingName] = useState(false)
+  const [profileMessage, setProfileMessage] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -48,6 +52,44 @@ export default function MePage() {
 
     loadGroups()
   }, [router, status])
+
+  useEffect(() => {
+    setName(session?.user?.name || "")
+  }, [session?.user?.name])
+
+  const handleSaveName = async () => {
+    if (!name.trim()) {
+      setProfileMessage("Name cannot be empty.")
+      return
+    }
+
+    setIsSavingName(true)
+    setProfileMessage("")
+
+    try {
+      const response = await fetch("/api/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setProfileMessage(data.message || "Could not update your name.")
+        return
+      }
+
+      await update({ name: data.name })
+      setName(data.name || "")
+      setProfileMessage("Your name was updated successfully.")
+    } catch (error) {
+      console.error("Failed to update profile name", error)
+      setProfileMessage("Something went wrong while updating your name.")
+    } finally {
+      setIsSavingName(false)
+    }
+  }
 
   const initials =
     session?.user?.name
@@ -111,9 +153,26 @@ export default function MePage() {
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                     Name
                   </p>
-                  <p className="mt-2 text-base font-bold text-slate-900">
-                    {session?.user?.name || "No name set"}
-                  </p>
+                  <div className="mt-3 space-y-3">
+                    <Input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Enter your name"
+                      className="h-12 rounded-2xl border-slate-200 bg-white font-semibold text-slate-900"
+                    />
+                    <Button
+                      onClick={handleSaveName}
+                      disabled={isSavingName}
+                      className="h-11 rounded-2xl px-5 font-bold"
+                    >
+                      {isSavingName ? "Saving..." : "Save Name"}
+                    </Button>
+                    {profileMessage && (
+                      <p className="text-xs font-semibold text-slate-500">
+                        {profileMessage}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
