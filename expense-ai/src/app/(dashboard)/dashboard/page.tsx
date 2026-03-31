@@ -165,19 +165,19 @@ function DashboardContent() {
         {activeTab === "groups" && (
            <>
             <div className="flex flex-col gap-4 mb-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-lg font-black text-slate-900">Your Groups</h2>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 sm:justify-end">
                   <button 
                     onClick={() => setShowSoloModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all border border-primary/20"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/20"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     Add Individual
                   </button>
                   <button 
                     onClick={() => setShowArchived(!showArchived)}
-                    className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all ${
+                    className={`rounded-xl border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
                         showArchived ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm"
                     }`}
                   >
@@ -228,7 +228,7 @@ function DashboardContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
+                    <div className="mt-auto flex flex-col gap-3 border-t border-slate-50 pt-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center -space-x-2">
                         {group.members.slice(0, 3).map((initial: string, idx: number) => (
                           <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm">{initial}</div>
@@ -238,7 +238,7 @@ function DashboardContent() {
                         )}
                       </div>
 
-                      <p className={`text-sm font-bold ${group.yourBalance > 0 ? "text-primary" : group.yourBalance < 0 ? "text-rose-600" : "text-slate-400"}`}>
+                      <p className={`text-sm font-bold sm:text-right ${group.yourBalance > 0 ? "text-primary" : group.yourBalance < 0 ? "text-rose-600" : "text-slate-400"}`}>
                         {group.yourBalance > 0 ? `You are owed ₹${group.yourBalance.toLocaleString()}` : group.yourBalance < 0 ? `You owe ₹${Math.abs(group.yourBalance).toLocaleString()}` : "Settled up"}
                       </p>
                     </div>
@@ -296,7 +296,7 @@ function DashboardContent() {
               ) : (
                  <div className="grid grid-cols-1 gap-3">
                     {peopleList.map((person) => (
-                       <Card key={person.userId} className="p-4 border-slate-100 rounded-2xl flex items-center justify-between bg-white shadow-sm group">
+                       <Card key={person.userId} className="group flex flex-col gap-4 rounded-2xl border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-3">
                              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-bold group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                 {person.name.substring(0, 2).toUpperCase()}
@@ -306,7 +306,7 @@ function DashboardContent() {
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Global Balance</p>
                              </div>
                           </div>
-                          <div className="text-right flex flex-col items-end gap-2">
+                          <div className="flex flex-col gap-2 sm:items-end sm:text-right">
                              <div>
                                 <p className={`text-lg font-black ${person.amount > 0 ? "text-primary" : "text-rose-600"}`}>
                                    {person.amount > 0 ? `+₹${person.amount.toLocaleString()}` : `-₹${Math.abs(person.amount).toLocaleString()}`}
@@ -320,7 +320,7 @@ function DashboardContent() {
                                    const sharedGroup = groups.find(g => g.debts.some((d:any) => d.userId === person.userId));
                                    if (sharedGroup) router.push(`/groups/${sharedGroup.id}`);
                                 }}
-                                className="px-3 py-1.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-900/10"
+                                className="self-start rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-slate-900/10 transition-all hover:scale-105 active:scale-95 sm:self-end"
                              >
                                 Settle
                              </button>

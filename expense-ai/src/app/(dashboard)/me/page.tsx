@@ -102,7 +102,7 @@ export default function MePage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] px-6 pb-32 pt-24">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => router.push("/dashboard")}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
@@ -113,7 +113,7 @@ export default function MePage() {
 
           <Button
             variant="outline"
-            className="rounded-2xl border-slate-200 bg-white px-5 font-bold text-slate-700"
+            className="rounded-2xl border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 sm:px-5"
             onClick={() => signOut({ callbackUrl: "/welcome" })}
           >
             <LogOut className="mr-2 h-4 w-4" />

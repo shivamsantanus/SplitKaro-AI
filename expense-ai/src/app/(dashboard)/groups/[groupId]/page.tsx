@@ -19,7 +19,10 @@ import {
   ChevronRight,
   Loader2,
   Pencil,
-  Trash2
+  ShieldCheck,
+  Trash2,
+  User,
+  UserMinus
 } from "lucide-react"
 
 export default function GroupDetailPage() {
@@ -1009,28 +1012,38 @@ export default function GroupDetailPage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Group Members ({group.members.length})</label>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                      {group.members.map((m: any) => (
-                       <div key={m.userId} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100/50 hover:bg-slate-100/50 transition-colors">
-                          <div className="flex items-center gap-3">
+                       <div key={m.userId} className="flex flex-col gap-3 rounded-2xl border border-slate-100/50 bg-slate-50 p-3 transition-colors hover:bg-slate-100/50 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                                 {m.user.name?.substring(0, 2).toUpperCase() || "U"}
                              </div>
                              <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                                <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold text-slate-900">
                                    {m.user.name}
                                     {currentUserId === m.userId && <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase font-black">You</span>}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-medium truncate">{m.user.email}</span>
+                                <span className="break-all text-[10px] font-medium text-slate-400">{m.user.email}</span>
                              </div>
                           </div>
-                           <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-2 py-1 rounded-lg border border-slate-100">{m.role}</span>
+                           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                              <span
+                                className={`flex items-center gap-1 rounded-lg border bg-white px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+                                  m.role === "ADMIN" ? "border-primary/15 text-primary" : "border-slate-100 text-slate-400"
+                                }`}
+                                title={m.role === "ADMIN" ? "Admin" : "Member"}
+                              >
+                                {m.role === "ADMIN" ? <ShieldCheck className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
+                                <span className="hidden sm:inline">{m.role}</span>
+                              </span>
                               {isGroupAdmin && currentUserId !== m.userId && m.role !== "ADMIN" && (
                                 <button
                                   onClick={() => handlePromoteMember(m.userId)}
-                                  className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg bg-primary/10 text-primary border border-primary/20"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
                                   disabled={isSaving}
+                                  aria-label={`Make ${m.user.name} an admin`}
+                                  title="Make admin"
                                 >
-                                  Make Admin
+                                  <ShieldCheck className="h-4 w-4" />
                                 </button>
                               )}
                               {isGroupAdmin && currentUserId !== m.userId && (
@@ -1044,19 +1057,18 @@ export default function GroupDetailPage() {
                                       confirmLabel: "Remove Member",
                                     })
                                   }
-                                  className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg bg-rose-50 text-rose-600 border border-rose-100"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                                   disabled={isSaving}
+                                  aria-label={`Remove ${m.user.name} from the group`}
+                                  title="Remove member"
                                 >
-                                  Remove
+                                  <UserMinus className="h-4 w-4" />
                                 </button>
                               )}
                            </div>
                         </div>
                       ))}
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-3 font-medium px-1">
-                    Split will be approximately <span className="text-slate-900 font-bold">₹{(parseFloat(amount || "0") / group.members.length).toFixed(1)}</span> per person.
-                  </p>
                </div>
             </div>
 
