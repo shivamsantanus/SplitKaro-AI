@@ -33,6 +33,7 @@ model Group {
   id          String   @id @default(uuid())
   name        String
   isArchived  Boolean  @default(false)
+  simplifyDebts Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

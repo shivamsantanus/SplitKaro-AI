@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent } from "@/lib/realtime";
+import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
 
 export async function GET(
   req: Request,
@@ -106,6 +107,7 @@ export async function GET(
             id: "solo-transactions",
             name: "Individual Payments",
             isSolo: true,
+            simplifyDebts: false,
             members: Array.from(memberMap.values()),
             expenses: allSoloExpenses,
             settlements: soloSettlements,
@@ -136,6 +138,7 @@ export async function GET(
           id: true,
           name: true,
           isArchived: true,
+          simplifyDebts: true,
           createdAt: true,
           updatedAt: true,
           createdById: true,
@@ -232,64 +235,95 @@ export async function GET(
       );
     }
 
-    // Single Group Pairwise Debt Calculation
-    const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
     const activeMemberIds = new Set(members.map((member) => member.userId));
     activeMemberIds.add(user.id);
-    
-    members.forEach((member) => {
-       if (member.userId !== user.id) {
+    const activeMembers = members
+      .filter((member) => activeMemberIds.has(member.userId))
+      .map((member) => ({
+        userId: member.userId,
+        name: member.user.name || member.user.email,
+      }));
+
+    const relevantExpenses = expenses
+      .filter((expense) => activeMemberIds.has(expense.paidById))
+      .map((expense) => ({
+        paidById: expense.paidById,
+        splits: expense.splits
+          .filter((split) => activeMemberIds.has(split.userId))
+          .map((split) => ({
+            userId: split.userId,
+            amount: split.amount,
+          })),
+      }));
+
+    const relevantSettlements = settlements
+      .filter((settlement) => activeMemberIds.has(settlement.payerId) && activeMemberIds.has(settlement.receiverId))
+      .map((settlement) => ({
+        payerId: settlement.payerId,
+        receiverId: settlement.receiverId,
+        amount: settlement.amount,
+      }));
+
+    let debtsArray: Array<{ userId: string; name: string; amount: number }>;
+
+    if (group.simplifyDebts) {
+      const balances = buildNetBalances(activeMembers, relevantExpenses, relevantSettlements);
+      const transfers = simplifyGroupDebts(balances);
+      debtsArray = getUserDebtSummaries(user.id, activeMembers, transfers);
+    } else {
+      const pairwiseDebts: Record<string, { userId: string; name: string; amount: number }> = {};
+
+      members.forEach((member) => {
+        if (member.userId !== user.id) {
           pairwiseDebts[member.userId] = {
-             userId: member.userId,
-             name: member.user.name || member.user.email,
-             amount: 0
+            userId: member.userId,
+            name: member.user.name || member.user.email,
+            amount: 0,
           };
-       }
-    });
+        }
+      });
 
-    expenses.forEach((exp) => {
-       if (!activeMemberIds.has(exp.paidById)) {
-         return;
-       }
+      expenses.forEach((exp) => {
+        if (!activeMemberIds.has(exp.paidById)) {
+          return;
+        }
 
-       if (exp.paidById === user.id) {
+        if (exp.paidById === user.id) {
           exp.splits.forEach((split) => {
-             if (
-               activeMemberIds.has(split.userId) &&
-               split.userId !== user.id &&
-               pairwiseDebts[split.userId]
-             ) {
-                pairwiseDebts[split.userId].amount += split.amount;
-             }
+            if (
+              activeMemberIds.has(split.userId) &&
+              split.userId !== user.id &&
+              pairwiseDebts[split.userId]
+            ) {
+              pairwiseDebts[split.userId].amount += split.amount;
+            }
           });
-       } else {
+        } else {
           const mySplit = exp.splits.find((split) => split.userId === user.id);
           if (mySplit && pairwiseDebts[exp.paidById]) {
-             pairwiseDebts[exp.paidById].amount -= mySplit.amount;
+            pairwiseDebts[exp.paidById].amount -= mySplit.amount;
           }
-       }
-    });
-
-    // Subtract/Add Settlements
-    settlements.forEach((settlement) => {
-      if (!activeMemberIds.has(settlement.payerId) || !activeMemberIds.has(settlement.receiverId)) {
-        return;
-      }
-
-      if (settlement.payerId === user.id) {
-        // You paid: reduces what you owe or increases what they owe you
-        if (pairwiseDebts[settlement.receiverId]) {
-          pairwiseDebts[settlement.receiverId].amount += settlement.amount;
         }
-      } else if (settlement.receiverId === user.id) {
-        // You were paid: reduces what they owe you or increases what you owe them
-        if (pairwiseDebts[settlement.payerId]) {
-          pairwiseDebts[settlement.payerId].amount -= settlement.amount;
-        }
-      }
-    });
+      });
 
-    const debtsArray = Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01);
+      settlements.forEach((settlement) => {
+        if (!activeMemberIds.has(settlement.payerId) || !activeMemberIds.has(settlement.receiverId)) {
+          return;
+        }
+
+        if (settlement.payerId === user.id) {
+          if (pairwiseDebts[settlement.receiverId]) {
+            pairwiseDebts[settlement.receiverId].amount += settlement.amount;
+          }
+        } else if (settlement.receiverId === user.id) {
+          if (pairwiseDebts[settlement.payerId]) {
+            pairwiseDebts[settlement.payerId].amount -= settlement.amount;
+          }
+        }
+      });
+
+      debtsArray = Object.values(pairwiseDebts).filter((debt) => Math.abs(debt.amount) > 0.01);
+    }
 
     return NextResponse.json({
       ...group,
@@ -360,7 +394,6 @@ export async function PUT(
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const { groupId } = await params;
-    const { name, isArchived } = await req.json();
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
@@ -368,14 +401,33 @@ export async function PUT(
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) return NextResponse.json({ message: "Group not found" }, { status: 404 });
 
-    if (group.createdById !== user.id) {
-       return NextResponse.json({ message: "Only the group creator can edit this group" }, { status: 403 });
+    const membership = await prisma.groupMember.findUnique({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId: user.id,
+        },
+      },
+      select: {
+        role: true,
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ message: "You are not a member of this group" }, { status: 403 });
     }
 
+    if (membership.role !== "ADMIN") {
+      return NextResponse.json({ message: "Only group admins can edit this group" }, { status: 403 });
+    }
+
+    const { name, isArchived, simplifyDebts } = await req.json();
+
     const updatedGroup = await prisma.$transaction(async (tx) => {
-      const updateData: { name?: string; isArchived?: boolean } = {};
+      const updateData: { name?: string; isArchived?: boolean; simplifyDebts?: boolean } = {};
       if (name) updateData.name = name.trim();
       if (typeof isArchived === "boolean") updateData.isArchived = isArchived;
+      if (typeof simplifyDebts === "boolean") updateData.simplifyDebts = simplifyDebts;
 
       const updated = await tx.group.update({
         where: { id: groupId },
@@ -402,6 +454,18 @@ export async function PUT(
             groupId: groupId,
             userId: user.id,
           }
+        });
+      }
+
+      if (typeof simplifyDebts === "boolean" && simplifyDebts !== group.simplifyDebts) {
+        await tx.activity.create({
+          data: {
+            type: "GROUP_SIMPLIFICATION_UPDATED",
+            message: `${user.name || user.email} ${simplifyDebts ? "enabled" : "disabled"} simplified debt view in "${updated.name}"`,
+            groupId,
+            userId: user.id,
+            metadata: { simplifyDebts },
+          },
         });
       }
 

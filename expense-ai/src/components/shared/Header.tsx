@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { Button } from "../ui/Button"
-import { Sparkles, LogOut, User } from "lucide-react"
+import { Sparkles, LogOut } from "lucide-react"
 
 export const Header = () => {
   const pathname = usePathname()
@@ -32,17 +32,14 @@ export const Header = () => {
       <nav className="ml-auto flex items-center gap-4">
         {session ? (
           <>
-            <Link href="/dashboard" className="hidden md:block">
-              <Button variant="ghost" size="sm" className="gap-2 text-slate-500 font-bold">
-                Dashboard
-              </Button>
-            </Link>
-            <div className="h-6 w-[1px] bg-slate-100 mx-2 hidden md:block" />
             <div className="flex items-center gap-3">
-               <div className="hidden sm:flex flex-col items-end mr-1">
-                  <span className="text-xs font-bold text-slate-900 leading-none">{session.user?.name}</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Verified User</span>
-               </div>
+               <Link
+                href="/dashboard"
+                aria-label="Go to dashboard"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+               >
+                {session.user?.name?.substring(0, 2).toUpperCase() || "U"}
+               </Link>
                <Button 
                 variant="outline" 
                 size="sm" 

@@ -64,6 +64,7 @@ export default function GroupDetailPage() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [editGroupName, setEditGroupName] = useState("")
+  const [editSimplifyDebts, setEditSimplifyDebts] = useState(false)
   
   // Custom Delete Modals
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null)
@@ -90,6 +91,7 @@ export default function GroupDetailPage() {
         const data = await response.json()
         setGroup(data)
         setEditGroupName(data.name)
+        setEditSimplifyDebts(Boolean(data.simplifyDebts))
         return
       }
 
@@ -146,7 +148,7 @@ export default function GroupDetailPage() {
       const response = await fetch(`/api/groups/${groupId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editGroupName }),
+        body: JSON.stringify({ name: editGroupName, simplifyDebts: editSimplifyDebts }),
       });
       if (response.ok) {
         setShowSettingsModal(false);
@@ -1006,6 +1008,32 @@ export default function GroupDetailPage() {
                     value={editGroupName}
                     onChange={(e) => setEditGroupName(e.target.value)}
                   />
+               </div>
+
+               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Simplify Payments</p>
+                      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                        Combine circular debts into the minimum transfers. Example: if A owes B and B owes C, the group can show A paying C directly.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditSimplifyDebts((current) => !current)}
+                      className={`relative inline-flex h-8 w-14 shrink-0 rounded-full border transition-colors ${
+                        editSimplifyDebts ? "border-primary bg-primary" : "border-slate-200 bg-white"
+                      }`}
+                      aria-pressed={editSimplifyDebts}
+                      aria-label="Toggle simplified debt view"
+                    >
+                      <span
+                        className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${
+                          editSimplifyDebts ? "translate-x-7" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
                </div>
 
                <div>

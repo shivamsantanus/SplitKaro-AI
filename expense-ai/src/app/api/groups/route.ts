@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
 
 type GroupMemberSummary = {
   groupId: string;
@@ -152,6 +153,7 @@ export async function GET(req: Request) {
           select: {
             id: true,
             name: true,
+            simplifyDebts: true,
           },
         },
       },
@@ -369,6 +371,7 @@ export async function GET(req: Request) {
       yourBalance: number;
       debts: { userId: string; name: string; amount: number }[];
       members: string[];
+      simplifyDebts?: boolean;
       isSolo?: boolean;
     }> = memberships.map((membership) => {
       const groupMembers = membersByGroup.get(membership.groupId) ?? [];
@@ -378,59 +381,89 @@ export async function GET(req: Request) {
       const activeMemberIds = new Set(groupMembers.map((member) => member.userId));
       activeMemberIds.add(user.id);
       
-      // Pairwise Debt Calculation
-      const pairwiseDebts: Record<string, { userId: string, name: string, amount: number }> = {};
-      
-      groupMembers.forEach(member => {
-         if (member.userId !== user.id) {
-            pairwiseDebts[member.userId] = {
-               userId: member.userId,
-               name: member.user.name || member.user.email,
-               amount: 0
-            };
-         }
-      });
+      const activeMembers = groupMembers
+        .filter((member) => activeMemberIds.has(member.userId))
+        .map((member) => ({
+          userId: member.userId,
+          name: member.user.name || member.user.email,
+        }));
 
-      // 1. Add Debts from Expenses
-      groupExpenses.forEach(exp => {
-         if (!activeMemberIds.has(exp.paidById)) {
-           return;
-         }
+      const relevantExpenses = groupExpenses
+        .filter((expense) => activeMemberIds.has(expense.paidById))
+        .map((expense) => ({
+          paidById: expense.paidById,
+          splits: expense.splits
+            .filter((split) => activeMemberIds.has(split.userId))
+            .map((split) => ({
+              userId: split.userId,
+              amount: split.amount,
+            })),
+        }));
+
+      const relevantSettlements = groupSettlements
+        .filter((settlement) => activeMemberIds.has(settlement.payerId) && activeMemberIds.has(settlement.receiverId))
+        .map((settlement) => ({
+          payerId: settlement.payerId,
+          receiverId: settlement.receiverId,
+          amount: settlement.amount,
+        }));
+
+      let debtsArray: { userId: string; name: string; amount: number }[];
+
+      if (membership.group.simplifyDebts) {
+        const balances = buildNetBalances(activeMembers, relevantExpenses, relevantSettlements);
+        const transfers = simplifyGroupDebts(balances);
+        debtsArray = getUserDebtSummaries(user.id, activeMembers, transfers);
+      } else {
+        const pairwiseDebts: Record<string, { userId: string; name: string; amount: number }> = {};
+
+        groupMembers.forEach(member => {
+          if (member.userId !== user.id) {
+            pairwiseDebts[member.userId] = {
+              userId: member.userId,
+              name: member.user.name || member.user.email,
+              amount: 0
+            };
+          }
+        });
+
+        groupExpenses.forEach(exp => {
+          if (!activeMemberIds.has(exp.paidById)) {
+            return;
+          }
 
           if (exp.paidById === user.id) {
-             exp.splits.forEach(split => {
-                if (
-                  activeMemberIds.has(split.userId) &&
-                  split.userId !== user.id &&
-                  pairwiseDebts[split.userId]
-                ) {
-                   pairwiseDebts[split.userId].amount += split.amount;
-                }
-             });
-         } else {
+            exp.splits.forEach(split => {
+              if (
+                activeMemberIds.has(split.userId) &&
+                split.userId !== user.id &&
+                pairwiseDebts[split.userId]
+              ) {
+                pairwiseDebts[split.userId].amount += split.amount;
+              }
+            });
+          } else {
             const mySplit = exp.splits.find(s => s.userId === user.id);
             if (mySplit && pairwiseDebts[exp.paidById]) {
-               pairwiseDebts[exp.paidById].amount -= mySplit.amount;
+              pairwiseDebts[exp.paidById].amount -= mySplit.amount;
             }
-         }
-      });
+          }
+        });
 
-      // 2. Subtract Settlements (recorded payments)
-      groupSettlements.forEach(sett => {
-         if (!activeMemberIds.has(sett.payerId) || !activeMemberIds.has(sett.receiverId)) {
-           return;
-         }
+        groupSettlements.forEach(sett => {
+          if (!activeMemberIds.has(sett.payerId) || !activeMemberIds.has(sett.receiverId)) {
+            return;
+          }
 
-         if (sett.payerId === user.id && pairwiseDebts[sett.receiverId]) {
-            // I paid them, reduces what I owe them or increases what they owe me
+          if (sett.payerId === user.id && pairwiseDebts[sett.receiverId]) {
             pairwiseDebts[sett.receiverId].amount += sett.amount;
-         } else if (sett.receiverId === user.id && pairwiseDebts[sett.payerId]) {
-            // They paid me, reduces what they owe me or increases what I owe them
+          } else if (sett.receiverId === user.id && pairwiseDebts[sett.payerId]) {
             pairwiseDebts[sett.payerId].amount -= sett.amount;
-         }
-      });
+          }
+        });
 
-      const debtsArray = Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01);
+        debtsArray = Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01);
+      }
 
       const myShare = groupExpenses.reduce((sum, expense) => {
         if (!activeMemberIds.has(expense.paidById)) {
@@ -482,6 +515,7 @@ export async function GET(req: Request) {
         yourBalance,
         debts: debtsArray,
         members: groupMembers.map(member => member.user.name?.substring(0, 2).toUpperCase() || "??"),
+        simplifyDebts: membership.group.simplifyDebts,
       };
     });
 
