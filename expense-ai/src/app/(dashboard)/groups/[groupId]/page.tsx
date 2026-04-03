@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/Button"
@@ -11,6 +11,8 @@ import {
   ArrowLeft,
   Settings,
   Send,
+  Mic,
+  MicOff,
   Plus,
   Sparkles,
   Check,
@@ -24,6 +26,33 @@ import {
   User,
   UserMinus
 } from "lucide-react"
+
+type SpeechRecognitionAlternative = {
+  transcript: string;
+};
+
+type SpeechRecognitionResult = {
+  isFinal: boolean;
+  0: SpeechRecognitionAlternative;
+};
+
+type SpeechRecognitionEvent = Event & {
+  results: ArrayLike<SpeechRecognitionResult>;
+};
+
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: Event) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
 export default function GroupDetailPage() {
   type PendingAction =
@@ -82,6 +111,34 @@ export default function GroupDetailPage() {
   const [settlePayerId, setSettlePayerId] = useState("")
   const [settleReceiverId, setSettleReceiverId] = useState("")
   const [settleAmount, setSettleAmount] = useState("")
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
+
+  const applyParsedSuggestion = useCallback((suggestion: {
+    amount: number;
+    description: string;
+    paidByUserId?: string;
+    splitMode?: "equal" | "custom";
+    activeSplitMembers?: string[];
+    customSplits?: Record<string, number>;
+  }) => {
+    setAmount(suggestion.amount.toString())
+    setDescription(suggestion.description)
+    setPaidByUserId(suggestion.paidByUserId || "")
+    setSplitMode(suggestion.splitMode === "custom" ? "custom" : "equal")
+    setActiveSplitMembers(
+      suggestion.activeSplitMembers && suggestion.activeSplitMembers.length > 0
+        ? suggestion.activeSplitMembers
+        : group?.members.map((member: any) => member.userId) || []
+    )
+    setCustomSplits(
+      Object.fromEntries(
+        Object.entries(suggestion.customSplits || {}).map(([userId, splitAmount]) => [userId, splitAmount.toString()])
+      )
+    )
+    setMessage("")
+    setShowExpenseModal(true)
+  }, [group?.members])
 
   const fetchGroupData = useCallback(async () => {
     if (!groupId) return;
@@ -344,35 +401,110 @@ export default function GroupDetailPage() {
     setShowSettleModal(true);
   }
 
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
+  const handleSendMessage = useCallback(async (rawMessage?: string) => {
+    const input = (rawMessage ?? message).trim()
+    if (!input) return;
     setIsParsing(true);
 
     try {
       const response = await fetch(`/api/groups/${groupId}/parse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: input }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.suggestion) {
-        // AI found an expense! Pre-fill the modal
-        setAmount(data.suggestion.amount.toString());
-        setDescription(data.suggestion.description);
-        setPaidByUserId(data.suggestion.paidByUserId);
-        setMessage(""); // Clear chat
-        setShowExpenseModal(true); // Open the pre-filled modal
+        applyParsedSuggestion(data.suggestion);
       } else {
-        // If not an expense, maybe just standard chat (optional)
-        console.log("Not an expense:", data.error || data.message);
+        setNotice({
+          title: "Couldn’t Understand That",
+          message: data.error || data.message || "Try saying the amount, a description, and who should pay what.",
+        })
       }
     } catch (error) {
       console.error("Failed to parse message:", error);
+      setNotice({
+        title: "Voice Parse Failed",
+        message: "We couldn’t turn that into an expense suggestion right now. You can try again or type it manually.",
+      })
     } finally {
       setIsParsing(false);
     }
+  }, [applyParsedSuggestion, groupId, message])
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop()
+    }
+  }, [recognitionRef])
+
+  const handleVoiceInput = () => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const recognitionApi = (window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    }).SpeechRecognition || (window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    }).webkitSpeechRecognition
+
+    if (!recognitionApi) {
+      setNotice({
+        title: "Voice Not Supported",
+        message: "Your browser does not support speech recognition here yet. Please use Chrome or Edge for the mic input.",
+      })
+      return
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop()
+      return
+    }
+
+    const recognition = new recognitionApi()
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.lang = "en-IN"
+
+    recognition.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      recognitionRef.current = null
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+      recognitionRef.current = null
+      setNotice({
+        title: "Mic Error",
+        message: "We couldn’t capture your voice just now. Please allow mic access and try again.",
+      })
+    }
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || "")
+        .join(" ")
+        .trim()
+
+      if (!transcript) {
+        return
+      }
+
+      setMessage(transcript)
+      void handleSendMessage(transcript)
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
   }
 
   const handleAddExpense = async () => {
@@ -762,6 +894,15 @@ export default function GroupDetailPage() {
           >
             <Plus className="w-8 h-8 stroke-[3]" />
           </button>
+          <button
+            onClick={handleVoiceInput}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95 shrink-0 ${
+              isListening ? "bg-rose-500 text-white shadow-rose-500/20" : "bg-white text-primary border border-primary/15"
+            }`}
+            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+          >
+            {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          </button>
           <div className="relative flex-1">
             <Input
               value={message}
@@ -769,12 +910,14 @@ export default function GroupDetailPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage();
               }}
-              placeholder="Ask AI or type 'paid 500 for lunch'..."
+              placeholder={isListening ? "Listening..." : "Type or speak: 'split 500 between 100 for A and 200 for B'"}
               className="h-14 rounded-3xl bg-slate-50 border-0 focus-visible:ring-1 focus-visible:ring-primary/20 pl-6 pr-14 text-slate-700 font-semibold"
-              disabled={isParsing}
+              disabled={isParsing || isListening}
             />
             <button
-              onClick={handleSendMessage}
+              onClick={() => {
+                void handleSendMessage()
+              }}
               className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${message.trim() && !isParsing ? 'bg-primary text-white scale-100 hover:bg-primary-600' : 'text-slate-300 scale-90'}`}
               disabled={!message.trim() || isParsing}
               aria-label="Send message"
