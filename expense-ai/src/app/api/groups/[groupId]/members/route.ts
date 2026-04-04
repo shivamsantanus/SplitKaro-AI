@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { findUserByEmailWithSelect, normalizeEmail } from "@/lib/users";
 
 export async function POST(
   req: Request,
@@ -29,8 +30,13 @@ export async function POST(
     }
 
     // 1. Find the target user to add
-    const targetUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const targetUser = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalizeEmail(email),
+          mode: "insensitive",
+        },
+      },
     });
 
     if (!targetUser) {
@@ -41,8 +47,10 @@ export async function POST(
     }
 
     // 2. Check if the current user is a member of the group (authorization)
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const currentUser = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
     });
 
     if (!currentUser) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { findUserByEmailWithSelect } from "@/lib/users";
 
 export async function PUT(req: Request) {
   try {
@@ -17,8 +18,16 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: "Name is required" }, { status: 400 });
     }
 
+    const currentUser = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
     const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: currentUser.id },
       data: {
         name: name.trim(),
       },

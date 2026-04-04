@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
+import { findUserByEmailWithSelect } from "@/lib/users";
 
 type GroupMemberSummary = {
   groupId: string;
@@ -72,8 +73,10 @@ export async function POST(req: Request) {
     }
 
     // Find the user by email
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
     });
 
     if (!user) {
@@ -124,11 +127,8 @@ export async function GET(req: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-      }
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
     });
 
 

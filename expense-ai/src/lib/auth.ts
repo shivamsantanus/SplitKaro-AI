@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { findUserByEmail, normalizeEmail } from "@/lib/users";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -28,11 +29,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email,
-            },
-          });
+          const user = await findUserByEmail(credentials.email);
 
           if (!user?.password) {
             return null;
@@ -69,16 +66,20 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account, profile, trigger, session }) {
       if (account?.provider === "google" && profile?.email) {
-        const email = String(profile.email).toLowerCase();
+        const email = normalizeEmail(String(profile.email));
         const name =
           typeof profile.name === "string" && profile.name
             ? profile.name
             : email.split("@")[0];
-        const dbUser = await prisma.user.upsert({
-          where: { email },
-          create: { email, name, password: undefined },
-          update: { name },
-        });
+        const existingUser = await findUserByEmail(email);
+        const dbUser = existingUser
+          ? await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { email, name },
+            })
+          : await prisma.user.create({
+              data: { email, name, password: undefined },
+            });
         token.sub = dbUser.id;
         token.id = dbUser.id;
         token.email = dbUser.email;

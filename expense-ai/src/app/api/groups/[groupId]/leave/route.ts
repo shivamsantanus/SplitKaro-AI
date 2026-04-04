@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ensureUserCanExitGroup } from "@/lib/group-membership";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { findUserByEmailWithSelect } from "@/lib/users";
 
 export async function POST(
   req: Request,
@@ -18,13 +19,10 @@ export async function POST(
 
     const { groupId } = await params;
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
     });
 
     if (!user) {

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { findUserByEmail, normalizeEmail } from "@/lib/users";
 
 export async function POST(req: Request) {
   try {
     const { name, email, password } = await req.json();
+    const normalizedEmail = normalizeEmail(email);
 
     // Basic validation
     if (!name || !email || !password) {
@@ -15,11 +17,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+    const existingUser = await findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       return NextResponse.json(
@@ -35,7 +33,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
       },
     });

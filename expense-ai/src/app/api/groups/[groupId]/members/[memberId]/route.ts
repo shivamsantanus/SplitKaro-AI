@@ -4,28 +4,30 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ensureUserCanExitGroup } from "@/lib/group-membership";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { normalizeEmail } from "@/lib/users";
 
 async function getRequestContext(groupId: string, memberId: string, email: string) {
-  const [requester, requesterMembership, targetMembership, adminCount, memberCount] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
+  const requester = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: normalizeEmail(email),
+        mode: "insensitive",
       },
-    }),
-    prisma.user.findUnique({
-      where: { email },
-      select: {
-        memberships: {
-          where: { groupId },
-          select: {
-            role: true,
-          },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      memberships: {
+        where: { groupId },
+        select: {
+          role: true,
         },
       },
-    }),
+    },
+  });
+
+  const [targetMembership, adminCount, memberCount] = await Promise.all([
     prisma.groupMember.findUnique({
       where: {
         groupId_userId: {
@@ -49,7 +51,7 @@ async function getRequestContext(groupId: string, memberId: string, email: strin
 
   return {
     requester,
-    requesterRole: requesterMembership?.memberships[0]?.role,
+    requesterRole: requester?.memberships[0]?.role,
     targetMembership,
     adminCount,
     memberCount,

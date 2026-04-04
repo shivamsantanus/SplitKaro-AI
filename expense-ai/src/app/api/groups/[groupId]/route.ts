@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent } from "@/lib/realtime";
 import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
+import { findUserByEmailWithSelect } from "@/lib/users";
 
 export async function GET(
   req: Request,
@@ -23,11 +24,8 @@ export async function GET(
     const { groupId } = await params;
     console.log("Fetching group with ID:", groupId);
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-      },
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
     });
 
     if (!user) {
@@ -352,7 +350,11 @@ export async function DELETE(
 
     const { groupId } = await params;
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
+    });
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
@@ -396,7 +398,11 @@ export async function PUT(
 
     const { groupId } = await params;
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
+    });
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });

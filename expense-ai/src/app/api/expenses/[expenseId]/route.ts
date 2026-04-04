@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
+import { findUserByEmailWithSelect } from "@/lib/users";
 
 export async function DELETE(
   req: Request,
@@ -33,13 +34,10 @@ export async function DELETE(
 
     if (!expense) return NextResponse.json({ message: "Expense not found" }, { status: 404 });
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
     });
 
     if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -145,13 +143,10 @@ export async function PUT(
 
     if (!expense) return NextResponse.json({ message: "Expense not found" }, { status: 404 });
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
+    const user = await findUserByEmailWithSelect(session.user.email, {
+      id: true,
+      name: true,
+      email: true,
     });
 
     if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
