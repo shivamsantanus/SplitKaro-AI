@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { amount, description, groupId, paidById, splits } = await req.json();
+    const { amount, description, groupId, paidById, splits, category } = await req.json();
 
     if (!amount || !description) {
       return NextResponse.json(
@@ -42,6 +43,9 @@ export async function POST(req: Request) {
     }
 
     const payerUserId = paidById || user.id;
+    const expenseCategory = category
+      ? normalizeExpenseCategory(category)
+      : inferExpenseCategory(description);
     let memberIds = new Set<string>();
 
     if (groupId) {
@@ -107,6 +111,7 @@ export async function POST(req: Request) {
         data: {
           amount: parseFloat(amount),
           description,
+          category: expenseCategory,
           groupId: groupId || null,
           paidById: payerUserId,
         },
@@ -130,6 +135,7 @@ export async function POST(req: Request) {
           metadata: {
             amount: parseFloat(amount),
             description,
+            category: expenseCategory,
             splitUserIds: expenseSplitData.map((split) => split.userId),
             paidById: payerUserId,
           }

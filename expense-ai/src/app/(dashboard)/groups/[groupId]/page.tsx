@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
+import { EXPENSE_CATEGORIES, getExpenseCategoryIconName, getExpenseCategoryLabel, inferExpenseCategory } from "@/lib/expense-categories"
 import {
   ArrowLeft,
   Settings,
@@ -17,14 +18,22 @@ import {
   Sparkles,
   Check,
   UtensilsCrossed,
+  Bus,
   Clock,
   ChevronRight,
   Loader2,
   Pencil,
+  Film,
+  HeartPulse,
+  Home,
+  Receipt,
   ShieldCheck,
+  ShoppingBag,
   Trash2,
+  Briefcase,
   User,
-  UserMinus
+  UserMinus,
+  Wallet
 } from "lucide-react"
 
 type SpeechRecognitionAlternative = {
@@ -53,6 +62,33 @@ type BrowserSpeechRecognition = {
 };
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+function CategoryIcon({ category, className }: { category: string; className?: string }) {
+  const iconName = getExpenseCategoryIconName(category)
+
+  switch (iconName) {
+    case "food":
+      return <UtensilsCrossed className={className} />
+    case "transport":
+      return <Bus className={className} />
+    case "groceries":
+      return <ShoppingBag className={className} />
+    case "entertainment":
+      return <Film className={className} />
+    case "travel":
+      return <Briefcase className={className} />
+    case "rent":
+      return <Home className={className} />
+    case "shopping":
+      return <ShoppingBag className={className} />
+    case "bills":
+      return <Receipt className={className} />
+    case "health":
+      return <HeartPulse className={className} />
+    default:
+      return <Wallet className={className} />
+  }
+}
 
 export default function GroupDetailPage() {
   type PendingAction =
@@ -83,6 +119,7 @@ export default function GroupDetailPage() {
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
+  const [expenseCategory, setExpenseCategory] = useState("OTHER")
   const [targetEmail, setTargetEmail] = useState("")
   const [paidByUserId, setPaidByUserId] = useState("")
   const [isSaving, setIsSaving] = useState(false)
@@ -124,6 +161,7 @@ export default function GroupDetailPage() {
   }) => {
     setAmount(suggestion.amount.toString())
     setDescription(suggestion.description)
+    setExpenseCategory(inferExpenseCategory(suggestion.description))
     setPaidByUserId(suggestion.paidByUserId || "")
     setSplitMode(suggestion.splitMode === "custom" ? "custom" : "equal")
     setActiveSplitMembers(
@@ -544,6 +582,7 @@ export default function GroupDetailPage() {
         body: JSON.stringify({
           amount: parsedAmount,
           description,
+          category: expenseCategory,
           groupId,
           paidById: paidByUserId || undefined,
           splits: splitsToSave,
@@ -553,6 +592,7 @@ export default function GroupDetailPage() {
       if (response.ok) {
         setAmount("")
         setDescription("")
+        setExpenseCategory("OTHER")
         setPaidByUserId("")
         setEditingExpenseId(null)
         setShowExpenseModal(false)
@@ -622,6 +662,7 @@ export default function GroupDetailPage() {
     if (expense) {
       setAmount(expense.amount.toString())
       setDescription(expense.description)
+      setExpenseCategory(expense.category || "OTHER")
       setPaidByUserId(expense.paidById)
       setEditingExpenseId(expense.id)
       
@@ -646,6 +687,7 @@ export default function GroupDetailPage() {
     } else {
       setAmount("")
       setDescription("")
+      setExpenseCategory("OTHER")
       setPaidByUserId("")
       setEditingExpenseId(null)
       setActiveSplitMembers(group?.members.map((m: any) => m.userId) || [])
@@ -682,6 +724,29 @@ export default function GroupDetailPage() {
     (a: any, b: any) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
+
+  const categoryEntries = Object.entries(
+    (group.expenses || []).reduce((acc: Record<string, { total: number; count: number }>, expense: any) => {
+      const category = expense.category || "OTHER"
+      if (!acc[category]) {
+        acc[category] = { total: 0, count: 0 }
+      }
+      acc[category].total += expense.amount
+      acc[category].count += 1
+      return acc
+    }, {})
+  ) as Array<[string, { total: number; count: number }]>
+
+  const categorySummary = categoryEntries
+    .map(([category, summary]) => ({
+      category,
+      label: getExpenseCategoryLabel(category),
+      total: summary.total,
+      count: summary.count,
+    }))
+    .sort((left, right) => right.total - left.total)
+
+  const categoryTotal = categorySummary.reduce((sum, item) => sum + item.total, 0)
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col overflow-x-hidden">
@@ -773,6 +838,71 @@ export default function GroupDetailPage() {
         </div>
       )}
 
+      {categorySummary.length > 0 && (
+        <div className="border-b border-slate-100 bg-white">
+          <div className="mx-auto grid w-full max-w-4xl gap-4 px-6 py-5 md:grid-cols-[0.95fr_1.05fr]">
+            <Card className="rounded-3xl border border-slate-100/80 bg-slate-50/70 p-5 shadow-none">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Where Money Goes</p>
+              <div className="mt-4 space-y-3">
+                {categorySummary.slice(0, 5).map((item) => {
+                  const percentage = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
+                  return (
+                    <div key={item.category} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-2">
+                          <CategoryIcon category={item.category} className="h-4 w-4 text-primary" />
+                          {item.label}
+                        </span>
+                        <span>₹{item.total.toLocaleString()}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-white">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${Math.max(percentage, 6)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+
+            <Card className="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-none">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Top Category</p>
+                  <h3 className="mt-2 flex items-center gap-2 text-xl font-black text-slate-900">
+                    {categorySummary[0] && <CategoryIcon category={categorySummary[0].category} className="h-5 w-5 text-primary" />}
+                    {categorySummary[0]?.label || "Other"}
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    {categorySummary[0]?.count || 0} expense entries
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-primary/10 px-3 py-2 text-right">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">Spent</p>
+                  <p className="mt-1 text-lg font-black text-primary">
+                    ₹{(categorySummary[0]?.total || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {categorySummary.slice(0, 4).map((item) => (
+                  <div key={item.category} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
+                    <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      <CategoryIcon category={item.category} className="h-3.5 w-3.5" />
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-base font-black text-slate-900">₹{item.total.toLocaleString()}</p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-500">{item.count} entries</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {/* Expense/Chat Feed */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full pb-32">
         {allTransactions.length === 0 ? (
@@ -817,12 +947,15 @@ export default function GroupDetailPage() {
                 <div className="flex items-start justify-between relative z-10">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center transition-colors">
-                      <UtensilsCrossed className="w-7 h-7 text-primary" />
+                      <CategoryIcon category={item.category || "OTHER"} className="w-7 h-7 text-primary" />
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">
                         {item.description}
                       </h4>
+                      <div className="mt-1.5 inline-flex items-center rounded-xl border border-primary/10 bg-primary/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary">
+                        {getExpenseCategoryLabel(item.category || "OTHER")}
+                      </div>
                       <p className="text-xl font-bold text-primary mt-1">₹{item.amount.toLocaleString()}</p>
                     </div>
                   </div>
@@ -994,6 +1127,29 @@ export default function GroupDetailPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
+               </div>
+
+               <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Category</label>
+                  <div className="flex flex-wrap gap-2">
+                     {EXPENSE_CATEGORIES.map((category) => {
+                        const isSelected = expenseCategory === category.value
+                        return (
+                           <button
+                              key={category.value}
+                              type="button"
+                              onClick={() => setExpenseCategory(category.value)}
+                              className={`rounded-2xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-all ${
+                                isSelected
+                                  ? "border-primary/20 bg-primary/10 text-primary"
+                                  : "border-slate-100 bg-white text-slate-400 hover:border-slate-200 hover:text-slate-600"
+                              }`}
+                           >
+                              {category.label}
+                           </button>
+                        )
+                     })}
+                  </div>
                </div>
 
                <div>

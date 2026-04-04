@@ -173,6 +173,7 @@ export async function GET(
         select: {
           id: true,
           description: true,
+          category: true,
           amount: true,
           createdAt: true,
           updatedAt: true,

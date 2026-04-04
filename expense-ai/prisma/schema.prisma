@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -69,6 +70,7 @@ model GroupMember {
 model Expense {
   id          String         @id @default(uuid())
   description String
+  category    String         @default("OTHER")
   amount      Float
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

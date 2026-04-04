@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 
 export async function DELETE(
   req: Request,
@@ -113,7 +114,7 @@ export async function PUT(
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const { expenseId } = await params;
-    const { amount, description, paidById, splits } = await req.json();
+    const { amount, description, paidById, splits, category } = await req.json();
 
     if (!amount || !description) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -190,6 +191,9 @@ export async function PUT(
     
     let expenseSplitData: { userId: string, amount: number, expenseId?: string }[] = [];
     const payerUserId = paidById || expense.paidById;
+    const expenseCategory = category
+      ? normalizeExpenseCategory(category)
+      : inferExpenseCategory(description);
 
     if (expense.groupId && !memberIds.has(payerUserId)) {
       return NextResponse.json(
@@ -240,6 +244,7 @@ export async function PUT(
         data: {
           amount: parseFloat(amount),
           description,
+          category: expenseCategory,
           paidById: payerUserId,
         },
       });
@@ -265,7 +270,7 @@ export async function PUT(
           message: `${user.name || user.email} updated "${description}"`,
           groupId: expense.groupId,
           userId: user.id,
-          metadata: { description, amount: parseFloat(amount) }
+          metadata: { description, amount: parseFloat(amount), category: expenseCategory }
         }
       });
 
