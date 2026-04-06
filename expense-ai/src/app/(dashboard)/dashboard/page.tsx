@@ -7,18 +7,48 @@ import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
-import { Plus, Users, Activity, User, Home, Search, Loader2, UserPlus } from "lucide-react"
+import { Plus, Users, Activity, User, Home, Loader2, UserPlus, PieChart, UtensilsCrossed, Bus, ShoppingBasket, Clapperboard, Plane, House, ShoppingBag, Receipt, HeartPulse, Wallet } from "lucide-react"
 import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
+import { getExpenseCategoryIconName } from "@/lib/expense-categories"
+
+function CategoryIcon({ category, className }: { category: string; className?: string }) {
+  const iconName = getExpenseCategoryIconName(category)
+
+  switch (iconName) {
+    case "food":
+      return <UtensilsCrossed className={className} />
+    case "transport":
+      return <Bus className={className} />
+    case "groceries":
+      return <ShoppingBasket className={className} />
+    case "entertainment":
+      return <Clapperboard className={className} />
+    case "travel":
+      return <Plane className={className} />
+    case "rent":
+      return <House className={className} />
+    case "shopping":
+      return <ShoppingBag className={className} />
+    case "bills":
+      return <Receipt className={className} />
+    case "health":
+      return <HeartPulse className={className} />
+    default:
+      return <Wallet className={className} />
+  }
+}
 
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
+  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people" | "spending">("groups")
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activities, setActivities] = useState<any[]>([])
   const [loadingActivities, setLoadingActivities] = useState(false)
+  const [spendingSummary, setSpendingSummary] = useState<any>(null)
+  const [loadingSpendingSummary, setLoadingSpendingSummary] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showSoloModal, setShowSoloModal] = useState(false)
 
@@ -68,6 +98,21 @@ function DashboardContent() {
     }
   }, [])
 
+  const fetchSpendingSummary = useCallback(async () => {
+    setLoadingSpendingSummary(true)
+    try {
+      const response = await fetch("/api/spending-summary")
+      if (response.ok) {
+        const data = await response.json()
+        setSpendingSummary(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch spending summary")
+    } finally {
+      setLoadingSpendingSummary(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchGroups()
   }, [fetchGroups])
@@ -75,7 +120,7 @@ function DashboardContent() {
   useEffect(() => {
     const tab = searchParams.get("tab")
 
-    if (tab === "groups" || tab === "activity" || tab === "people") {
+    if (tab === "groups" || tab === "activity" || tab === "people" || tab === "spending") {
       setActiveTab(tab)
       return
     }
@@ -87,7 +132,10 @@ function DashboardContent() {
     if (activeTab === "activity") {
       fetchActivities()
     }
-  }, [activeTab, fetchActivities])
+    if (activeTab === "spending") {
+      fetchSpendingSummary()
+    }
+  }, [activeTab, fetchActivities, fetchSpendingSummary])
 
   useEffect(() => {
     const eventSource = new EventSource("/api/events")
@@ -98,6 +146,10 @@ function DashboardContent() {
       if (activeTab === "activity") {
         fetchActivities()
       }
+
+      if (activeTab === "spending") {
+        fetchSpendingSummary()
+      }
     }
 
     eventSource.addEventListener("update", handleUpdate)
@@ -106,9 +158,9 @@ function DashboardContent() {
       eventSource.removeEventListener("update", handleUpdate)
       eventSource.close()
     }
-  }, [activeTab, fetchActivities, fetchGroups])
+  }, [activeTab, fetchActivities, fetchGroups, fetchSpendingSummary])
 
-  const navigateToTab = (tab: "groups" | "activity" | "people") => {
+  const navigateToTab = (tab: "groups" | "activity" | "people" | "spending") => {
     setActiveTab(tab)
     router.push(tab === "groups" ? "/dashboard" : `/dashboard?tab=${tab}`)
   }
@@ -131,6 +183,7 @@ function DashboardContent() {
               {activeTab === "groups" && "Your expense groups"}
               {activeTab === "activity" && "Recent group activities"}
               {activeTab === "people" && "People you owe or owe you"}
+              {activeTab === "spending" && "Track what you spend across groups and individual payments"}
             </p>
           </div>
           <div className="w-12 h-12 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center text-white font-bold transition-all hover:scale-105">
@@ -331,6 +384,119 @@ function DashboardContent() {
               )}
            </div>
         )}
+
+        {activeTab === "spending" && (
+           <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-bold text-slate-900">Spending Summary</h2>
+                <button
+                  onClick={fetchSpendingSummary}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all hover:text-slate-700"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loadingSpendingSummary ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" /></div>
+              ) : !spendingSummary || spendingSummary.categories.length === 0 ? (
+                <div className="rounded-3xl border border-slate-100 bg-white px-6 py-16 text-center shadow-sm">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                    <PieChart className="h-8 w-8" />
+                  </div>
+                  <h3 className="font-bold text-slate-900">No spending data yet</h3>
+                  <p className="mt-1 text-sm text-slate-400">Add a group or individual expense to start seeing category insights.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Total Paid</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">₹{spendingSummary.totals.total.toLocaleString()}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-400">{spendingSummary.totals.count} expense entries</p>
+                    </Card>
+                    <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Group Spend</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">₹{spendingSummary.totals.group.toLocaleString()}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-400">Shared group expenses you paid</p>
+                    </Card>
+                    <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Individual Spend</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">₹{spendingSummary.totals.solo.toLocaleString()}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-400">Direct payments to friends</p>
+                    </Card>
+                  </div>
+
+                  <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Top Category</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          {spendingSummary.topCategory && <CategoryIcon category={spendingSummary.topCategory.category} className="h-5 w-5 text-primary" />}
+                          <h3 className="text-lg font-black text-slate-900">{spendingSummary.topCategory?.label ?? "Other"}</h3>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-slate-900">₹{(spendingSummary.topCategory?.total ?? 0).toLocaleString()}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{spendingSummary.topCategory?.count ?? 0} entries</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {spendingSummary.categories.map((item: any) => {
+                        const percentage = spendingSummary.totals.total > 0 ? (item.total / spendingSummary.totals.total) * 100 : 0
+
+                        return (
+                          <div key={item.category} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <CategoryIcon category={item.category} className="h-4 w-4 shrink-0 text-primary" />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-bold text-slate-900">{item.label}</p>
+                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                    Group ₹{item.group.toLocaleString()} • Individual ₹{item.solo.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="shrink-0 text-sm font-black text-slate-900">₹{item.total.toLocaleString()}</p>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(percentage, 100)}%` }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </Card>
+
+                  <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <h3 className="text-lg font-black text-slate-900">Recent Payments</h3>
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Latest 6</p>
+                    </div>
+                    <div className="space-y-3">
+                      {spendingSummary.recentExpenses.map((expense: any) => (
+                        <div key={expense.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+                              <CategoryIcon category={expense.category} className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-slate-900">{expense.description}</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                {expense.group?.name || "Individual Payment"} • {new Date(expense.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="shrink-0 text-sm font-black text-slate-900">₹{expense.amount.toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </>
+              )}
+           </div>
+        )}
       </div>
 
       {/* Floating Action Button - Only on Groups Tab */}
@@ -379,6 +545,16 @@ function DashboardContent() {
             <span className="text-[9px] font-black uppercase tracking-tighter leading-none">People</span>
           </button>
           
+          <button 
+            onClick={() => navigateToTab("spending")}
+            className={`flex flex-col items-center gap-1 transition-all ${activeTab === "spending" ? "text-primary" : "text-slate-400 opacity-70"}`}
+          >
+            <div className={`p-2 rounded-xl transition-colors ${activeTab === "spending" ? "bg-primary/10 shadow-inner" : "hover:bg-slate-50"}`}>
+               <PieChart className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Spend</span>
+          </button>
+
           <button 
             onClick={() => router.push("/me")}
             className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all hover:text-primary"

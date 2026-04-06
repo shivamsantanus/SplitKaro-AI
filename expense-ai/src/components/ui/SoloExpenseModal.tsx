@@ -2,7 +2,8 @@ import { useState, useEffect } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Input } from "./Input"
-import { User, DollarSign, Send, Loader2, Search, Check } from "lucide-react"
+import { User, Loader2, Search, Check } from "lucide-react"
+import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
 
 interface SoloExpenseModalProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
   const [email, setEmail] = useState("")
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
+  const [category, setCategory] = useState("OTHER")
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
   const [friends, setFriends] = useState<any[]>([])
@@ -68,6 +70,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
         body: JSON.stringify({
           amount: parseFloat(amount),
           description,
+          category,
           groupId: null,
           splits: [{ userId: friendId, amount: parseFloat(amount) }]
         })
@@ -76,6 +79,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
       if (res.ok) {
         setAmount("")
         setDescription("")
+        setCategory("OTHER")
         setEmail("")
         setSelectedFriend(null)
         onSuccess()
@@ -172,14 +176,43 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Category</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Description</label>
                 <Input
-                    placeholder="E.g. Coffee"
+                    placeholder="E.g. Coffee, Rent, Uber"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    onBlur={() => {
+                      if (description.trim() && category === "OTHER") {
+                        setCategory(inferExpenseCategory(description))
+                      }
+                    }}
                     className="h-14 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all font-bold text-slate-700"
                 />
               </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Category</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {EXPENSE_CATEGORIES.map((item) => {
+                const isSelected = category === item.value
+
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setCategory(item.value)}
+                    className={`rounded-2xl border px-3 py-3 text-left text-xs font-black transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-slate-100 bg-slate-50 text-slate-500 hover:border-primary/20 hover:text-slate-700"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
