@@ -1,6 +1,6 @@
 # SplitKaro AI
 
-SplitKaro AI is a collaborative expense-splitting app built for groups and direct one-to-one payments. It helps users track shared spending, manage settlements, and stay synced with realtime updates across dashboard and group views.
+SplitKaro AI is a collaborative expense-splitting app built for shared groups and direct one-to-one payments. It helps users track spending, manage settlements, analyze where money goes, and stay synced with realtime updates across dashboard and group views.
 
 ## What The App Supports
 
@@ -20,6 +20,8 @@ SplitKaro AI is a collaborative expense-splitting app built for groups and direc
 - delete a group
 - view group details and balances
 - see active members and roles
+- toggle simplified debt view for a group
+- keep a virtual `Individual Payments` group for solo transactions
 
 ### Group member management
 
@@ -37,20 +39,27 @@ SplitKaro AI is a collaborative expense-splitting app built for groups and direc
 - choose who paid
 - split equally
 - split with custom amounts
+- parse natural-language payment input
+- support voice-to-text expense drafting
 - edit expenses
 - delete expenses
+- categorize expenses
+- infer categories from descriptions when helpful
 - validate that payer and split users belong to the group
 
 ### Individual payments
 
 - add direct friend payments from the dashboard
 - store these as expenses with `groupId: null`
+- categorize direct payments too
 - show direct balances in the People/Friends style overview
+- show solo transactions inside a virtual individual-payments group
 - refresh related dashboards in realtime when a direct payment is added
 
 ### Settlements
 
 - settle balances inside a group
+- settle direct one-to-one balances
 - validate payer and receiver membership
 - update balances after settlement
 
@@ -59,6 +68,7 @@ SplitKaro AI is a collaborative expense-splitting app built for groups and direc
 - activity feed for group activity
 - activity feed support for individual payment flows
 - recent expense and settlement visibility inside groups
+- dashboard spending summary with recent payments and category totals
 
 ### Realtime updates
 
@@ -74,6 +84,7 @@ SplitKaro AI is a collaborative expense-splitting app built for groups and direc
 - mobile-friendly group page
 - compact member-management controls in group settings
 - custom in-app modals instead of browser alerts/confirms
+- icon-first action controls to reduce crowding on mobile
 
 ## Feature Highlights Added In This Workspace
 
@@ -83,13 +94,20 @@ These are the bigger product improvements added on top of the basic expense-shar
 - individual payment flow from dashboard
 - user-level and group-level realtime refresh
 - group admin promotion and role management
+- group simplify-expenses toggle
 - leave-group flow with balance checks
 - remove-member flow with balance checks
 - editable profile name on Me page
 - About page entry flow from welcome page
+- dedicated About page for multiple developers
 - responsive mobile cleanup for dashboard, group settings, and profile screens
 - icon-based member controls for tighter mobile layouts
+- voice-to-text expense drafting
+- natural-language parsing for expenses
+- payment categories with category-aware icons
+- dashboard spending summary tab
 - stronger API validation for group membership in expenses and settlements
+- case-insensitive user/email lookup improvements for hosted environments
 
 ## Main User Flows
 
@@ -104,18 +122,19 @@ These are the bigger product improvements added on top of the basic expense-shar
 ### Add a shared expense
 
 1. Open the group page.
-2. Add amount and description.
+2. Add amount and description, or use voice/natural-language input.
 3. Choose payer.
 4. Pick equal or custom split mode.
-5. Save the expense.
-6. Group balances and dashboard summaries update.
+5. Choose or confirm the category.
+6. Save the expense.
+7. Group balances and dashboard summaries update.
 
 ### Add an individual payment
 
 1. Open dashboard.
 2. Click `Add Individual`.
 3. Pick a friend or search by email.
-4. Add amount and description.
+4. Add amount, description, and category.
 5. Save.
 6. Both users get refreshed data through realtime updates.
 
@@ -134,6 +153,14 @@ These are the bigger product improvements added on top of the basic expense-shar
 3. Backend checks outstanding balances first.
 4. If fully settled, the membership change is applied.
 5. Related screens refresh in realtime.
+
+### Review spending by category
+
+1. Open dashboard.
+2. Go to the `Spend` tab.
+3. See total paid, group spend, and individual spend.
+4. Review category-wise totals and recent payments.
+5. Use this summary to understand where most money is being spent.
 
 ## Project Structure
 
@@ -176,6 +203,7 @@ prisma/
 - `/api/settlements`
 - `/api/activities`
 - `/api/events`
+- `/api/spending-summary`
 - `/api/me`
 - `/api/friends`
 - `/api/users/find`
@@ -231,4 +259,7 @@ If you want to understand the stack and concepts in depth, read:
 - The database is the source of truth for balances and activity.
 - Realtime updates are delivered through Redis-backed Server-Sent Events.
 - Individual payments are modeled as expenses where `groupId` is `null`.
+- Group debt display can be switched between original pairwise balances and simplified transfers.
+- Payment categories are stored in the database for both group and individual expenses.
+- Voice and natural-language inputs are draft helpers; users can still review and edit before saving.
 - Group membership and settlement rules are validated server-side.

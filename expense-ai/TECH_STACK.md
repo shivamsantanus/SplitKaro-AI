@@ -11,6 +11,7 @@ This document explains the technologies, patterns, and concepts used in this wor
 - TypeScript
 - Tailwind CSS 4
 - Lucide React
+- Browser SpeechRecognition API
 
 ### Backend
 
@@ -28,6 +29,7 @@ This document explains the technologies, patterns, and concepts used in this wor
 - PostCSS
 - Autoprefixer
 - Prisma Client generation
+- Prisma migrations for production deploys
 
 ## Technologies Explained
 
@@ -76,6 +78,8 @@ Examples:
 - expense modal state
 - group settings modal
 - realtime re-fetch logic
+- spending summary tab
+- voice-to-text draft flow
 
 ### TypeScript
 
@@ -94,6 +98,7 @@ Examples:
 - API response shaping
 - typed summary objects
 - typed component state
+- typed debt and category summary helpers
 
 ### Tailwind CSS
 
@@ -124,6 +129,23 @@ Examples in this app:
 - `Trash2`
 - `UserMinus`
 - `Activity`
+- `PieChart`
+- category-specific icons for spending analytics
+
+### Browser SpeechRecognition API
+
+This is used for the voice-to-text expense flow in supported browsers.
+
+Concepts:
+
+- microphone permissions
+- secure contexts like `https://` or `localhost`
+- transcript capture
+- converting spoken text into a draft expense
+
+File to study:
+
+- `src/app/(dashboard)/groups/[groupId]/page.tsx`
 
 ### NextAuth.js
 
@@ -173,6 +195,12 @@ Concepts:
 - transactions
 - generated client
 - singleton client pattern
+- migrations vs `db push`
+
+Important note in this project:
+
+- the Prisma client is generated into `src/generated/prisma`
+- production deploys rely on tracked migrations
 
 ### PostgreSQL
 
@@ -235,6 +263,12 @@ Current flow:
 5. SSE forwards `update` events.
 6. Frontend fetches fresh dashboard/group/activity data.
 
+The same event flow is also used to refresh user-level views like:
+
+- direct individual payments
+- dashboard spending summaries
+- virtual solo-transaction group pages
+
 ## Core Product Concepts
 
 ### Authentication vs Authorization
@@ -262,6 +296,11 @@ Split modes:
 - equal
 - custom
 
+This project also supports optional simplified debt display:
+
+- original pairwise view
+- reduced transfer view that minimizes hops between members
+
 ### Individual payments
 
 This app supports solo/direct payments too.
@@ -271,6 +310,65 @@ How it is modeled:
 - save expense with `groupId: null`
 - keep splits pointing to the friend involved
 - include these in dashboard balances and activity
+- expose them through a virtual `Individual Payments` group in the UI
+
+### Expense categorization
+
+Every expense can carry a category.
+
+Used for:
+
+- group-level category summaries
+- individual payment categorization
+- dashboard spending analytics
+- category-based icons and charts
+
+Categories currently include:
+
+- Food
+- Transport
+- Groceries
+- Entertainment
+- Travel
+- Rent
+- Shopping
+- Bills
+- Health
+- Other
+
+Key file:
+
+- `src/lib/expense-categories.ts`
+
+### Voice and natural-language input
+
+The app supports turning user input into expense drafts.
+
+Flow:
+
+1. user speaks or types a natural sentence
+2. parser extracts amount, payer, participants, and splits
+3. modal opens with a draft
+4. user confirms or edits before saving
+
+Key files:
+
+- `src/app/api/groups/[groupId]/parse/route.ts`
+- `src/app/(dashboard)/groups/[groupId]/page.tsx`
+
+### Spending analytics
+
+The dashboard includes a spending summary tab for the current user.
+
+It groups expenses by category and splits them into:
+
+- all paid expenses
+- group expenses
+- individual payments
+
+Key file:
+
+- `src/app/api/spending-summary/route.ts`
 
 ### Realtime synchronization
 
@@ -305,6 +403,8 @@ Important server-side checks in this project include:
 - split users belong to group
 - settlement payer/receiver belong to group
 - member removal or leaving only when balances are settled
+- admin-only group settings changes
+- case-insensitive user lookup by email
 
 ## Database Models
 
@@ -319,6 +419,7 @@ Important server-side checks in this project include:
 - shared expense container
 - archived/active state
 - creator relationship
+- simplify-debt toggle
 
 ### GroupMember
 
@@ -329,6 +430,7 @@ Important server-side checks in this project include:
 
 - main payment record
 - can belong to a group or be an individual payment with `groupId: null`
+- stores a category for analytics and UI display
 
 ### ExpenseSplit
 
@@ -379,6 +481,8 @@ Important server-side checks in this project include:
 - `src/app/api/expenses/route.ts`
 - `src/app/api/expenses/[expenseId]/route.ts`
 - `src/app/api/settlements/route.ts`
+- `src/app/api/spending-summary/route.ts`
+- `src/lib/expense-categories.ts`
 
 ### Dashboard and UI
 
@@ -409,5 +513,7 @@ REDIS_URL=
 6. Learn NextAuth login/session flow.
 7. Learn route handlers and server validation.
 8. Learn split/settlement business logic.
-9. Learn Redis pub/sub and SSE realtime flow.
-10. Learn performance and scaling tradeoffs.
+9. Learn payment categories and analytics summaries.
+10. Learn voice input and parsing flow.
+11. Learn Redis pub/sub and SSE realtime flow.
+12. Learn performance and scaling tradeoffs.
