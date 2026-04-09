@@ -9,7 +9,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -25,6 +24,7 @@ model User {
   memberships         GroupMember[]
   expensesPaid        Expense[]       @relation("ExpensePayer")
   expenseSplits       ExpenseSplit[]
+  personalTransactions PersonalTransaction[]
   settlementsSent     Settlement[]    @relation("SettlementPayer")
   settlementsReceived Settlement[]    @relation("SettlementReceiver")
   activities          Activity[]
@@ -100,6 +100,22 @@ model ExpenseSplit {
 
   @@index([expenseId])
   @@index([userId])
+}
+
+model PersonalTransaction {
+  id              String   @id @default(uuid())
+  description     String
+  category        String   @default("OTHER")
+  amount          Float
+  transactionDate DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId         String
+
+  @@index([ownerId, transactionDate])
+  @@index([ownerId, category])
 }
 
 model Settlement {
