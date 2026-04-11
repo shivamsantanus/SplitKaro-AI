@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
-import { Loader2, Plus, ChevronLeft, ChevronRight, PieChart } from "lucide-react"
+import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
+import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart } from "lucide-react"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -25,6 +26,7 @@ export default function PersonalPage() {
   const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
 
   const fetchSummary = useCallback(async () => {
     setLoading(true)
@@ -55,6 +57,11 @@ export default function PersonalPage() {
       <PersonalTransactionModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
+        onSuccess={fetchSummary}
+      />
+      <VoiceExpenseModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
         onSuccess={fetchSummary}
       />
 
@@ -241,14 +248,21 @@ export default function PersonalPage() {
         )}
       </div>
 
-      {/* FAB */}
-      <div className="fixed bottom-28 right-6 z-40">
+      {/* FABs — voice (primary) + manual (secondary) */}
+      <div className="fixed bottom-28 right-6 z-40 flex flex-col items-center gap-3">
         <Button
           onClick={() => setShowModal(true)}
           size="icon"
-          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+          className="w-12 h-12 rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform bg-white border border-slate-200 text-primary hover:bg-slate-50"
         >
-          <Plus className="w-8 h-8 stroke-[3]" />
+          <Plus className="w-5 h-5 stroke-[3]" />
+        </Button>
+        <Button
+          onClick={() => setShowVoiceModal(true)}
+          size="icon"
+          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/30 hover:scale-105 transition-transform"
+        >
+          <Mic className="w-7 h-7" />
         </Button>
       </div>
 
