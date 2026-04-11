@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { groupSettlementService } from "@/lib/group-settlement-service";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { findUserByEmailWithSelect } from "@/lib/users";
 
@@ -33,37 +34,26 @@ export async function POST(req: Request) {
     }
 
     if (groupId) {
-      const membership = await prisma.groupMember.findUnique({
-        where: {
-          groupId_userId: {
-            groupId,
-            userId: user.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-      }
-
-      const participants = await prisma.groupMember.findMany({
-        where: {
+      try {
+        const settlement = await groupSettlementService.create({
           groupId,
-          userId: {
-            in: [payerId, receiverId],
-          },
-        },
-        select: {
-          userId: true,
-        },
-      });
+          requesterId: user.id,
+          actorName: user.name || "",
+          actorEmail: user.email,
+          amount,
+          payerId,
+          receiverId,
+        });
 
-      const participantIds = new Set(participants.map((participant) => participant.userId));
-      if (!participantIds.has(payerId) || !participantIds.has(receiverId)) {
-        return NextResponse.json(
-          { message: "Payer and receiver must both be members of this group" },
-          { status: 400 }
-        );
+        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
+        return NextResponse.json(settlement, { status: 201 });
+      } catch (error) {
+        if (error instanceof Error) {
+          const status = error.message === "You are not a member of this group" ? 403 : 400;
+          return NextResponse.json({ message: error.message }, { status });
+        }
+
+        throw error;
       }
     }
 
