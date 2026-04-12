@@ -2,6 +2,21 @@
 
 This document explains the technologies, patterns, and concepts used in this workspace so you can study them one by one.
 
+## Architecture Direction
+
+The project is evolving toward two cleaner finance domains:
+
+- `Personal Finance`
+- `Group Finance`
+
+The current stable codebase still contains some mixed direct-payment logic, but the architectural direction is to separate:
+
+- storage models
+- API routes
+- validation rules
+- analytics
+- dashboard experiences
+
 ## Core Stack
 
 ### Frontend
@@ -218,6 +233,12 @@ Important relation examples:
 - one-to-many from `Group` to `Expense`
 - one-to-many from `Expense` to `ExpenseSplit`
 
+Planned direction:
+
+- personal transactions should live in their own domain model
+- group expenses should remain split-aware and group-bound
+- analytics should aggregate per domain before building combined views
+
 ### Redis
 
 Redis is used for realtime fanout.
@@ -302,6 +323,12 @@ This project also supports optional simplified debt display:
 - original pairwise view
 - reduced transfer view that minimizes hops between members
 
+Planned separation:
+
+- group expenses keep split logic
+- group settlements stay group-bound
+- group validations remain isolated from personal-finance rules
+
 ### Individual payments
 
 This app supports solo/direct payments too.
@@ -312,6 +339,11 @@ How it is modeled:
 - keep splits pointing to the friend involved
 - include these in dashboard balances and activity
 - expose them through a virtual `Individual Payments` group in the UI
+
+Architectural note:
+
+- this is the area targeted for refactor because it currently mixes direct/personal concepts with group-oriented structures
+- the long-term direction is to isolate personal-finance logic instead of relying on `groupId: null`
 
 ### Expense categorization
 
@@ -371,11 +403,13 @@ Key file:
 
 - `src/app/api/spending-summary/route.ts`
 
-Current implementation details:
+Next-step direction:
 
-- groups expenses by category with Prisma `groupBy`
-- separates solo spending from group spending in the API layer
-- returns recent expenses for dashboard summary cards
+- personal analytics
+- group analytics
+- combined overview analytics
+
+This keeps reporting accurate while avoiding mixed query logic.
 
 ### Realtime synchronization
 
@@ -413,9 +447,10 @@ Important server-side checks in this project include:
 - admin-only group settings changes
 - case-insensitive user lookup by email
 
-Key supporting file:
+Next-step validation split:
 
-- `src/lib/users.ts`
+- personal entries validate only user ownership and basic fields
+- group entries validate membership, payer, receivers, and splits
 
 ## Database Models
 
@@ -442,6 +477,11 @@ Key supporting file:
 - main payment record
 - can belong to a group or be an individual payment with `groupId: null`
 - stores a category for analytics and UI display
+
+Long-term direction:
+
+- separate personal-transaction modeling
+- preserve group expense semantics without overloading one table for both domains
 
 ### ExpenseSplit
 
@@ -495,7 +535,13 @@ Key supporting file:
 - `src/app/api/settlements/route.ts`
 - `src/app/api/spending-summary/route.ts`
 - `src/lib/expense-categories.ts`
-- `src/lib/users.ts`
+
+Planned next backend shape:
+
+- personal transaction APIs
+- group expense APIs
+- group settlement APIs
+- compatibility wrappers during migration
 
 ### Dashboard and UI
 
@@ -530,3 +576,14 @@ REDIS_URL=
 10. Learn voice input and parsing flow.
 11. Learn Redis pub/sub and SSE realtime flow.
 12. Learn performance and scaling tradeoffs.
+
+## Refactor Study Order
+
+If you want to learn the next architectural step, study in this order:
+
+1. current `Expense` + `ExpenseSplit` + `Settlement` flow
+2. where `groupId: null` is currently used
+3. personal-only transaction requirements
+4. group-only validation requirements
+5. analytics split: personal, group, combined
+6. API migration strategy with backward compatibility

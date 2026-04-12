@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { groupExpenseService } from "@/lib/group-expense-service";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 import { findUserByEmailWithSelect } from "@/lib/users";
@@ -40,67 +41,48 @@ export async function POST(req: Request) {
       );
     }
 
+    if (groupId) {
+      try {
+        const expense = await groupExpenseService.create({
+          groupId,
+          requesterId: user.id,
+          actorName: user.name || "",
+          actorEmail: user.email,
+          amount,
+          description,
+          paidById,
+          splits,
+          category,
+        });
+
+        await publishGroupEvent(groupId, "EXPENSE_ADDED");
+        return NextResponse.json(expense, { status: 201 });
+      } catch (error) {
+        if (error instanceof Error) {
+          const status = error.message === "You are not a member of this group" ? 403 : 400;
+          return NextResponse.json({ message: error.message }, { status });
+        }
+
+        throw error;
+      }
+    }
+
     const payerUserId = paidById || user.id;
     const expenseCategory = category
       ? normalizeExpenseCategory(category)
       : inferExpenseCategory(description);
-    let memberIds = new Set<string>();
-
-    if (groupId) {
-      // Check if group exists and user is a member
-      const membership = await prisma.groupMember.findUnique({
-        where: {
-          groupId_userId: {
-            groupId,
-            userId: user.id,
-          },
-        },
-      });
-
-      if (!membership) {
-        return NextResponse.json(
-          { message: "You are not a member of this group" },
-          { status: 403 }
-        );
-      }
-
-      // Get all members of the group
-      const members = await prisma.groupMember.findMany({
-        where: { groupId },
-        select: { userId: true },
-      });
-      memberIds = new Set(members.map((m) => m.userId));
-
-      if (!memberIds.has(payerUserId)) {
-        return NextResponse.json({ message: "Payer must be a member of this group" }, { status: 400 });
-      }
-    }
-
     let expenseSplitData: { userId: string, amount: number }[] = [];
 
     if (splits && Array.isArray(splits) && splits.length > 0) {
-      // Validate Custom Splits
       const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
 
-      if (groupId) {
-          const hasInvalidSplitUser = splits.some((split) => !split?.userId || !memberIds.has(split.userId));
-          if (hasInvalidSplitUser) {
-            return NextResponse.json({ message: "All split users must be members of this group" }, { status: 400 });
-          }
-      }
-      
       if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
          return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
       }
       
       expenseSplitData = splits;
-    } else if (groupId) {
-      // Default: equal among group members
-      const members = await prisma.groupMember.findMany({ where: { groupId }, select: { userId: true } });
-      const splitAmount = parseFloat(amount) / members.length;
-      expenseSplitData = members.map((m) => ({ userId: m.userId, amount: splitAmount }));
     } else {
-        return NextResponse.json({ message: "Splits are required for individual payments" }, { status:400 });
+      return NextResponse.json({ message: "Splits are required for individual payments" }, { status:400 });
     }
 
     // Create the expense and splits in a transaction

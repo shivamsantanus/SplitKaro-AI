@@ -2,6 +2,15 @@
 
 SplitKaro AI is a collaborative expense-splitting app built for shared groups and direct one-to-one payments. It helps users track spending, manage settlements, analyze where money goes, and stay synced with realtime updates across dashboard and group views.
 
+## Current Direction
+
+The codebase is moving toward a cleaner finance-domain split:
+
+- `Personal Finance`
+- `Group Finance`
+
+The current stable app still supports the legacy direct-payment flow, but the refactor direction is to separate domain logic, APIs, analytics, and dashboard experiences so personal tracking no longer depends on group-style modeling.
+
 ## What The App Supports
 
 ### Authentication and access
@@ -216,6 +225,39 @@ prisma/
 - `/api/friends`
 - `/api/users/find`
 
+## Refactor Roadmap
+
+This is the backend/frontend separation direction for the next architecture pass.
+
+### Personal finance target
+
+- dedicated personal transactions
+- personal-only summaries and monthly analytics
+- separate dashboard route under `/dashboard/personal`
+- no split logic for personal entries
+
+### Group finance target
+
+- dedicated group expense endpoints
+- dedicated group settlement endpoints
+- group-only validation for membership, splits, and balances
+- separate dashboard route under `/dashboard/groups`
+
+### Unified overview target
+
+- combined dashboard overview remains available
+- total personal spending
+- total group spending
+- recent activity in one place
+- internal logic stays separated even if overview UI is combined
+
+### Migration approach
+
+- keep current UI stable while backend paths are separated
+- add new domain-first APIs before removing legacy mixed routes
+- move analytics next
+- split dashboard routes after backend contracts are stable
+
 ## Environment Variables
 
 Set these before running the app.
@@ -271,5 +313,4 @@ If you want to understand the stack and concepts in depth, read:
 - Payment categories are stored in the database for both group and individual expenses.
 - Voice and natural-language inputs are draft helpers; users can still review and edit before saving.
 - Group membership and settlement rules are validated server-side.
-- Prisma Client is generated into `src/generated/prisma` instead of relying on the default package output.
-- Spending summaries are built from category aggregations plus recent-expense reads, not hardcoded dashboard math.
+- The next structural improvement is clean domain separation between personal finance and group finance.
