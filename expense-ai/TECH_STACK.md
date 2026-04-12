@@ -201,6 +201,7 @@ Important note in this project:
 
 - the Prisma client is generated into `src/generated/prisma`
 - production deploys rely on tracked migrations
+- analytics endpoints use Prisma `groupBy` and `aggregate`
 
 ### PostgreSQL
 
@@ -370,6 +371,12 @@ Key file:
 
 - `src/app/api/spending-summary/route.ts`
 
+Current implementation details:
+
+- groups expenses by category with Prisma `groupBy`
+- separates solo spending from group spending in the API layer
+- returns recent expenses for dashboard summary cards
+
 ### Realtime synchronization
 
 Realtime does not directly mutate all UI state blindly.
@@ -405,6 +412,10 @@ Important server-side checks in this project include:
 - member removal or leaving only when balances are settled
 - admin-only group settings changes
 - case-insensitive user lookup by email
+
+Key supporting file:
+
+- `src/lib/users.ts`
 
 ## Database Models
 
@@ -461,6 +472,7 @@ Important server-side checks in this project include:
 
 - `prisma/schema.prisma`
 - `src/lib/prisma.ts`
+- `src/generated/prisma`
 
 ### Realtime
 
@@ -483,6 +495,7 @@ Important server-side checks in this project include:
 - `src/app/api/settlements/route.ts`
 - `src/app/api/spending-summary/route.ts`
 - `src/lib/expense-categories.ts`
+- `src/lib/users.ts`
 
 ### Dashboard and UI
 

@@ -70,6 +70,13 @@ SplitKaro AI is a collaborative expense-splitting app built for shared groups an
 - recent expense and settlement visibility inside groups
 - dashboard spending summary with recent payments and category totals
 
+### Backend safeguards
+
+- case-insensitive user lookup for session-linked APIs
+- server-side validation for group payer and split membership
+- server-side validation for group settlement participants
+- Prisma-backed aggregation for spending summary data
+
 ### Realtime updates
 
 - dashboard listens for updates
@@ -195,6 +202,7 @@ prisma/
 - `/api/auth/signup`
 - `/api/groups`
 - `/api/groups/[groupId]`
+- `/api/groups/[groupId]/parse`
 - `/api/groups/[groupId]/members`
 - `/api/groups/[groupId]/members/[memberId]`
 - `/api/groups/[groupId]/leave`
@@ -263,3 +271,5 @@ If you want to understand the stack and concepts in depth, read:
 - Payment categories are stored in the database for both group and individual expenses.
 - Voice and natural-language inputs are draft helpers; users can still review and edit before saving.
 - Group membership and settlement rules are validated server-side.
+- Prisma Client is generated into `src/generated/prisma` instead of relying on the default package output.
+- Spending summaries are built from category aggregations plus recent-expense reads, not hardcoded dashboard math.
