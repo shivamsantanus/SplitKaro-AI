@@ -1,6 +1,6 @@
 # SplitKaro AI
 
-SplitKaro AI is a collaborative expense-splitting app built for shared groups and direct one-to-one payments. It helps users track spending, manage settlements, analyze where money goes, and stay synced with realtime updates across dashboard and group views.
+SplitKaro AI is a collaborative expense-splitting app built for shared groups and direct one-to-one payments. It helps users track spending, manage settlements, analyze where money goes, and stay synced with realtime updates across dashboard and group views. Can track personal expenses too.
 
 ## Current Direction
 
