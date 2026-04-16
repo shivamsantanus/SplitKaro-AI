@@ -9,6 +9,7 @@ export const groupAnalyticsService = {
       categoryBreakdown,
       topGroupsRaw,
       recentExpenses,
+      recentSettlements,
     ] = await Promise.all([
       // Total I paid across all group expenses
       prisma.expense.aggregate({
@@ -62,6 +63,22 @@ export const groupAnalyticsService = {
           payer: { select: { id: true, name: true } },
         },
       }),
+      prisma.settlement.findMany({
+        where: {
+          groupId: { not: null },
+          OR: [{ payerId: userId }, { receiverId: userId }],
+        },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          amount: true,
+          createdAt: true,
+          group: { select: { id: true, name: true } },
+          payer: { select: { id: true, name: true, email: true } },
+          receiver: { select: { id: true, name: true, email: true } },
+        },
+      }),
     ]);
 
     // Resolve group names for topGroups (groupBy only returns the id)
@@ -108,6 +125,32 @@ export const groupAnalyticsService = {
         expenseCount: entry._count._all,
       })),
       recentExpenses,
+      recentActivity: [...recentExpenses, ...recentSettlements]
+        .map((entry) => {
+          if ("description" in entry) {
+            return {
+              id: entry.id,
+              type: "EXPENSE" as const,
+              description: entry.description,
+              amount: entry.amount,
+              category: entry.category,
+              createdAt: entry.createdAt,
+              group: entry.group,
+              payer: entry.payer,
+            };
+          }
+
+          return {
+            id: entry.id,
+            type: "SETTLEMENT" as const,
+            amount: entry.amount,
+            createdAt: entry.createdAt,
+            group: entry.group,
+            payer: entry.payer,
+            receiver: entry.receiver,
+          };
+        })
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
     };
   },
 };

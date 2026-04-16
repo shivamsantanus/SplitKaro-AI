@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input"
 import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
 import { EXPENSE_CATEGORIES, getExpenseCategoryIconName, getExpenseCategoryLabel, inferExpenseCategory } from "@/lib/expense-categories"
+import { formatCurrency } from "@/lib/currency"
 import {
   ArrowLeft,
   Settings,
@@ -149,6 +150,7 @@ export default function GroupDetailPage() {
   const [settleReceiverId, setSettleReceiverId] = useState("")
   const [settleAmount, setSettleAmount] = useState("")
   const [isListening, setIsListening] = useState(false)
+  const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null)
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
 
   const applyParsedSuggestion = useCallback((suggestion: {
@@ -799,32 +801,31 @@ export default function GroupDetailPage() {
 
       {/* Local Group Balance Summary */}
       {group.debts && group.debts.length > 0 && (
-        <div className="bg-white border-b border-slate-100 flex items-center shrink-0 z-0">
-          <div className="px-6 py-3 flex gap-2 items-center overflow-x-auto whitespace-nowrap hide-scrollbar max-w-4xl mx-auto w-full">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2 shrink-0">
-              Balances:
+        <div className="bg-white border-b border-slate-100 shrink-0 z-0">
+          <div className="px-4 py-2 flex gap-2 items-center overflow-x-auto flex-nowrap hide-scrollbar max-w-4xl mx-auto w-full">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+              Balances
             </span>
             {group.debts
               .filter((debt: any) => Math.abs(debt.amount) > 0.01)
               .map((debt: any) => (
                 <div
                   key={debt.userId}
-                  className={`inline-flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-xl border text-[11px] font-bold shrink-0 shadow-sm ${
+                  className={`inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-xl border text-[10px] font-bold shrink-0 ${
                     debt.amount > 0
                       ? "bg-emerald-50 border-emerald-100 text-emerald-600"
                       : "bg-rose-50 border-rose-100 text-rose-600"
                   }`}
                 >
-                  <span>{debt.name}</span>
-                  <span className="opacity-40">|</span>
-                  <span className="font-black">
+                  <span className="font-black">{debt.name}</span>
+                  <span className="opacity-50">
                     {debt.amount > 0
-                      ? `+₹${debt.amount.toLocaleString()}`
-                      : `-₹${Math.abs(debt.amount).toLocaleString()}`}
+                      ? `+${formatCurrency(debt.amount)}`
+                      : `-${formatCurrency(Math.abs(debt.amount))}`}
                   </span>
                   <button
                     onClick={() => openSettleModal(debt)}
-                    className={`ml-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${
+                    className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${
                       debt.amount > 0
                         ? "bg-emerald-600 text-white"
                         : "bg-rose-600 text-white"
@@ -840,71 +841,45 @@ export default function GroupDetailPage() {
 
       {categorySummary.length > 0 && (
         <div className="border-b border-slate-100 bg-white">
-          <div className="mx-auto grid w-full max-w-4xl gap-4 px-6 py-5 md:grid-cols-[0.95fr_1.05fr]">
-            <Card className="rounded-3xl border border-slate-100/80 bg-slate-50/70 p-5 shadow-none">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Where Money Goes</p>
-              <div className="mt-4 space-y-3">
-                {categorySummary.slice(0, 5).map((item) => {
-                  const percentage = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
-                  return (
-                    <div key={item.category} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700">
-                        <span className="flex items-center gap-2">
-                          <CategoryIcon category={item.category} className="h-4 w-4 text-primary" />
-                          {item.label}
-                        </span>
-                        <span>₹{item.total.toLocaleString()}</span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-white">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.max(percentage, 6)}%` }}
-                        />
-                      </div>
+          <div className="mx-auto w-full max-w-4xl px-6 py-1.5">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Spending</p>
+              {categorySummary[0] && (
+                <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-xl">
+                  <CategoryIcon category={categorySummary[0].category} className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-black text-primary">{categorySummary[0].label}</span>
+                  <span className="text-[10px] font-bold text-primary/60">{formatCurrency(categorySummary[0].total)}</span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              {categorySummary.slice(0, 5).map((item) => {
+                const pct = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
+                return (
+                  <div key={item.category} className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 w-24 shrink-0">
+                      <CategoryIcon category={item.category} className="h-3 w-3 text-primary shrink-0" />
+                      <span className="text-[10px] font-bold text-slate-500 truncate">{item.label}</span>
                     </div>
-                  )
-                })}
-              </div>
-            </Card>
-
-            <Card className="rounded-3xl border border-slate-100/80 bg-white p-5 shadow-none">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Top Category</p>
-                  <h3 className="mt-2 flex items-center gap-2 text-xl font-black text-slate-900">
-                    {categorySummary[0] && <CategoryIcon category={categorySummary[0].category} className="h-5 w-5 text-primary" />}
-                    {categorySummary[0]?.label || "Other"}
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-slate-500">
-                    {categorySummary[0]?.count || 0} expense entries
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-primary/10 px-3 py-2 text-right">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">Spent</p>
-                  <p className="mt-1 text-lg font-black text-primary">
-                    ₹{(categorySummary[0]?.total || 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {categorySummary.slice(0, 4).map((item) => (
-                  <div key={item.category} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
-                    <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                      <CategoryIcon category={item.category} className="h-3.5 w-3.5" />
-                      {item.label}
-                    </p>
-                    <p className="mt-1 text-base font-black text-slate-900">₹{item.total.toLocaleString()}</p>
-                    <p className="mt-1 text-[11px] font-medium text-slate-500">{item.count} entries</p>
+                    <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${Math.max(pct, 3)}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-600 w-14 text-right shrink-0">
+                      {formatCurrency(item.total)}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </Card>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* Expense/Chat Feed */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 max-w-4xl mx-auto w-full pb-32">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 max-w-4xl mx-auto w-full pb-24">
         {allTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
             <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
@@ -917,21 +892,20 @@ export default function GroupDetailPage() {
           allTransactions.map((item: any) => {
             if (item.isSettlement) {
               return (
-                <div key={item.id} className="flex flex-col items-center py-4 relative">
-                  <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-slate-100 z-0" />
-                  <div className="bg-white border-2 border-slate-100 rounded-2xl px-5 py-2.5 shadow-sm text-[11px] font-bold text-slate-600 flex items-center gap-3 relative z-10 hover:border-emerald-200 transition-colors">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                      <Check className="w-3.5 h-3.5 text-white stroke-[4]" />
+                <div key={item.id} className="flex justify-center">
+                  <div className="bg-white border border-slate-100 rounded-xl px-4 py-1.5 shadow-sm text-[11px] font-bold text-slate-600 flex items-center gap-2 hover:border-emerald-200 transition-colors">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm shadow-emerald-500/30">
+                      <Check className="w-2.5 h-2.5 text-white stroke-[4]" />
                     </div>
                     <span>
                       <span className="text-slate-900 font-black">{item.payer.name}</span>
-                      <span className="mx-1.5 opacity-60">paid</span>
+                      <span className="mx-1 opacity-50">paid</span>
                       <span className="text-slate-900 font-black">{item.receiver.name}</span>
                     </span>
-                    <span className="text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50">
-                      ₹{item.amount.toLocaleString()}
+                    <span className="text-emerald-600 font-black bg-emerald-50 px-1.5 py-0.5 rounded-lg border border-emerald-100/50">
+                      {formatCurrency(item.amount)}
                     </span>
-                    <span className="text-[9px] text-slate-400 opacity-60 ml-2 font-medium">
+                    <span className="text-[9px] text-slate-300 font-medium">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -939,102 +913,143 @@ export default function GroupDetailPage() {
               )
             }
 
-            return (
-              <Card
-                key={item.id}
-                className="p-5 rounded-3xl bg-white shadow-sm border border-slate-100/50 hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 relative group"
-              >
-                <div className="flex items-start justify-between relative z-10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center transition-colors">
-                      <CategoryIcon category={item.category || "OTHER"} className="w-7 h-7 text-primary" />
+            {
+              const userSplit = item.splits.find((s: any) => s.userId === currentUserId)
+              const userShare = userSplit?.amount ?? 0
+              const userPaid = currentUserId === item.paidById
+              const userInvolved = userPaid || userShare > 0
+              const netLent = item.amount - userShare
+              const isExpanded = expandedExpenseId === item.id
+
+              return (
+                <Card
+                  key={item.id}
+                  className="rounded-2xl bg-white shadow-sm border border-slate-100/80 hover:shadow-md transition-all group overflow-hidden"
+                >
+                  {/* Main row */}
+                  <div
+                    className="flex items-center gap-3 px-3 py-3 cursor-pointer"
+                    onClick={() => setExpandedExpenseId(isExpanded ? null : item.id)}
+                  >
+                    {/* Category icon — tinted by user's relationship to this expense */}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      !userInvolved ? "bg-slate-100" : userPaid ? "bg-emerald-50" : "bg-orange-50"
+                    }`}>
+                      <CategoryIcon category={item.category || "OTHER"} className={`w-4 h-4 ${
+                        !userInvolved ? "text-slate-400" : userPaid ? "text-emerald-500" : "text-orange-400"
+                      }`} />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">
+
+                    {/* Description + secondary meta */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 text-base leading-tight truncate">
                         {item.description}
-                      </h4>
-                      <div className="mt-1.5 inline-flex items-center rounded-xl border border-primary/10 bg-primary/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary">
-                        {getExpenseCategoryLabel(item.category || "OTHER")}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-xs text-slate-400">
+                          {userPaid ? "You paid" : `Paid by ${item.payer.name}`}
+                        </span>
+                        <span className="text-xs text-slate-200">•</span>
+                        <span className="text-xs text-slate-400">
+                          Total {formatCurrency(item.amount)}
+                        </span>
                       </div>
-                      <p className="text-xl font-bold text-primary mt-1">₹{item.amount.toLocaleString()}</p>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        aria-label="Edit expense"
-                        onClick={() => openExpenseModal(item)}
-                        className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        aria-label="Delete expense"
-                        onClick={() => handleDeleteExpense(item.id)}
-                        className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {/* User-specific amount — primary right-side figure */}
+                    <div className="flex flex-col items-end shrink-0 mr-1">
+                      {userInvolved ? (
+                        <>
+                          <p className={`text-sm font-black leading-tight ${userPaid ? "text-emerald-600" : "text-orange-500"}`}>
+                            {userPaid
+                              ? netLent > 0.01 ? `+${formatCurrency(netLent)}` : "Settled"
+                              : `-${formatCurrency(userShare)}`}
+                          </p>
+                          <span className={`text-[9px] font-black uppercase tracking-wide leading-tight ${
+                            userPaid ? "text-emerald-400" : "text-orange-400"
+                          }`}>
+                            {userPaid ? (netLent > 0.01 ? "you lent" : "settled") : "you owe"}
+                          </span>
+                        </>
+                      ) : (
+                        <p className="text-sm font-black text-slate-300">{formatCurrency(item.amount)}</p>
+                      )}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-50 flex flex-col gap-3 text-xs font-medium text-slate-500">
-                  <div className="flex items-center justify-between gap-3">
-                    <p>
-                      Paid by{' '}
-                      <span className="text-slate-900 font-bold">
-                        {(session?.user as any)?.id === item.paidById ? 'You' : item.payer.name}
+
+                    {/* Actions + date */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          aria-label="Edit expense"
+                          onClick={(e) => { e.stopPropagation(); openExpenseModal(item) }}
+                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          aria-label="Delete expense"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteExpense(item.id) }}
+                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <span className="text-[9px] text-slate-300 font-medium">
+                        {new Date(item.createdAt).toLocaleDateString()}
                       </span>
-                    </p>
-                    <span className="opacity-60 font-bold">Total: ₹{item.amount.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-x-2 gap-y-2 pt-1">
-                    {item.splits.map((split: any) => (
-                      <div
-                        key={split.id}
-                        className="flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-xl border border-slate-100/50"
-                      >
-                        <span className="text-slate-900 font-bold text-[10px]">
-                          {split.userId === (session?.user as any)?.id ? 'You' : split.user?.name}
-                        </span>
-                        <span className="text-primary font-black text-[10px]">
-                          {"₹"}{split.amount.toLocaleString(undefined, {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1,
-                          })}
-                        </span>
+
+                  {/* Expanded splits — toggle on card click */}
+                  {isExpanded && (
+                    <div className="px-3 pb-3 border-t border-slate-50">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-2 mb-1.5">Split Details</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.splits.map((split: any) => (
+                          <div
+                            key={split.id}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] ${
+                              split.userId === currentUserId
+                                ? userPaid
+                                  ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                                  : "bg-orange-50 border-orange-100 text-orange-600"
+                                : "bg-slate-50 border-slate-100 text-slate-600"
+                            }`}
+                          >
+                            <span className="font-bold">
+                              {split.userId === currentUserId ? "You" : split.user?.name}
+                            </span>
+                            <span className="font-black">{formatCurrency(split.amount)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            )
+                    </div>
+                  )}
+                </Card>
+              )
+            }
           })
         )}
       </div>
 
       {/* Bottom Input Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100 bg-white/90 backdrop-blur-lg px-4 py-4 md:px-12 md:py-6 shrink-0 shadow-[0_-15px_35px_rgba(0,0,0,0.05)] z-20 pb-safe">
-        <div className="flex gap-2 sm:gap-4 items-center max-w-4xl mx-auto w-full">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100/60 bg-white/70 backdrop-blur-xl px-4 py-2 md:px-12 shrink-0 shadow-[0_-6px_16px_rgba(0,0,0,0.03)] z-20 pb-safe">
+        <div className="flex gap-2 items-center max-w-4xl mx-auto w-full">
           <button
             onClick={() => openExpenseModal()}
-            className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-primary-600 transition-all shadow-lg active:scale-95 shrink-0"
+            className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary-600 transition-all shadow-md active:scale-95 shrink-0"
             aria-label="Add expense"
           >
-            <Plus className="w-8 h-8 stroke-[3]" />
+            <Plus className="w-5 h-5 stroke-[3]" />
           </button>
           <button
             onClick={handleVoiceInput}
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95 shrink-0 ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md active:scale-95 shrink-0 ${
               isListening ? "bg-rose-500 text-white shadow-rose-500/20" : "bg-white text-primary border border-primary/15"
             }`}
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
           >
-            {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
           <div className="relative flex-1">
             <Input
@@ -1043,19 +1058,19 @@ export default function GroupDetailPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage();
               }}
-              placeholder={isListening ? "Listening..." : "Type or speak: 'split 500 between 100 for A and 200 for B'"}
-              className="h-14 rounded-3xl bg-slate-50 border-0 focus-visible:ring-1 focus-visible:ring-primary/20 pl-6 pr-14 text-slate-700 font-semibold"
+              placeholder={isListening ? "Listening..." : "Type or speak an expense..."}
+              className="h-10 rounded-2xl bg-slate-50 border-0 focus-visible:ring-1 focus-visible:ring-primary/20 pl-4 pr-11 text-slate-700 font-semibold text-sm"
               disabled={isParsing || isListening}
             />
             <button
               onClick={() => {
                 void handleSendMessage()
               }}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${message.trim() && !isParsing ? 'bg-primary text-white scale-100 hover:bg-primary-600' : 'text-slate-300 scale-90'}`}
+              className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-xl flex items-center justify-center transition-all ${message.trim() && !isParsing ? 'bg-primary text-white scale-100' : 'text-slate-300 scale-90'}`}
               disabled={!message.trim() || isParsing}
               aria-label="Send message"
             >
-              {isParsing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              {isParsing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>

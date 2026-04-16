@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Check, Loader2 } from "lucide-react"
@@ -10,6 +10,13 @@ interface PersonalTransactionModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  transaction?: {
+    id: string
+    amount: number
+    description: string
+    category: string
+    transactionDate: string
+  } | null
 }
 
 // Shared field wrapper — enforces identical height and styling on all devices
@@ -23,7 +30,7 @@ function FieldWrapper({ children }: { children: React.ReactNode }) {
 
 const baseInput = "flex-1 min-w-0 bg-transparent outline-none text-slate-900 placeholder:text-slate-400"
 
-export function PersonalTransactionModal({ isOpen, onClose, onSuccess }: PersonalTransactionModalProps) {
+export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transaction = null }: PersonalTransactionModalProps) {
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("OTHER")
@@ -39,6 +46,23 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess }: Persona
     setError("")
   }
 
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    if (transaction) {
+      setAmount(transaction.amount.toString())
+      setDescription(transaction.description)
+      setCategory(transaction.category || "OTHER")
+      setDate(transaction.transactionDate ? transaction.transactionDate.slice(0, 10) : "")
+      setError("")
+      return
+    }
+
+    reset()
+  }, [isOpen, transaction])
+
   const handleSave = async () => {
     if (!amount || !description) {
       setError("Amount and description are required")
@@ -49,8 +73,12 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess }: Persona
     setError("")
 
     try {
-      const res = await fetch("/api/personal/transactions", {
-        method: "POST",
+      const endpoint = transaction
+        ? `/api/personal/transactions/${transaction.id}`
+        : "/api/personal/transactions"
+
+      const res = await fetch(endpoint, {
+        method: transaction ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: parseFloat(amount),
@@ -76,7 +104,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess }: Persona
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Personal Expense">
+    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Edit Personal Expense" : "Add Personal Expense"}>
       <div className="space-y-5">
 
         {/* Amount + Date — identical wrapper enforces same height on iOS */}
@@ -176,7 +204,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess }: Persona
           ) : (
             <Check className="w-5 h-5 mr-4 stroke-[4]" />
           )}
-          Save Expense
+          {transaction ? "Update Expense" : "Save Expense"}
         </Button>
       </div>
     </Modal>

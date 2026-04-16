@@ -5,19 +5,20 @@ export const dynamic = "force-dynamic"
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
 import {
-  Plus,
   Users,
   Activity,
   User,
   Loader2,
   UserPlus,
   PieChart,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 
 function GroupsContent() {
@@ -25,7 +26,7 @@ function GroupsContent() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
 
-  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people" | "spending">("groups")
+  const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
   const [groups, setGroups] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activities, setActivities] = useState<any[]>([])
@@ -34,8 +35,11 @@ function GroupsContent() {
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showSoloModal, setShowSoloModal] = useState(false)
+  const [showSpending, setShowSpending] = useState(false)
 
-  const totalBalance = groups.reduce((acc, group) => acc + (group.yourBalance || 0), 0)
+  const totalBalance = groups.reduce((acc, g) => acc + (g.yourBalance || 0), 0)
+  const toCollect = groups.reduce((acc, g) => acc + (g.yourBalance > 0 ? g.yourBalance : 0), 0)
+  const toPay = groups.reduce((acc, g) => acc + (g.yourBalance < 0 ? Math.abs(g.yourBalance) : 0), 0)
 
   const consolidatedDebts: Record<string, { userId: string; name: string; amount: number }> = {}
   groups.forEach((group) => {
@@ -91,7 +95,7 @@ function GroupsContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab === "groups" || tab === "activity" || tab === "people" || tab === "spending") {
+    if (tab === "activity" || tab === "people") {
       setActiveTab(tab)
       return
     }
@@ -100,26 +104,29 @@ function GroupsContent() {
 
   useEffect(() => {
     if (activeTab === "activity") fetchActivities()
-    if (activeTab === "spending") fetchGroupAnalytics()
-  }, [activeTab, fetchActivities, fetchGroupAnalytics])
+  }, [activeTab, fetchActivities])
 
   useEffect(() => {
     const eventSource = new EventSource("/api/events")
     const handleUpdate = () => {
       fetchGroups()
       if (activeTab === "activity") fetchActivities()
-      if (activeTab === "spending") fetchGroupAnalytics()
     }
     eventSource.addEventListener("update", handleUpdate)
     return () => {
       eventSource.removeEventListener("update", handleUpdate)
       eventSource.close()
     }
-  }, [activeTab, fetchActivities, fetchGroups, fetchGroupAnalytics])
+  }, [activeTab, fetchActivities, fetchGroups])
 
-  const navigateToTab = (tab: "groups" | "activity" | "people" | "spending") => {
+  const navigateToTab = (tab: "groups" | "activity" | "people") => {
     setActiveTab(tab)
     router.push(tab === "groups" ? "/dashboard/groups" : `/dashboard/groups?tab=${tab}`)
+  }
+
+  const handleSpendingToggle = () => {
+    if (!showSpending && !groupAnalytics) fetchGroupAnalytics()
+    setShowSpending((v) => !v)
   }
 
   return (
@@ -131,39 +138,68 @@ function GroupsContent() {
       />
 
       {/* Header */}
-      <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-6">
+      <div className="px-6 pt-8 pb-4 max-w-4xl mx-auto w-full">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Hello, {session?.user?.name?.split(" ")[0] || "User"}
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold text-slate-900">Groups</h1>
+            <p className="text-sm text-slate-500 mt-0.5">
               {activeTab === "groups" && "Your expense groups"}
               {activeTab === "activity" && "Recent group activities"}
               {activeTab === "people" && "People you owe or owe you"}
-              {activeTab === "spending" && "Group spending breakdown"}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center text-white font-bold transition-all hover:scale-105">
+          <div className="w-12 h-12 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center text-white font-bold">
             {session?.user?.name?.substring(0, 2).toUpperCase() || "U"}
           </div>
         </div>
 
-        {/* Balance card — hidden on activity tab */}
-        {activeTab !== "activity" && (
-          <Card className="p-6 rounded-3xl shadow-md border border-slate-200/50 bg-white overflow-hidden relative group hover:shadow-lg transition-all">
-            <div className="relative z-10">
-              <p className="text-sm font-medium text-slate-500 mb-2 uppercase tracking-tight">Total Balance</p>
-              <p className={`text-4xl font-bold ${totalBalance >= 0 ? "text-primary" : "text-rose-600"}`}>
+        {/* Compact Balance Card */}
+        <Card className="px-4 py-3 rounded-2xl border border-slate-100 bg-white shadow-sm mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={`text-lg font-black leading-tight ${totalBalance >= 0 ? "text-primary" : "text-rose-600"}`}>
                 {totalBalance >= 0
                   ? `You are owed ₹${totalBalance.toLocaleString()}`
                   : `You owe ₹${Math.abs(totalBalance).toLocaleString()}`}
               </p>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5">
+                {toCollect > 0 ? `₹${toCollect.toLocaleString()} to collect` : "Nothing to collect"}
+                {" • "}
+                {toPay > 0 ? `₹${toPay.toLocaleString()} to pay` : "Nothing to pay"}
+              </p>
             </div>
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
-              <Activity className="w-24 h-24" />
-            </div>
-          </Card>
+            <span
+              className={`shrink-0 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest ${
+                totalBalance > 0
+                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                  : totalBalance < 0
+                  ? "bg-rose-50 text-rose-500 border border-rose-100"
+                  : "bg-slate-50 text-slate-400 border border-slate-100"
+              }`}
+            >
+              {totalBalance > 0 ? "Owed" : totalBalance < 0 ? "You Owe" : "Settled"}
+            </span>
+          </div>
+        </Card>
+
+        {/* Primary Action Row */}
+        {activeTab === "groups" && (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowSoloModal(true)}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs font-black text-primary transition-all hover:bg-primary/20 active:scale-95"
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              Add Individual
+            </button>
+            <button
+              onClick={() => router.push("/create-group")}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-xs font-black text-white shadow-md shadow-primary/20 transition-all hover:opacity-90 active:scale-95"
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              Create Group
+            </button>
+          </div>
         )}
       </div>
 
@@ -173,107 +209,167 @@ function GroupsContent() {
         {/* Groups Tab */}
         {activeTab === "groups" && (
           <>
-            <div className="flex flex-col gap-4 mb-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-lg font-black text-slate-900">Your Groups</h2>
-                <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <button
-                    onClick={() => setShowSoloModal(true)}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/20"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    Add Individual
-                  </button>
-                  <button
-                    onClick={() => setShowArchived(!showArchived)}
-                    className={`rounded-xl border px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
-                      showArchived
-                        ? "bg-slate-900 border-slate-900 text-white"
-                        : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm"
-                    }`}
-                  >
-                    {showArchived ? "Showing Archived" : "Show Archived"}
-                  </button>
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-3 mt-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your Groups</p>
+              <button
+                onClick={() => setShowArchived(!showArchived)}
+                className={`rounded-xl border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest transition-all ${
+                  showArchived
+                    ? "bg-slate-900 border-slate-900 text-white"
+                    : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm"
+                }`}
+              >
+                {showArchived ? "Archived" : "Show Archived"}
+              </button>
             </div>
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 space-y-4 opacity-50">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm font-medium text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                  Loading groups...
-                </p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading groups...</p>
               </div>
             ) : groups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-300 mb-6">
-                  <Users className="w-10 h-10" />
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-3xl border border-dashed border-slate-200 bg-white">
+                <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-300 mb-4">
+                  <Users className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">No groups yet</h3>
-                <p className="text-slate-500 text-sm max-w-[240px] mb-8">
-                  Create a group to start splitting expenses with your friends.
+                <h3 className="text-sm font-bold text-slate-900 mb-1">No groups yet</h3>
+                <p className="text-xs text-slate-400 max-w-[200px]">
+                  Create a group to start splitting expenses with friends.
                 </p>
-                <Button onClick={() => router.push("/create-group")} className="rounded-2xl px-8 shadow-md">
-                  <Plus className="w-4 h-4 mr-2 stroke-[3]" />
-                  Create Group
-                </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {groups.map((group) => (
-                  <Card
-                    key={group.id}
-                    className="p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer border border-slate-100 rounded-[2rem] bg-white group flex flex-col h-full"
-                    onClick={() => router.push(`/groups/${group.id}`)}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                          <Users className="w-7 h-7 text-primary" />
+              <div className="space-y-2">
+                {groups.map((group) => {
+                  const balance = group.yourBalance || 0
+                  const isOwed = balance > 0.01
+                  const owes = balance < -0.01
+
+                  return (
+                    <Card
+                      key={group.id}
+                      className="px-4 py-3 shadow-sm hover:shadow-md transition-all cursor-pointer border border-slate-100 rounded-2xl bg-white"
+                      onClick={() => router.push(`/groups/${group.id}`)}
+                    >
+                      {/* Top row: name + badge */}
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm truncate">{group.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                            Total spent ₹{group.totalSpent.toLocaleString()}
+                          </p>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 text-lg group-hover:text-primary transition-colors">
-                            {group.name}
-                          </h3>
-                          <p className="text-sm text-slate-400">Total spent: ₹{group.totalSpent.toLocaleString()}</p>
+                        <span
+                          className={`shrink-0 mt-0.5 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest ${
+                            isOwed
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : owes
+                              ? "bg-orange-50 text-orange-500 border border-orange-100"
+                              : "bg-slate-50 text-slate-400 border border-slate-100"
+                          }`}
+                        >
+                          {isOwed
+                            ? `+₹${balance.toLocaleString()}`
+                            : owes
+                            ? `-₹${Math.abs(balance).toLocaleString()}`
+                            : "Settled"}
+                        </span>
+                      </div>
+
+                      {/* Bottom row: avatars + status label */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center -space-x-1.5">
+                          {group.members.slice(0, 4).map((initial: string, idx: number) => (
+                            <div
+                              key={idx}
+                              className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-600 shadow-sm"
+                            >
+                              {initial}
+                            </div>
+                          ))}
+                          {group.members.length > 4 && (
+                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-500 shadow-sm">
+                              +{group.members.length - 4}
+                            </div>
+                          )}
                         </div>
+                        <p
+                          className={`text-[10px] font-black uppercase tracking-widest ${
+                            isOwed ? "text-emerald-600" : owes ? "text-orange-500" : "text-slate-400"
+                          }`}
+                        >
+                          {isOwed ? "You are owed" : owes ? "You owe" : "Settled up"}
+                        </p>
                       </div>
-                    </div>
-                    <div className="mt-auto flex flex-col gap-3 border-t border-slate-50 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center -space-x-2">
-                        {group.members.slice(0, 3).map((initial: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm"
-                          >
-                            {initial}
-                          </div>
-                        ))}
-                        {group.members.length > 3 && (
-                          <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">
-                            +{group.members.length - 3}
-                          </div>
-                        )}
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Inline Spending Toggle */}
+            {groups.length > 0 && (
+              <div className="mt-4">
+                <button
+                  onClick={handleSpendingToggle}
+                  className="flex items-center gap-2 w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs font-black text-slate-600 shadow-sm hover:shadow-md transition-all"
+                >
+                  <TrendingUp className="w-4 h-4 text-primary shrink-0" />
+                  <span className="flex-1 text-left">Spending Overview</span>
+                  {showSpending ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </button>
+
+                {showSpending && (
+                  <div className="mt-2">
+                    {loadingAnalytics ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary opacity-30" />
                       </div>
-                      <p
-                        className={`text-sm font-bold sm:text-right ${
-                          group.yourBalance > 0
-                            ? "text-primary"
-                            : group.yourBalance < 0
-                            ? "text-rose-600"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        {group.yourBalance > 0
-                          ? `You are owed ₹${group.yourBalance.toLocaleString()}`
-                          : group.yourBalance < 0
-                          ? `You owe ₹${Math.abs(group.yourBalance).toLocaleString()}`
-                          : "Settled up"}
-                      </p>
-                    </div>
-                  </Card>
-                ))}
+                    ) : !groupAnalytics || groupAnalytics.categoryBreakdown.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-100 bg-white px-5 py-8 text-center">
+                        <p className="text-xs text-slate-400">No spending data yet</p>
+                      </div>
+                    ) : (
+                      <Card className="rounded-2xl border-slate-100 bg-white p-4 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">By Category</p>
+                          <p className="text-[10px] font-black text-slate-400">
+                            ₹{groupAnalytics.totals.totalPaid.toLocaleString()} total
+                          </p>
+                        </div>
+                        {groupAnalytics.categoryBreakdown.map((item: any) => {
+                          const pct =
+                            groupAnalytics.totals.totalPaid > 0
+                              ? (item.amount / groupAnalytics.totals.totalPaid) * 100
+                              : 0
+                          return (
+                            <div key={item.category} className="space-y-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <CategoryIcon category={item.category} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                  <p className="truncate text-xs font-bold text-slate-900">{item.label}</p>
+                                </div>
+                                <p className="shrink-0 text-xs font-black text-slate-900">
+                                  ₹{item.amount.toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                  className="h-full rounded-full bg-primary transition-all"
+                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </Card>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -281,274 +377,131 @@ function GroupsContent() {
 
         {/* Activity Tab */}
         {activeTab === "activity" && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Activity Feed</h2>
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Activity Feed</p>
             {loadingActivities ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
               </div>
             ) : activities.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">No activity yet.</div>
-            ) : (
-              <div className="space-y-3">
-                {activities.map((activity) => (
-                  <Card
-                    key={activity.id}
-                    className="p-4 border-slate-100 rounded-2xl flex gap-4 items-start bg-white shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
-                        activity.type.includes("EXPENSE")
-                          ? "bg-primary/10 text-primary"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      <Activity className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-900 font-medium leading-tight">{activity.message}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">
-                          {activity.group?.name || "Individual Payment"}
-                        </span>
-                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-                          • {new Date(activity.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    {activity.metadata?.amount && (
-                      <div className="text-sm font-black text-slate-900">₹{activity.metadata.amount}</div>
-                    )}
-                  </Card>
-                ))}
+              <div className="flex flex-col items-center justify-center py-16 text-center rounded-3xl border border-dashed border-slate-200 bg-white">
+                <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-300 mb-4">
+                  <Activity className="w-8 h-8" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900">No activity yet</h3>
+                <p className="text-xs text-slate-400 mt-1">Group expenses and settlements will appear here.</p>
               </div>
+            ) : (
+              activities.map((activity) => (
+                <Card
+                  key={activity.id}
+                  className="p-4 border-slate-100 rounded-2xl flex gap-3 items-start bg-white shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${
+                      activity.type.includes("EXPENSE")
+                        ? "bg-primary/10 text-primary"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-900 font-medium leading-tight">{activity.message}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">
+                        {activity.group?.name || "Individual Payment"}
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+                        • {new Date(activity.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  {activity.metadata?.amount && (
+                    <p className="text-sm font-black text-slate-900 shrink-0">₹{activity.metadata.amount}</p>
+                  )}
+                </Card>
+              ))
             )}
           </div>
         )}
 
         {/* People Tab */}
         {activeTab === "people" && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">People Overview</h2>
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">People Overview</p>
             {peopleList.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+              <div className="flex flex-col items-center justify-center py-20 text-center rounded-3xl border border-dashed border-slate-200 bg-white px-8">
+                <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-300 mb-4">
                   <User className="w-8 h-8" />
                 </div>
-                <h3 className="font-bold text-slate-900">Nicely done!</h3>
-                <p className="text-sm text-slate-400 mt-1">You are settled up with everyone across all groups.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {peopleList.map((person) => (
-                  <Card
-                    key={person.userId}
-                    className="group flex flex-col gap-4 rounded-2xl border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-bold group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {person.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900">{person.name}</h3>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                          Global Balance
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:items-end sm:text-right">
-                      <div>
-                        <p
-                          className={`text-lg font-black ${
-                            person.amount > 0 ? "text-primary" : "text-rose-600"
-                          }`}
-                        >
-                          {person.amount > 0
-                            ? `+₹${person.amount.toLocaleString()}`
-                            : `-₹${Math.abs(person.amount).toLocaleString()}`}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                          {person.amount > 0 ? "owes you" : "you owe"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const sharedGroup = groups.find((g) =>
-                            g.debts.some((d: any) => d.userId === person.userId)
-                          )
-                          if (sharedGroup) router.push(`/groups/${sharedGroup.id}`)
-                        }}
-                        className="self-start rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-slate-900/10 transition-all hover:scale-105 active:scale-95 sm:self-end"
-                      >
-                        Settle
-                      </button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Spending Tab — now uses /api/analytics/groups */}
-        {activeTab === "spending" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-slate-900">Group Spending</h2>
-              <button
-                onClick={fetchGroupAnalytics}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all hover:text-slate-700"
-              >
-                Refresh
-              </button>
-            </div>
-
-            {loadingAnalytics ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
-              </div>
-            ) : !groupAnalytics || groupAnalytics.categoryBreakdown.length === 0 ? (
-              <div className="rounded-3xl border border-slate-100 bg-white px-6 py-16 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
-                  <PieChart className="h-8 w-8" />
-                </div>
-                <h3 className="font-bold text-slate-900">No group spending data yet</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  Add expenses to your groups to see spending insights.
+                <h3 className="text-sm font-bold text-slate-900">All settled up</h3>
+                <p className="text-xs text-slate-400 mt-1 mb-6 max-w-[200px]">
+                  No pending balances. Invite friends to split expenses together.
                 </p>
+                <button
+                  onClick={() => setShowSoloModal(true)}
+                  className="flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-xs font-black text-white shadow-md shadow-primary/20 transition-transform active:scale-95 hover:opacity-90"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Invite a new friend
+                </button>
               </div>
             ) : (
-              <>
-                {/* Stat cards */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Total Paid</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      ₹{groupAnalytics.totals.totalPaid.toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-slate-400">
-                      {groupAnalytics.totals.expenseCount} expenses
-                    </p>
-                  </Card>
-                  <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">My Share</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      ₹{groupAnalytics.totals.totalOwed.toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-slate-400">Your split across all groups</p>
-                  </Card>
-                  <Card className="rounded-3xl border-slate-100 bg-white p-5 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Net Balance</p>
-                    <p
-                      className={`mt-2 text-2xl font-black ${
-                        groupAnalytics.totals.netBalance >= 0 ? "text-primary" : "text-rose-600"
-                      }`}
+              peopleList.map((person) => (
+                <Card
+                  key={person.userId}
+                  className="group flex flex-col gap-3 rounded-2xl border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      {person.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm">{person.name}</h3>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                        Global Balance
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+                    <div className="sm:text-right">
+                      <p className={`text-base font-black ${person.amount > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {person.amount > 0
+                          ? `+₹${person.amount.toLocaleString()}`
+                          : `-₹${Math.abs(person.amount).toLocaleString()}`}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                        {person.amount > 0 ? "owes you" : "you owe"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const sharedGroup = groups.find((g) =>
+                          g.debts.some((d: any) => d.userId === person.userId)
+                        )
+                        if (sharedGroup) router.push(`/groups/${sharedGroup.id}`)
+                      }}
+                      className="rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:scale-105 active:scale-95"
                     >
-                      {groupAnalytics.totals.netBalance >= 0 ? "+" : ""}₹
-                      {Math.abs(groupAnalytics.totals.netBalance).toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-slate-400">
-                      {groupAnalytics.totals.netBalance >= 0 ? "Others owe you" : "You owe others"}
-                    </p>
-                  </Card>
-                </div>
-
-                {/* Category breakdown */}
-                <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-900 mb-4">By Category</h3>
-                  <div className="space-y-3">
-                    {groupAnalytics.categoryBreakdown.map((item: any) => {
-                      const pct =
-                        groupAnalytics.totals.totalPaid > 0
-                          ? (item.amount / groupAnalytics.totals.totalPaid) * 100
-                          : 0
-                      return (
-                        <div key={item.category} className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <CategoryIcon category={item.category} className="h-4 w-4 shrink-0 text-primary" />
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-slate-900">{item.label}</p>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                  {item.count} entries
-                                </p>
-                              </div>
-                            </div>
-                            <p className="shrink-0 text-sm font-black text-slate-900">
-                              ₹{item.amount.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${Math.min(pct, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
+                      Settle
+                    </button>
                   </div>
                 </Card>
-
-                {/* Recent group expenses */}
-                {groupAnalytics.recentExpenses.length > 0 && (
-                  <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-black text-slate-900">Recent Expenses</h3>
-                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Latest 8</p>
-                    </div>
-                    <div className="space-y-3">
-                      {groupAnalytics.recentExpenses.map((exp: any) => (
-                        <div
-                          key={exp.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-                              <CategoryIcon category={exp.category} className="h-4 w-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-slate-900">{exp.description}</p>
-                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                {exp.group?.name} • {new Date(exp.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="shrink-0 text-sm font-black text-slate-900">
-                            ₹{exp.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-              </>
+              ))
             )}
           </div>
         )}
       </div>
 
-      {/* FAB — only on groups tab */}
-      {activeTab === "groups" && (
-        <div className="fixed bottom-28 right-6 z-40">
-          <Button
-            onClick={() => router.push("/create-group")}
-            size="icon"
-            className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
-          >
-            <Plus className="w-8 h-8 stroke-[3]" />
-          </Button>
-        </div>
-      )}
-
-      {/* Tab bar */}
+      {/* Tab bar — 3 tabs */}
       <div className="fixed bottom-16 left-0 right-0 z-40 flex justify-center pointer-events-none">
         <div className="pointer-events-auto mx-4 flex gap-1 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur px-2 py-1.5 shadow-lg">
-          {(["groups", "activity", "people", "spending"] as const).map((tab) => (
+          {(["groups", "activity", "people"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => navigateToTab(tab)}
-              className={`rounded-xl px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
+              className={`rounded-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
                 activeTab === tab
                   ? "bg-primary text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-600"

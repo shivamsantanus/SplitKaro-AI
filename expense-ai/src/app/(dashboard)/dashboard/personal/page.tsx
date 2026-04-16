@@ -6,11 +6,13 @@ import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
+import { Modal } from "@/components/ui/Modal"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
-import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart } from "lucide-react"
+import { formatCurrency } from "@/lib/currency"
+import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -27,12 +29,17 @@ export default function PersonalPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchSummary = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/personal/summary?month=${month}&year=${year}`)
-      if (res.ok) setSummary(await res.json())
+      if (res.ok) {
+        setSummary(await res.json())
+      }
     } catch {
       console.error("Failed to fetch personal summary")
     } finally {
@@ -45,19 +52,45 @@ export default function PersonalPage() {
   }, [fetchSummary])
 
   const stepMonth = (dir: 1 | -1) => {
-    const d = new Date(year, month - 1 + dir, 1)
-    setMonth(d.getMonth() + 1)
-    setYear(d.getFullYear())
+    const date = new Date(year, month - 1 + dir, 1)
+    setMonth(date.getMonth() + 1)
+    setYear(date.getFullYear())
   }
 
   const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear()
 
+  const handleDeleteTransaction = async () => {
+    if (!deletingTransaction) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/personal/transactions/${deletingTransaction.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setDeletingTransaction(null)
+        fetchSummary()
+      }
+    } catch (error) {
+      console.error("Failed to delete personal transaction", error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
       <PersonalTransactionModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        isOpen={showModal || !!editingTransaction}
+        onClose={() => {
+          setShowModal(false)
+          setEditingTransaction(null)
+        }}
         onSuccess={fetchSummary}
+        transaction={editingTransaction}
       />
       <VoiceExpenseModal
         isOpen={showVoiceModal}
@@ -65,7 +98,6 @@ export default function PersonalPage() {
         onSuccess={fetchSummary}
       />
 
-      {/* Header */}
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -79,7 +111,6 @@ export default function PersonalPage() {
           </div>
         </div>
 
-        {/* Month selector */}
         <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm mb-6">
           <button
             onClick={() => stepMonth(-1)}
@@ -113,12 +144,11 @@ export default function PersonalPage() {
           </div>
         ) : !summary ? null : (
           <>
-            {/* Monthly totals */}
             <div className="grid grid-cols-2 gap-4">
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">This Month</p>
                 <p className="mt-2 text-2xl font-black text-slate-900">
-                  ₹{summary.totals.monthlyAmount.toLocaleString()}
+                  {formatCurrency(summary.totals.monthlyAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
                   {summary.totals.monthlyCount} entries
@@ -127,7 +157,7 @@ export default function PersonalPage() {
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Lifetime</p>
                 <p className="mt-2 text-2xl font-black text-slate-900">
-                  ₹{summary.totals.lifetimeAmount.toLocaleString()}
+                  {formatCurrency(summary.totals.lifetimeAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
                   {summary.totals.lifetimeCount} total entries
@@ -135,25 +165,22 @@ export default function PersonalPage() {
               </Card>
             </div>
 
-            {/* 6-month trend */}
             {summary.monthlySummary.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">6-Month Trend</h3>
                 <div className="flex items-end gap-2 h-24">
                   {summary.monthlySummary.map((item: { month: string; amount: number }) => {
-                    const max = Math.max(...summary.monthlySummary.map((m: { amount: number }) => m.amount), 1)
+                    const max = Math.max(...summary.monthlySummary.map((entry: { amount: number }) => entry.amount), 1)
                     const pct = (item.amount / max) * 100
-                    const [y, m] = item.month.split("-")
-                    const label = new Date(Number(y), Number(m) - 1).toLocaleString("default", { month: "short" })
+                    const [summaryYear, summaryMonth] = item.month.split("-")
+                    const label = new Date(Number(summaryYear), Number(summaryMonth) - 1).toLocaleString("default", { month: "short" })
                     const isActive = item.month === `${year}-${String(month).padStart(2, "0")}`
 
                     return (
                       <div key={item.month} className="flex flex-col items-center gap-1 flex-1">
                         <div className="w-full flex items-end justify-center h-16">
                           <div
-                            className={`w-full rounded-t-lg transition-all ${
-                              isActive ? "bg-primary" : "bg-slate-100"
-                            }`}
+                            className={`w-full rounded-t-lg transition-all ${isActive ? "bg-primary" : "bg-slate-100"}`}
                             style={{ height: `${Math.max(pct, 4)}%` }}
                           />
                         </div>
@@ -165,7 +192,6 @@ export default function PersonalPage() {
               </Card>
             )}
 
-            {/* Category breakdown */}
             {summary.categoryBreakdown.length > 0 ? (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">By Category</h3>
@@ -175,6 +201,7 @@ export default function PersonalPage() {
                       summary.totals.monthlyAmount > 0
                         ? (item.amount / summary.totals.monthlyAmount) * 100
                         : 0
+
                     return (
                       <div key={item.category} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3">
@@ -188,7 +215,7 @@ export default function PersonalPage() {
                             </div>
                           </div>
                           <p className="shrink-0 text-sm font-black text-slate-900">
-                            ₹{item.amount.toLocaleString()}
+                            {formatCurrency(item.amount)}
                           </p>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -212,7 +239,6 @@ export default function PersonalPage() {
               </div>
             )}
 
-            {/* Recent transactions */}
             {summary.recentTransactions.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
@@ -220,25 +246,43 @@ export default function PersonalPage() {
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Latest 8</p>
                 </div>
                 <div className="space-y-2">
-                  {summary.recentTransactions.map((txn: any) => (
+                  {summary.recentTransactions.map((transaction: any) => (
                     <div
-                      key={txn.id}
+                      key={transaction.id}
                       className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-                          <CategoryIcon category={txn.category} className="h-4 w-4" />
+                          <CategoryIcon category={transaction.category} className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-900">{txn.description}</p>
+                          <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                            {new Date(txn.transactionDate).toLocaleDateString()}
+                            {new Date(transaction.transactionDate).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <p className="shrink-0 text-sm font-black text-slate-900">
-                        ₹{txn.amount.toLocaleString()}
-                      </p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <p className="text-sm font-black text-slate-900">
+                          {formatCurrency(transaction.amount)}
+                        </p>
+                        <button
+                          onClick={() => setEditingTransaction(transaction)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                          aria-label={`Edit ${transaction.description}`}
+                          title="Edit expense"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingTransaction(transaction)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
+                          aria-label={`Delete ${transaction.description}`}
+                          title="Delete expense"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -248,7 +292,6 @@ export default function PersonalPage() {
         )}
       </div>
 
-      {/* FABs — voice (primary) + manual (secondary) */}
       <div className="fixed bottom-28 right-6 z-40 flex flex-col items-center gap-3">
         <Button
           onClick={() => setShowModal(true)}
@@ -267,6 +310,35 @@ export default function PersonalPage() {
       </div>
 
       <BottomNav active="personal" />
+
+      <Modal
+        isOpen={!!deletingTransaction}
+        onClose={() => setDeletingTransaction(null)}
+        title="Delete Personal Expense"
+      >
+        <div className="space-y-6">
+          <p className="text-sm font-medium text-slate-600 text-center">
+            Are you sure you want to delete <span className="font-bold text-slate-900">{deletingTransaction?.description}</span>?
+          </p>
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+              onClick={handleDeleteTransaction}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Expense"}
+            </button>
+            <Button
+              variant="outline"
+              className="w-full h-14 rounded-2xl text-base font-black border-slate-200"
+              onClick={() => setDeletingTransaction(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

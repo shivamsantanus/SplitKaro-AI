@@ -41,7 +41,7 @@ export async function GET() {
             ...item,
             label: getExpenseCategoryLabel(item.category),
           })),
-        recentTransactions: personalSummary.recentTransactions.slice(0, 4),
+        recentTransactions: personalSummary.recentTransactions.slice(0, 5),
       },
       groups: {
         totalPaid: groupSummary.totals.totalPaid,
@@ -49,7 +49,8 @@ export async function GET() {
         netBalance: groupSummary.totals.netBalance,
         expenseCount: groupSummary.totals.expenseCount,
         topGroups: groupSummary.topGroups.slice(0, 3),
-        recentExpenses: groupSummary.recentExpenses.slice(0, 4),
+        recentExpenses: groupSummary.recentExpenses.slice(0, 5),
+        recentActivity: groupSummary.recentActivity.slice(0, 5),
       },
     });
   } catch (error) {

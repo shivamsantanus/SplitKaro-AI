@@ -9,6 +9,15 @@ type CreatePersonalTransactionInput = {
   transactionDate?: string | Date | null;
 };
 
+type UpdatePersonalTransactionInput = {
+  transactionId: string;
+  ownerId: string;
+  amount: number | string;
+  description: string;
+  category?: string | null;
+  transactionDate?: string | Date | null;
+};
+
 type PersonalTransactionFilters = {
   month?: number | null;
   year?: number | null;
@@ -36,6 +45,15 @@ function buildMonthRange(filters: PersonalTransactionFilters) {
 }
 
 export const personalTransactionService = {
+  async getById(transactionId: string, ownerId: string) {
+    return prisma.personalTransaction.findFirst({
+      where: {
+        id: transactionId,
+        ownerId,
+      },
+    });
+  },
+
   async create(input: CreatePersonalTransactionInput) {
     const amount = Number(input.amount);
     const description = input.description.trim();
@@ -67,6 +85,63 @@ export const personalTransactionService = {
         description,
         category,
         transactionDate,
+      },
+    });
+  },
+
+  async update(input: UpdatePersonalTransactionInput) {
+    const existingTransaction = await this.getById(input.transactionId, input.ownerId);
+
+    if (!existingTransaction) {
+      throw new Error("Transaction not found");
+    }
+
+    const amount = Number(input.amount);
+    const description = input.description.trim();
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Amount must be greater than 0");
+    }
+
+    if (!description) {
+      throw new Error("Description is required");
+    }
+
+    const category = input.category
+      ? normalizeExpenseCategory(input.category)
+      : inferExpenseCategory(description);
+
+    const transactionDate = input.transactionDate
+      ? new Date(input.transactionDate)
+      : existingTransaction.transactionDate;
+
+    if (Number.isNaN(transactionDate.getTime())) {
+      throw new Error("Transaction date is invalid");
+    }
+
+    return prisma.personalTransaction.update({
+      where: {
+        id: input.transactionId,
+      },
+      data: {
+        amount,
+        description,
+        category,
+        transactionDate,
+      },
+    });
+  },
+
+  async remove(transactionId: string, ownerId: string) {
+    const existingTransaction = await this.getById(transactionId, ownerId);
+
+    if (!existingTransaction) {
+      throw new Error("Transaction not found");
+    }
+
+    await prisma.personalTransaction.delete({
+      where: {
+        id: transactionId,
       },
     });
   },
