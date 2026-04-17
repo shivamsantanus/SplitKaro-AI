@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react"
 import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Activity, Home, LogOut, Mail, User, Users } from "lucide-react"
+import { ArrowLeft, LogOut, Mail, Users } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { Input } from "@/components/ui/Input"
+import { BottomNav } from "@/components/shared/BottomNav"
 
 type GroupSummary = {
   id: string
@@ -231,46 +232,7 @@ export default function MePage() {
         </Card>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
-        <div className="flex items-center justify-around max-w-2xl mx-auto">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
-          >
-            <div className="p-2 rounded-xl hover:bg-slate-50">
-              <Home className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Groups</span>
-          </button>
-
-          <button
-            onClick={() => router.push("/dashboard?tab=activity")}
-            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
-          >
-            <div className="p-2 rounded-xl hover:bg-slate-50">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Activity</span>
-          </button>
-
-          <button
-            onClick={() => router.push("/dashboard?tab=people")}
-            className="flex flex-col items-center gap-1 text-slate-400 opacity-70 transition-all"
-          >
-            <div className="p-2 rounded-xl hover:bg-slate-50">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">People</span>
-          </button>
-
-          <button className="flex flex-col items-center gap-1 text-primary transition-all">
-            <div className="p-2 rounded-xl bg-primary/10 shadow-inner">
-              <User className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter leading-none">Me</span>
-          </button>
-        </div>
-      </div>
+      <BottomNav active="me" />
     </div>
   )
 }

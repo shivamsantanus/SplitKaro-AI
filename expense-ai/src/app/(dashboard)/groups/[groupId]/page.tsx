@@ -22,6 +22,7 @@ import {
   Bus,
   Clock,
   ChevronRight,
+  ChevronDown,
   Loader2,
   Pencil,
   Film,
@@ -145,6 +146,7 @@ export default function GroupDetailPage() {
   const [customSplits, setCustomSplits] = useState<Record<string, string>>({})
 
   // Settlements State
+  const [showInsights, setShowInsights] = useState(false)
   const [showSettleModal, setShowSettleModal] = useState(false)
   const [settlePayerId, setSettlePayerId] = useState("")
   const [settleReceiverId, setSettleReceiverId] = useState("")
@@ -750,6 +752,23 @@ export default function GroupDetailPage() {
 
   const categoryTotal = categorySummary.reduce((sum, item) => sum + item.total, 0)
 
+  // User summary stats — computed from existing group data, no extra API call
+  const groupTotal = (group.expenses || []).reduce((sum: number, e: any) => sum + e.amount, 0)
+  const myShare = (group.expenses || []).reduce((sum: number, e: any) => {
+    const split = e.splits.find((s: any) => s.userId === currentUserId)
+    return sum + (split?.amount ?? 0)
+  }, 0)
+  const iPaid = (group.expenses || [])
+    .filter((e: any) => e.paidById === currentUserId)
+    .reduce((sum: number, e: any) => sum + e.amount, 0)
+  const settledOut = (group.settlements || [])
+    .filter((s: any) => s.payerId === currentUserId)
+    .reduce((sum: number, s: any) => sum + s.amount, 0)
+  const settledIn = (group.settlements || [])
+    .filter((s: any) => s.receiverId === currentUserId)
+    .reduce((sum: number, s: any) => sum + s.amount, 0)
+  const netBalance = (group.debts || []).reduce((sum: number, d: any) => sum + d.amount, 0)
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col overflow-x-hidden">
       {/* Header */}
@@ -839,42 +858,113 @@ export default function GroupDetailPage() {
         </div>
       )}
 
-      {categorySummary.length > 0 && (
-        <div className="border-b border-slate-100 bg-white">
-          <div className="mx-auto w-full max-w-4xl px-6 py-1.5">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Spending</p>
-              {categorySummary[0] && (
-                <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-xl">
-                  <CategoryIcon category={categorySummary[0].category} className="h-3 w-3 text-primary" />
-                  <span className="text-[10px] font-black text-primary">{categorySummary[0].label}</span>
-                  <span className="text-[10px] font-bold text-primary/60">{formatCurrency(categorySummary[0].total)}</span>
+      {/* Insights — collapsed by default, tap to expand */}
+      {groupTotal > 0 && (
+        <div className="bg-white border-b border-slate-100 shrink-0">
+          {/* Toggle row */}
+          <button
+            onClick={() => setShowInsights((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Insights</span>
+              {/* Always-visible net badge */}
+              <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg ${
+                netBalance > 0.01 ? "bg-emerald-50 text-emerald-600" :
+                netBalance < -0.01 ? "bg-rose-50 text-rose-600" :
+                "bg-slate-100 text-slate-400"
+              }`}>
+                {netBalance > 0.01 ? `+${formatCurrency(netBalance)}` :
+                 netBalance < -0.01 ? `-${formatCurrency(Math.abs(netBalance))}` :
+                 "Settled"}
+              </span>
+              <span className="text-[9px] text-slate-300 font-medium">{formatCurrency(groupTotal)} total</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showInsights ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* Collapsible body */}
+          {showInsights && (
+            <div className="px-4 pb-3 max-w-4xl mx-auto w-full space-y-3">
+
+              {/* My Summary — 4 stat cards */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="bg-slate-50 rounded-xl px-3 py-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Group Total</p>
+                  <p className="text-sm font-black text-slate-900 mt-0.5">{formatCurrency(groupTotal)}</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">{(group.expenses || []).length} expenses</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl px-3 py-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">My Share</p>
+                  <p className="text-sm font-black text-slate-900 mt-0.5">{formatCurrency(myShare)}</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">
+                    {Math.round((myShare / groupTotal) * 100)}% of total
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl px-3 py-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">I Paid</p>
+                  <p className="text-sm font-black text-slate-900 mt-0.5">{formatCurrency(iPaid)}</p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">
+                    {settledOut > 0 ? `${formatCurrency(settledOut)} settled` : "as payer"}
+                  </p>
+                </div>
+                <div className={`rounded-xl px-3 py-2 ${
+                  netBalance > 0.01 ? "bg-emerald-50" :
+                  netBalance < -0.01 ? "bg-rose-50" : "bg-slate-50"
+                }`}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Net Balance</p>
+                  <p className={`text-sm font-black mt-0.5 ${
+                    netBalance > 0.01 ? "text-emerald-600" :
+                    netBalance < -0.01 ? "text-rose-600" : "text-slate-400"
+                  }`}>
+                    {netBalance > 0.01 ? `+${formatCurrency(netBalance)}` :
+                     netBalance < -0.01 ? `-${formatCurrency(Math.abs(netBalance))}` : "Settled"}
+                  </p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">
+                    {netBalance > 0.01 ? "others owe you" :
+                     netBalance < -0.01 ? "you owe others" : "all clear"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Category bars */}
+              {categorySummary.length > 0 && (
+                <div className="bg-slate-50 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">By Category</p>
+                    {categorySummary[0] && (
+                      <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-lg">
+                        <CategoryIcon category={categorySummary[0].category} className="h-3 w-3 text-primary" />
+                        <span className="text-[9px] font-black text-primary">{categorySummary[0].label}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {categorySummary.slice(0, 5).map((item) => {
+                      const pct = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
+                      return (
+                        <div key={item.category} className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1 w-24 shrink-0">
+                            <CategoryIcon category={item.category} className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-[10px] font-bold text-slate-500 truncate">{item.label}</span>
+                          </div>
+                          <div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{ width: `${Math.max(pct, 3)}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-black text-slate-600 w-14 text-right shrink-0">
+                            {formatCurrency(item.total)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
-            <div className="space-y-1">
-              {categorySummary.slice(0, 5).map((item) => {
-                const pct = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
-                return (
-                  <div key={item.category} className="flex items-center gap-1.5">
-                    <div className="flex items-center gap-1 w-24 shrink-0">
-                      <CategoryIcon category={item.category} className="h-3 w-3 text-primary shrink-0" />
-                      <span className="text-[10px] font-bold text-slate-500 truncate">{item.label}</span>
-                    </div>
-                    <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${Math.max(pct, 3)}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-black text-slate-600 w-14 text-right shrink-0">
-                      {formatCurrency(item.total)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
