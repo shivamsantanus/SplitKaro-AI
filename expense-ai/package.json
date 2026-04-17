@@ -8,6 +8,7 @@
     "build:vercel": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
+    "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
