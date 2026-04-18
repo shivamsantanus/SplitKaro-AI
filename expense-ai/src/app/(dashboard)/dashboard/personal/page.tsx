@@ -99,16 +99,11 @@ export default function PersonalPage() {
       />
 
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Personal Expenses</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {session?.user?.name?.split(" ")[0] || "Your"}'s spending tracker
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center text-white font-bold">
-            {session?.user?.name?.substring(0, 2).toUpperCase() || "U"}
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Personal Expenses</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {session?.user?.name?.split(" ")[0] || "Your"}'s spending tracker
+          </p>
         </div>
 
         <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm mb-6">

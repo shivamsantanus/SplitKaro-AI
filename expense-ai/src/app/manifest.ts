@@ -11,20 +11,6 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#F8FAFC",
     theme_color: "#16a34a",
     categories: ["finance", "productivity"],
-    screenshots: [
-      {
-        src: "/screenshots/screenshot-mobile.png",
-        sizes: "390x844",
-        type: "image/png",
-        // no form_factor → treated as narrow/mobile
-      },
-      {
-        src: "/screenshots/screenshot-desktop.png",
-        sizes: "1280x720",
-        type: "image/png",
-        form_factor: "wide",
-      },
-    ],
     icons: [
       {
         src: "/icons/icon-192.png",

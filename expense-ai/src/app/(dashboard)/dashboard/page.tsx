@@ -97,16 +97,11 @@ function OverviewContent() {
       />
 
       <div className="mx-auto max-w-4xl px-6 pb-6 pt-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Hello, {session?.user?.name?.split(" ")[0] || "User"}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">{monthLabel} overview</p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-primary font-bold text-white shadow-sm">
-            {session?.user?.name?.substring(0, 2).toUpperCase() || "U"}
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">
+            Hello, {session?.user?.name?.split(" ")[0] || "User"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">{monthLabel} overview</p>
         </div>
 
         {loading ? (

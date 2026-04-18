@@ -139,18 +139,13 @@ function GroupsContent() {
 
       {/* Header */}
       <div className="px-6 pt-8 pb-4 max-w-4xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Groups</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {activeTab === "groups" && "Your expense groups"}
-              {activeTab === "activity" && "Recent group activities"}
-              {activeTab === "people" && "People you owe or owe you"}
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-full bg-primary border-2 border-white shadow-sm flex items-center justify-center text-white font-bold">
-            {session?.user?.name?.substring(0, 2).toUpperCase() || "U"}
-          </div>
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-slate-900">Groups</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {activeTab === "groups" && "Your expense groups"}
+            {activeTab === "activity" && "Recent group activities"}
+            {activeTab === "people" && "People you owe or owe you"}
+          </p>
         </div>
 
         {/* Compact Balance Card */}

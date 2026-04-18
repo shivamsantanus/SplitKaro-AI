@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { signOut, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, LogOut, Mail, Users } from "lucide-react"
+import { Mail, Users } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { Input } from "@/components/ui/Input"
@@ -103,25 +103,6 @@ export default function MePage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] px-6 pb-32 pt-24">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-
-          <Button
-            variant="outline"
-            className="rounded-2xl border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 sm:px-5"
-            onClick={() => signOut({ callbackUrl: "/welcome" })}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
-
         <Card className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-lg">
           <div className="bg-primary px-8 py-10 text-white">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
