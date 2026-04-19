@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
+import { Toast } from "@/components/ui/Toast"
+import { PaymentConfirmModal } from "@/components/ui/PaymentConfirmModal"
 import { EXPENSE_CATEGORIES, getExpenseCategoryIconName, getExpenseCategoryLabel, inferExpenseCategory } from "@/lib/expense-categories"
 import { formatCurrency } from "@/lib/currency"
+import { generateUpiLink, UpiApp } from "@/lib/upi"
+import { UpiPickerSheet } from "@/components/ui/UpiPickerSheet"
+import { useToast } from "@/hooks/useToast"
+import { usePaymentReturn, savePendingPayment } from "@/hooks/usePaymentReturn"
+import type { PendingPayment } from "@/hooks/usePaymentReturn"
 import {
   ArrowLeft,
   Settings,
@@ -152,6 +159,15 @@ export default function GroupDetailPage() {
   const [settleReceiverId, setSettleReceiverId] = useState("")
   const [settleAmount, setSettleAmount] = useState("")
   const [isListening, setIsListening] = useState(false)
+
+  // UPI / payment-return
+  const { toast, showToast, dismissToast } = useToast()
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null)
+  usePaymentReturn((payment) => setPendingPayment(payment))
+  const [upiPickerOpen, setUpiPickerOpen] = useState(false)
+  const [upiTarget, setUpiTarget] = useState<{
+    upiId: string; receiverName: string; receiverId: string; amount: number; groupName: string
+  } | null>(null)
   const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null)
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
 
@@ -429,18 +445,58 @@ export default function GroupDetailPage() {
   }
 
   const openSettleModal = (debt: any) => {
+    const currentUserId = (session?.user as any)?.id as string
+
     if (debt.amount > 0) {
-      // They owe me, so I receive money
-      setSettlePayerId(debt.userId);
-      setSettleReceiverId((session?.user as any)?.id);
-      setSettleAmount(debt.amount.toString());
-    } else {
-      // I owe them, so I pay money
-      setSettlePayerId((session?.user as any)?.id);
-      setSettleReceiverId(debt.userId);
-      setSettleAmount(Math.abs(debt.amount).toString());
+      // They owe me — I'm receiving; use the manual settle modal
+      setSettlePayerId(debt.userId)
+      setSettleReceiverId(currentUserId)
+      setSettleAmount(debt.amount.toString())
+      setShowSettleModal(true)
+      return
     }
-    setShowSettleModal(true);
+
+    // I owe them — try UPI flow first
+    const amount = Math.abs(debt.amount)
+    const receiverMember = group?.members.find((m: any) => m.userId === debt.userId)
+    const receiverUpiId  = receiverMember?.user?.upiId as string | undefined
+    const receiverName   = (receiverMember?.user?.name as string | undefined) || debt.name || "them"
+
+    if (!receiverUpiId) {
+      showToast("This user hasn't set up their UPI ID yet.", "info")
+      // Fall back to manual settle
+      setSettlePayerId(currentUserId)
+      setSettleReceiverId(debt.userId)
+      setSettleAmount(amount.toString())
+      setShowSettleModal(true)
+      return
+    }
+
+    // Show UPI app picker — user chooses the app, then we launch it
+    setUpiTarget({
+      upiId: receiverUpiId,
+      receiverName,
+      receiverId: debt.userId,
+      amount,
+      groupName: group?.name || "the group",
+    })
+    setUpiPickerOpen(true)
+  }
+
+  const handleUpiAppSelect = (app: UpiApp) => {
+    if (!upiTarget) return
+    const currentUserId = (session?.user as any)?.id as string
+    savePendingPayment({
+      amount: upiTarget.amount,
+      payerId: currentUserId,
+      receiverId: upiTarget.receiverId,
+      receiverName: upiTarget.receiverName,
+      groupId: isSoloGroup ? "" : (groupId as string),
+      groupName: upiTarget.groupName,
+    })
+    const upiLink = generateUpiLink(app, upiTarget.upiId, upiTarget.receiverName, upiTarget.amount, upiTarget.groupName)
+    setUpiPickerOpen(false)
+    window.location.href = upiLink
   }
 
   const handleSendMessage = useCallback(async (rawMessage?: string) => {
@@ -1678,6 +1734,28 @@ export default function GroupDetailPage() {
             </Button>
          </div>
       </Modal>
+
+      {/* UPI app picker */}
+      {upiTarget && (
+        <UpiPickerSheet
+          open={upiPickerOpen}
+          amount={upiTarget.amount}
+          receiverName={upiTarget.receiverName}
+          onSelect={handleUpiAppSelect}
+          onClose={() => setUpiPickerOpen(false)}
+        />
+      )}
+
+      {/* UPI payment-return confirmation */}
+      <PaymentConfirmModal
+        payment={pendingPayment}
+        onConfirmed={fetchGroupData}
+        onDismiss={() => setPendingPayment(null)}
+        showToast={showToast}
+      />
+
+      {/* Toast notifications */}
+      {toast && <Toast toast={toast} onDismiss={dismissToast} />}
 
     </div>
   )

@@ -72,6 +72,18 @@ The current stable app still supports the legacy direct-payment flow, but the re
 - validate payer and receiver membership
 - update balances after settlement
 
+### UPI Payments
+
+- save a personal UPI ID from the Me page
+- group members can see each other's UPI IDs
+- tapping Settle on a debt you owe shows a UPI app picker bottom sheet
+- picker lists PhonePe, Google Pay, Paytm, BHIM, Amazon Pay, and WhatsApp Pay
+- each app opens with a pre-filled deep link including amount, receiver name, and note
+- after returning from the payment app, a confirmation modal appears automatically
+- user confirms or cancels; confirmed payments are recorded as settlements immediately
+- confetti animation fires on confirmed settlement
+- if the receiver has no UPI ID saved, falls back to the manual settlement modal
+
 ### Activity and history
 
 - activity feed for group activity
@@ -101,6 +113,18 @@ The current stable app still supports the legacy direct-payment flow, but the re
 - compact member-management controls in group settings
 - custom in-app modals instead of browser alerts/confirms
 - icon-first action controls to reduce crowding on mobile
+- bottom navigation with correct active tab highlighting on all pages
+
+### PWA
+
+- installable on Android, iOS, and desktop
+- Web App Manifest with name, colors, icons, display mode
+- service worker with cache-first for static assets and network-first for pages
+- offline fallback page served only when the device is genuinely offline
+- iOS home screen support with `apple-touch-icon` and 12 splash screen sizes
+- theme color and viewport fit set for status bar integration
+- PWA icons at 192px, 512px, and 180px generated from the SVG logo
+- service worker only registers in production to avoid LAN-IP dev issues
 
 ## Feature Highlights Added In This Workspace
 
@@ -114,6 +138,12 @@ These are the bigger product improvements added on top of the basic expense-shar
 - leave-group flow with balance checks
 - remove-member flow with balance checks
 - editable profile name on Me page
+- UPI ID field on Me page with format validation
+- Member Since display on Me page
+- UPI Settle & Confirm flow with app picker, visibilitychange detection, and confetti
+- UPI app picker bottom sheet showing 6 payment apps
+- payment return detection using localStorage + visibilitychange event
+- canvas-based confetti on confirmed settlement (no external package)
 - About page entry flow from welcome page
 - dedicated About page for multiple developers
 - responsive mobile cleanup for dashboard, group settings, and profile screens
@@ -124,6 +154,9 @@ These are the bigger product improvements added on top of the basic expense-shar
 - dashboard spending summary tab
 - stronger API validation for group membership in expenses and settlements
 - case-insensitive user/email lookup improvements for hosted environments
+- full PWA with manifest, service worker, offline page, and iOS splash screens
+- bottom navigation fixed to show correct active tab on all dashboard pages
+- removed redundant per-page initials avatars from dashboard, personal, and groups pages
 
 ## Main User Flows
 
@@ -154,12 +187,23 @@ These are the bigger product improvements added on top of the basic expense-shar
 5. Save.
 6. Both users get refreshed data through realtime updates.
 
-### Settle a payment
+### Settle via UPI
 
 1. Open a group.
-2. Choose the payer and receiver.
-3. Enter settlement amount.
-4. Save settlement.
+2. Tap the Settle button on a debt balance you owe.
+3. A bottom sheet shows the available UPI payment apps.
+4. Tap an app — it opens with the payment pre-filled.
+5. Complete payment in the app and return to SplitKaro.
+6. A confirmation modal appears asking if the payment went through.
+7. Tap Yes — the settlement is recorded and confetti fires.
+8. Tap No — the payment is not recorded; the user can try again.
+
+### Settle manually
+
+1. Open a group.
+2. Tap Settle on a debt someone owes you, or when receiver has no UPI ID.
+3. A modal shows the suggested amount.
+4. Confirm to record the settlement.
 5. Debt calculations refresh for all related users.
 
 ### Leave or remove a member
@@ -190,8 +234,15 @@ src/
     providers/
     shared/
     ui/
+  hooks/
   lib/
+  types/
 prisma/
+public/
+  icons/
+  sw.js
+  offline.html
+scripts/
 ```
 
 ## Important Pages
@@ -298,6 +349,12 @@ Build for production:
 npm run build
 ```
 
+Generate PWA icons and splash screens:
+
+```bash
+npm run generate-icons
+```
+
 ## Learning Docs
 
 If you want to understand the stack and concepts in depth, read:
@@ -313,4 +370,6 @@ If you want to understand the stack and concepts in depth, read:
 - Payment categories are stored in the database for both group and individual expenses.
 - Voice and natural-language inputs are draft helpers; users can still review and edit before saving.
 - Group membership and settlement rules are validated server-side.
+- UPI payments use app-specific deep link schemes so the OS app picker is bypassed in favor of the in-app picker.
+- The service worker is disabled in development to prevent offline-page false positives when testing on phones via LAN IP.
 - The next structural improvement is clean domain separation between personal finance and group finance.

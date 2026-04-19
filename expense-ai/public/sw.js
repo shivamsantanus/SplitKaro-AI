@@ -1,4 +1,4 @@
-const CACHE = 'splitkaro-v1'
+const CACHE = 'splitkaro-v2'
 
 // Static assets with content hashes — safe to cache aggressively
 const STATIC_RE = /\/_next\/static\/|\/icons\/|\.ico$|\.png$|\.svg$|\.webmanifest$/
@@ -53,13 +53,20 @@ self.addEventListener('fetch', (event) => {
       )
     )
   } else {
-    // Network-first for navigation + dynamic pages; serve offline fallback if down
+    // Network-first for navigation + dynamic pages.
+    // Only serve the offline fallback when the device is genuinely offline
+    // (navigator.onLine === false). If the server is simply unreachable (e.g.
+    // self-signed cert on a LAN IP in dev), let the browser show its own error
+    // so the offline page doesn't appear unexpectedly.
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match('/offline.html').then(
-          (r) => r ?? new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })
-        )
-      )
+      fetch(request).catch((err) => {
+        if (!navigator.onLine) {
+          return caches.match('/offline.html').then(
+            (r) => r ?? new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+          )
+        }
+        throw err
+      })
     )
   }
 })
