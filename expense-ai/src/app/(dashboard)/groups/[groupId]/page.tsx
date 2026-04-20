@@ -11,7 +11,6 @@ import { Toast } from "@/components/ui/Toast"
 import { PaymentConfirmModal } from "@/components/ui/PaymentConfirmModal"
 import { EXPENSE_CATEGORIES, getExpenseCategoryIconName, getExpenseCategoryLabel, inferExpenseCategory } from "@/lib/expense-categories"
 import { formatCurrency } from "@/lib/currency"
-import { generateUpiLink, UpiApp } from "@/lib/upi"
 import { UpiPickerSheet } from "@/components/ui/UpiPickerSheet"
 import { useToast } from "@/hooks/useToast"
 import { usePaymentReturn, savePendingPayment } from "@/hooks/usePaymentReturn"
@@ -472,7 +471,7 @@ export default function GroupDetailPage() {
       return
     }
 
-    // Show UPI app picker — user chooses the app, then we launch it
+    // Show UPI pay sheet
     setUpiTarget({
       upiId: receiverUpiId,
       receiverName,
@@ -483,7 +482,7 @@ export default function GroupDetailPage() {
     setUpiPickerOpen(true)
   }
 
-  const handleUpiAppSelect = (app: UpiApp) => {
+  const handleUpiPay = (url: string) => {
     if (!upiTarget) return
     const currentUserId = (session?.user as any)?.id as string
     savePendingPayment({
@@ -494,9 +493,8 @@ export default function GroupDetailPage() {
       groupId: isSoloGroup ? "" : (groupId as string),
       groupName: upiTarget.groupName,
     })
-    const upiLink = generateUpiLink(app, upiTarget.upiId, upiTarget.receiverName, upiTarget.amount, upiTarget.groupName)
     setUpiPickerOpen(false)
-    window.location.href = upiLink
+    window.location.href = url
   }
 
   const handleSendMessage = useCallback(async (rawMessage?: string) => {
@@ -1735,13 +1733,15 @@ export default function GroupDetailPage() {
          </div>
       </Modal>
 
-      {/* UPI app picker */}
+      {/* UPI pay sheet */}
       {upiTarget && (
         <UpiPickerSheet
           open={upiPickerOpen}
           amount={upiTarget.amount}
           receiverName={upiTarget.receiverName}
-          onSelect={handleUpiAppSelect}
+          receiverUpiId={upiTarget.upiId}
+          groupName={upiTarget.groupName}
+          onPay={handleUpiPay}
           onClose={() => setUpiPickerOpen(false)}
         />
       )}

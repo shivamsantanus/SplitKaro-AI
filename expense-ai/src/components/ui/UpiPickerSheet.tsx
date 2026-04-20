@@ -1,17 +1,34 @@
 "use client"
 
-import { UPI_APPS, UpiApp } from "@/lib/upi"
+import { useState } from "react"
+import { Copy, Check, Smartphone } from "lucide-react"
+import { isIOS, IOS_UPI_APPS, generateIosAppLink, generateUpiLink } from "@/lib/upi"
 
 type Props = {
   open: boolean
   amount: number
   receiverName: string
-  onSelect: (app: UpiApp) => void
+  receiverUpiId: string
+  groupName: string
+  onPay: (url: string) => void
   onClose: () => void
 }
 
-export function UpiPickerSheet({ open, amount, receiverName, onSelect, onClose }: Props) {
+export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, groupName, onPay, onClose }: Props) {
+  const [copied, setCopied] = useState(false)
+  const ios = isIOS()
+
   if (!open) return null
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(receiverUpiId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard not available — silently ignore
+    }
+  }
 
   return (
     <>
@@ -23,40 +40,65 @@ export function UpiPickerSheet({ open, amount, receiverName, onSelect, onClose }
       />
 
       {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-2xl px-5 pt-5 pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-2xl px-5 pt-5 pb-8">
         {/* Drag handle */}
-        <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-5" />
+        <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-6" />
 
-        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 text-center mb-1">
-          Pay via
-        </p>
-        <p className="text-base font-black text-slate-900 text-center mb-6">
-          ₹{amount.toLocaleString("en-IN")} to {receiverName}
-        </p>
-
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          {UPI_APPS.map((app) => (
-            <button
-              key={app.name}
-              onClick={() => onSelect(app)}
-              className="flex flex-col items-center gap-2 py-4 rounded-2xl border border-slate-100 bg-slate-50 active:scale-95 transition-all hover:border-slate-200 hover:shadow-sm"
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-sm"
-                style={{ background: app.bg }}
-              >
-                {app.name.slice(0, 2).toUpperCase()}
-              </div>
-              <span className="text-[11px] font-bold text-slate-700 leading-tight text-center">
-                {app.name}
-              </span>
-            </button>
-          ))}
+        {/* Amount + receiver */}
+        <div className="text-center mb-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Paying</p>
+          <p className="text-4xl font-black text-slate-900">
+            ₹{amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-sm font-bold text-slate-500 mt-1">to {receiverName}</p>
         </div>
+
+        {/* UPI ID pill */}
+        <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 mb-6">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">UPI ID</p>
+            <p className="text-sm font-bold text-slate-800 mt-0.5">{receiverUpiId}</p>
+          </div>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-black text-slate-500 hover:text-slate-700 active:scale-95 transition-all"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+
+        {ios ? (
+          <>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-3">
+              Choose your UPI app
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {IOS_UPI_APPS.map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => onPay(generateIosAppLink(app, receiverUpiId, receiverName, amount, groupName))}
+                  className="flex flex-col items-center justify-center gap-1.5 h-16 rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 font-black text-xs active:scale-95 transition-all hover:border-primary/20 hover:bg-primary/5"
+                >
+                  <Smartphone className="w-5 h-5 text-primary" />
+                  {app.name}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => onPay(generateUpiLink(receiverUpiId, receiverName, amount, groupName))}
+            className="w-full h-14 rounded-2xl bg-primary text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all mb-3"
+          >
+            <Smartphone className="w-5 h-5" />
+            Open UPI App
+          </button>
+        )}
 
         <button
           onClick={onClose}
-          className="w-full h-12 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm active:scale-95 transition-all mb-2"
+          className="w-full py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
         >
           Cancel
         </button>
