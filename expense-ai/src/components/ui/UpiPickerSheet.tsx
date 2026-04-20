@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Copy, Check, Smartphone } from "lucide-react"
-import { isIOS, IOS_UPI_APPS, generateIosAppLink, generateUpiLink } from "@/lib/upi"
+import { isIOS, IOS_UPI_APPS } from "@/lib/upi"
 
 type Props = {
   open: boolean
@@ -68,16 +68,25 @@ export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, grou
           </button>
         </div>
 
+        {/* Step guide — same for iOS and Android */}
+        <div className="flex items-center justify-center gap-2 mb-5 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-2.5">
+          <span className="w-5 h-5 rounded-full bg-amber-200 flex items-center justify-center text-[9px] font-black text-amber-800 shrink-0">1</span>
+          <span className="text-[11px] font-bold text-amber-700">Copy the UPI ID above</span>
+          <span className="text-amber-300 font-black">→</span>
+          <span className="w-5 h-5 rounded-full bg-amber-200 flex items-center justify-center text-[9px] font-black text-amber-800 shrink-0">2</span>
+          <span className="text-[11px] font-bold text-amber-700">Open your app &amp; pay</span>
+        </div>
+
         {ios ? (
           <>
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-3">
-              Choose your UPI app
+              Open your UPI app
             </p>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {IOS_UPI_APPS.map((app) => (
                 <button
                   key={app.id}
-                  onClick={() => onPay(generateIosAppLink(app, receiverUpiId, receiverName, amount, groupName))}
+                  onClick={() => onPay(app.scheme)}
                   className="flex flex-col items-center justify-center gap-1.5 h-16 rounded-2xl border border-slate-100 bg-slate-50 text-slate-700 font-black text-xs active:scale-95 transition-all hover:border-primary/20 hover:bg-primary/5"
                 >
                   <Smartphone className="w-5 h-5 text-primary" />
@@ -88,7 +97,7 @@ export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, grou
           </>
         ) : (
           <button
-            onClick={() => onPay(generateUpiLink(receiverUpiId, receiverName, amount, groupName))}
+            onClick={() => onPay("upi://pay")}
             className="w-full h-14 rounded-2xl bg-primary text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all mb-3"
           >
             <Smartphone className="w-5 h-5" />
