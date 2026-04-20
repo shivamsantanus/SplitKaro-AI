@@ -33,6 +33,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // If the client sent its own session ID as payerId, replace it with the
+    // server-verified user.id (found by email). This prevents JWT-token vs
+    // database-ID mismatches from breaking the group membership check.
+    const sessionUserId = (session.user as any)?.id as string | undefined
+    const resolvedPayerId = (payerId === sessionUserId || payerId === user.id)
+      ? user.id
+      : payerId
+
     if (groupId) {
       try {
         const settlement = await groupSettlementService.create({
@@ -41,7 +49,7 @@ export async function POST(req: Request) {
           actorName: user.name || "",
           actorEmail: user.email,
           amount,
-          payerId,
+          payerId: resolvedPayerId,
           receiverId,
         });
 
@@ -63,7 +71,7 @@ export async function POST(req: Request) {
         data: {
           amount: parseFloat(amount),
           groupId: groupId || null,
-          payerId,
+          payerId: resolvedPayerId,
           receiverId,
         },
         include: {
@@ -78,7 +86,7 @@ export async function POST(req: Request) {
           message: `${newSettlement.payer.name} paid ₹${amount} to ${newSettlement.receiver.name}`,
           groupId: groupId || null,
           userId: user.id,
-          metadata: { amount: parseFloat(amount), payerId, receiverId }
+          metadata: { amount: parseFloat(amount), payerId: resolvedPayerId, receiverId }
         }
       });
 
@@ -88,7 +96,7 @@ export async function POST(req: Request) {
     if (groupId) {
         await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
     } else {
-        await publishUserEvent(payerId, "SETTLEMENT_ADDED");
+        await publishUserEvent(resolvedPayerId, "SETTLEMENT_ADDED");
         await publishUserEvent(receiverId, "SETTLEMENT_ADDED");
     }
 

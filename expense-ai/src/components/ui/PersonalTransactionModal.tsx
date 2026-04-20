@@ -30,11 +30,18 @@ function FieldWrapper({ children }: { children: React.ReactNode }) {
 
 const baseInput = "flex-1 min-w-0 bg-transparent outline-none text-slate-900 placeholder:text-slate-400"
 
+function localDateStr(d = new Date()) {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transaction = null }: PersonalTransactionModalProps) {
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("OTHER")
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState(localDateStr)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -42,7 +49,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
     setAmount("")
     setDescription("")
     setCategory("OTHER")
-    setDate("")
+    setDate(localDateStr())
     setError("")
   }
 

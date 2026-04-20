@@ -1,50 +1,54 @@
-export type UpiApp = {
-  name: string
-  bg: string          // background colour
-  fg: string          // foreground / text colour
-  scheme: string      // URL scheme prefix, e.g. "phonepe://pay"
+export function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)
 }
 
-export const UPI_APPS: UpiApp[] = [
-  { name: "PhonePe",    bg: "#5f259f", fg: "#fff", scheme: "phonepe://pay"    },
-  { name: "Google Pay", bg: "#4285F4", fg: "#fff", scheme: "gpay://upi/pay"   },
-  { name: "Paytm",      bg: "#00BAF2", fg: "#fff", scheme: "paytmmp://pay"    },
-  { name: "BHIM",       bg: "#00704A", fg: "#fff", scheme: "upi://pay"        },
-  { name: "Amazon Pay", bg: "#FF9900", fg: "#fff", scheme: "amazonpay://pay"  },
-  { name: "WhatsApp",   bg: "#25D366", fg: "#fff", scheme: "whatsapp://upi/pay" },
+export type UpiApp = {
+  id: string
+  name: string
+  scheme: string
+}
+
+// App-specific iOS launch schemes — bare launchers only, no UPI params.
+// Pre-filling params via deep link is unreliable on iOS: PhonePe routes to
+// QR scanner, GPay (tez://) ignores params on newer builds. User copies the
+// UPI ID first, then opens the app to paste it manually.
+export const IOS_UPI_APPS: UpiApp[] = [
+  { id: "phonepe", name: "PhonePe",    scheme: "phonepe://" },
+  { id: "gpay",    name: "Google Pay", scheme: "tez://" },
+  { id: "paytm",   name: "Paytm",      scheme: "paytmmp://" },
 ]
 
-function upiParams(
+// NPCI-standard UPI deep link for Android — every certified UPI app registers
+// as a handler, so the OS shows its native app chooser.
+export function generateUpiLink(
   receiverUpiId: string,
   receiverName: string,
   amount: number,
   groupName: string
-) {
-  return (
-    `pa=${receiverUpiId}` +
+): string {
+  const params =
+    `pa=${encodeURIComponent(receiverUpiId)}` +
     `&pn=${encodeURIComponent(receiverName)}` +
-    `&am=${amount}` +
+    `&am=${amount.toFixed(2)}` +
     `&cu=INR` +
-    `&tn=${encodeURIComponent(`Settling in ${groupName}`)}`
-  )
+    `&tn=${encodeURIComponent(`SplitKaro: ${groupName}`)}`
+  return `upi://pay?${params}`
 }
 
-export function generateUpiLink(
+// iOS-only: build a link for a specific app using its unique scheme.
+export function generateIosAppLink(
   app: UpiApp,
   receiverUpiId: string,
   receiverName: string,
   amount: number,
   groupName: string
 ): string {
-  return `${app.scheme}?${upiParams(receiverUpiId, receiverName, amount, groupName)}`
-}
-
-// Returns the generic upi:// link (for copying / fallback)
-export function generateGenericUpiLink(
-  receiverUpiId: string,
-  receiverName: string,
-  amount: number,
-  groupName: string
-): string {
-  return `upi://pay?${upiParams(receiverUpiId, receiverName, amount, groupName)}`
+  const params =
+    `pa=${encodeURIComponent(receiverUpiId)}` +
+    `&pn=${encodeURIComponent(receiverName)}` +
+    `&am=${amount.toFixed(2)}` +
+    `&cu=INR` +
+    `&tn=${encodeURIComponent(`SplitKaro: ${groupName}`)}`
+  return `${app.scheme}?${params}`
 }
