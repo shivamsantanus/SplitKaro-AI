@@ -124,8 +124,8 @@ Examples:
 - typed summary objects
 - typed component state
 - typed debt and category summary helpers
-- `UpiApp` type for payment app config
-- `PendingPayment` type for localStorage-persisted UPI intent
+- `UpiApp` type for iOS app config (id, name, bare launch scheme)
+- `PendingPayment` type for localStorage-persisted UPI intent including `savedAt` for stale-entry expiry
 - `src/types/global.d.ts` for CSS side-effect import declarations
 
 ### Tailwind CSS
@@ -353,7 +353,7 @@ Concepts:
 
 ### UPI Deep Links
 
-UPI deep links allow SplitKaro to hand off payments to installed UPI apps.
+UPI deep links allow SplitKaro to open installed UPI apps for payment.
 
 Key file:
 
@@ -361,10 +361,12 @@ Key file:
 
 Concepts:
 
-- `upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...` is the standard UPI intent URL
-- Each UPI app also has its own scheme: `phonepe://pay`, `gpay://upi/pay`, `paytmmp://pay`, etc.
-- Using app-specific schemes bypasses the OS default-app picker and opens the chosen app directly
-- `window.location.href` triggers the deep link; control returns to the browser when the payment app is closed
+- `upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...` is the NPCI-standard UPI intent URL — works reliably for native Android app-to-app Intent calls
+- Pre-filling params via deep link is **not used** in SplitKaro because the app runs as a PWA: `window.location.href = "upi://..."` from a PWA web shell skips the Android Intent system, so params are silently dropped or cause app-side errors
+- The same pre-fill problem affects iOS where app-specific schemes (`phonepe://pay?...`) route to wrong screens (e.g. PhonePe opens its QR scanner, not the payment form)
+- Instead, the receiver's UPI ID is shown with a copy button and a step guide; the user copies the ID, switches to their app, and pastes it manually
+- On iOS: `isIOS()` detects the platform and shows three buttons for PhonePe (`phonepe://`), Google Pay (`tez://`), and Paytm (`paytmmp://`) — bare launch schemes that open each app to its home screen without ambiguity
+- On Android: a single "Open UPI App" button uses `upi://pay` (no params) to trigger the system app chooser
 
 ### Payment Return Detection
 
@@ -376,10 +378,12 @@ Key file:
 
 Concepts:
 
-- `visibilitychange` event fires when the user switches back to the browser tab or app
-- A 1500ms delay gives the UPI app time to fully close before the modal appears
-- The pending payment intent is stored in `localStorage` under `pending_payment` so it survives the app context switch
+- `visibilitychange` event fires when the user switches back from the UPI app (background → foreground)
+- An on-mount check (600ms delay) handles the PWA reload case where the app fully restarts after returning — `visibilitychange` does not fire in that case
+- The pending payment intent is stored in `localStorage` under `pending_payment` so it survives both the app context switch and a full PWA reload
+- `savedAt` timestamp on the stored intent auto-expires entries older than 10 minutes so stale intents don't cause false confirmation modals
 - `savePendingPayment` writes the intent, `clearPendingPayment` removes it after confirmation or cancellation
+- The callback is kept in a `useRef` so the `useEffect` runs once with an empty deps array — no risk of re-registering the listener on every render
 
 ### Toast Notifications
 
@@ -453,12 +457,17 @@ Architectural note:
 
 When a user owes money to a group member who has a UPI ID set:
 
-1. Tapping Settle shows a bottom sheet listing 6 UPI apps.
-2. User picks an app — a deep link opens the payment app with amount, receiver, and note pre-filled.
-3. After returning, a confirmation modal asks if the payment went through.
-4. Yes confirms and records the settlement in the database; confetti fires.
-5. No cancels cleanly; the user can retry anytime.
-6. If the receiver has no UPI ID, the manual settle modal appears instead.
+1. Tapping Settle shows a bottom sheet with the receiver's UPI ID and a copy button.
+2. A step guide on the sheet instructs: copy the UPI ID, then open your UPI app.
+3. On iOS: three app buttons (PhonePe, Google Pay, Paytm) open each app via its bare launch scheme.
+4. On Android: a single button opens the system app chooser via `upi://pay`.
+5. User copies the UPI ID, opens their app, pastes it, and completes the payment manually.
+6. On returning to SplitKaro, a confirmation modal asks if the payment went through.
+7. Yes confirms and records the settlement in the database; confetti fires.
+8. No cancels cleanly; the user can retry anytime.
+9. If the receiver has no UPI ID, the manual settle modal appears instead.
+
+Why copy-paste instead of pre-fill: `upi://pay?pa=...` pre-fill was designed for native Android Intent calls. From a PWA web shell, `window.location.href` skips the Intent system — params get dropped or cause app errors. On iOS, app-specific schemes route to wrong screens (PhonePe QR scanner, GPay home). Copy-paste is the only approach that works reliably across both platforms.
 
 ### Expense categorization
 
@@ -562,6 +571,7 @@ Important server-side checks in this project include:
 - admin-only group settings changes
 - case-insensitive user lookup by email
 - UPI ID format validated on save with `/^[\w.-]+@[\w.-]+$/`
+- settlement payer ID is normalized server-side to the database `user.id` (JWT session ID can diverge from DB ID in Google-auth flows)
 
 Next-step validation split:
 
@@ -655,9 +665,9 @@ Long-term direction:
 
 ### UPI payments
 
-- `src/lib/upi.ts` — UPI app definitions and link generators
-- `src/hooks/usePaymentReturn.ts` — visibilitychange detection and localStorage persistence
-- `src/components/ui/UpiPickerSheet.tsx` — bottom sheet with 6 UPI app buttons
+- `src/lib/upi.ts` — `isIOS()` detection, `IOS_UPI_APPS` bare launch schemes, `generateUpiLink()` for Android
+- `src/hooks/usePaymentReturn.ts` — visibilitychange + on-mount detection, localStorage persistence with 10-min TTL
+- `src/components/ui/UpiPickerSheet.tsx` — platform-aware sheet: iOS 3-app grid, Android single button, copy-paste step guide
 - `src/components/ui/PaymentConfirmModal.tsx` — post-payment confirmation dialog
 - `src/lib/confetti.ts` — canvas-based confetti animation
 

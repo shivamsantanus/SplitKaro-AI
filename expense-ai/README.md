@@ -65,6 +65,13 @@ The current stable app still supports the legacy direct-payment flow, but the re
 - show solo transactions inside a virtual individual-payments group
 - refresh related dashboards in realtime when a direct payment is added
 
+### Personal transactions
+
+- add personal expenses from the Me page
+- each transaction records amount, description, category, and date
+- date field pre-fills to today in local time (timezone-safe, avoids UTC off-by-one in IST)
+- supports editing and deleting personal transactions
+
 ### Settlements
 
 - settle balances inside a group
@@ -76,9 +83,12 @@ The current stable app still supports the legacy direct-payment flow, but the re
 
 - save a personal UPI ID from the Me page
 - group members can see each other's UPI IDs
-- tapping Settle on a debt you owe shows a UPI app picker bottom sheet
-- picker lists PhonePe, Google Pay, Paytm, BHIM, Amazon Pay, and WhatsApp Pay
-- each app opens with a pre-filled deep link including amount, receiver name, and note
+- tapping Settle on a debt you owe shows a UPI pay bottom sheet
+- sheet displays the receiver's UPI ID prominently with a one-tap copy button
+- a step guide instructs: copy the UPI ID, then open your UPI app to pay
+- on iOS: three app buttons (PhonePe, Google Pay, Paytm) open each app directly using app-specific bare launch schemes
+- on Android: a single "Open UPI App" button triggers the system app chooser via the standard `upi://pay` scheme
+- pre-filling payment params is intentionally skipped — PWA context does not reliably hand off UPI params to any app on either platform
 - after returning from the payment app, a confirmation modal appears automatically
 - user confirms or cancels; confirmed payments are recorded as settlements immediately
 - confetti animation fires on confirmed settlement
@@ -140,10 +150,14 @@ These are the bigger product improvements added on top of the basic expense-shar
 - editable profile name on Me page
 - UPI ID field on Me page with format validation
 - Member Since display on Me page
-- UPI Settle & Confirm flow with app picker, visibilitychange detection, and confetti
-- UPI app picker bottom sheet showing 6 payment apps
-- payment return detection using localStorage + visibilitychange event
+- UPI Settle & Confirm flow with platform-aware pay sheet, return detection, and confetti
+- platform-aware UPI pay sheet: iOS shows 3 app buttons, Android shows single app chooser button
+- UPI ID copy-paste flow replacing unreliable pre-filled deep links (PWA context limitation)
+- payment return detection using localStorage + visibilitychange event + on-mount check for PWA reload case
+- stale pending payment cleanup (entries older than 10 minutes are auto-discarded)
 - canvas-based confetti on confirmed settlement (no external package)
+- personal transaction date field with timezone-safe local date pre-fill
+- settlement payer ID normalization to fix JWT vs database ID mismatch on settlement creation
 - About page entry flow from welcome page
 - dedicated About page for multiple developers
 - responsive mobile cleanup for dashboard, group settings, and profile screens
@@ -191,12 +205,15 @@ These are the bigger product improvements added on top of the basic expense-shar
 
 1. Open a group.
 2. Tap the Settle button on a debt balance you owe.
-3. A bottom sheet shows the available UPI payment apps.
-4. Tap an app — it opens with the payment pre-filled.
-5. Complete payment in the app and return to SplitKaro.
-6. A confirmation modal appears asking if the payment went through.
-7. Tap Yes — the settlement is recorded and confetti fires.
-8. Tap No — the payment is not recorded; the user can try again.
+3. A bottom sheet shows the receiver's UPI ID with a copy button.
+4. A step guide on the sheet reads: copy the UPI ID, then open your app.
+5. Tap Copy to copy the UPI ID to the clipboard.
+6. On iOS: tap one of the three app buttons (PhonePe, Google Pay, Paytm) to open that specific app.
+7. On Android: tap Open UPI App to open the system app chooser.
+8. In the UPI app, paste the copied UPI ID and enter the amount to complete the payment.
+9. Return to SplitKaro — a confirmation modal appears automatically.
+10. Tap Yes — the settlement is recorded and confetti fires.
+11. Tap No — the payment is not recorded; the user can try again.
 
 ### Settle manually
 
@@ -370,6 +387,8 @@ If you want to understand the stack and concepts in depth, read:
 - Payment categories are stored in the database for both group and individual expenses.
 - Voice and natural-language inputs are draft helpers; users can still review and edit before saving.
 - Group membership and settlement rules are validated server-side.
-- UPI payments use app-specific deep link schemes so the OS app picker is bypassed in favor of the in-app picker.
+- UPI payments use a copy-paste flow because `upi://` pre-fill params are unreliable from a PWA web context on both iOS and Android.
+- On iOS, app-specific bare launch schemes (`phonepe://`, `tez://`, `paytmmp://`) open the correct app directly since iOS has no system app chooser for custom URL schemes.
+- On Android, `upi://pay` (no params) opens the system app chooser; the user pastes the copied UPI ID manually.
 - The service worker is disabled in development to prevent offline-page false positives when testing on phones via LAN IP.
 - The next structural improvement is clean domain separation between personal finance and group finance.
