@@ -7,7 +7,7 @@ const developers = [
   {
     name: "Shivam Santanu",
     role: "Full Stack Developer",
-    bio: "Add a short intro here about Shivam, the parts of SplitSmart AI he built, and what he focused on.",
+    bio: "I’m a developer who enjoys turning everyday problems into practical solutions. Outside of code, I’m usually gaming or deep into a binge-worthy series",
     githubUrl: "https://github.com/shivamsantanus",
     linkedinUrl: "https://linkedin.com/in/shivamsantanu",
     githubHandle: "@shivamsantanus",
@@ -17,7 +17,7 @@ const developers = [
   {
     name: "Anurag Verma",
     role: "Backend / Product Developer",
-    bio: "Add a short intro here about Anurag, his role in the product, and the systems he worked on.",
+    bio: "I approach development with a business mindset—focused on building solutions that create real value and can scale into sustainable products.",
     githubUrl: "https://github.com/anuragverma57",
     linkedinUrl: "https://linkedin.com/in/anuragverma57",
     githubHandle: "@anuragverma57",
