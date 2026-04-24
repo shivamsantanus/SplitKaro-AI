@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Generates all PWA assets:
- *   public/icons/      — app icons (192, 512, apple-touch)
- *   public/splash/     — iOS splash screens for every major device
- *   public/screenshots/— manifest screenshots for richer install UI
+ *   assets/icons/      â€” app icons (192, 512, apple-touch)
+ *   assets/splash/     â€” iOS splash screens for every major device
+ *   assets/screenshots/â€” manifest screenshots for richer install UI
  *
  * Run: node scripts/generate-pwa-icons.mjs
  * Requires: sharp (already in node_modules via Next.js)
@@ -16,9 +16,10 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
-const ICONS_DIR   = join(ROOT, 'public', 'icons')
-const SPLASH_DIR  = join(ROOT, 'public', 'splash')
-const SCREENS_DIR = join(ROOT, 'public', 'screenshots')
+const ASSETS_DIR  = join(ROOT, 'assets')
+const ICONS_DIR   = join(ASSETS_DIR, 'icons')
+const SPLASH_DIR  = join(ASSETS_DIR, 'splash')
+const SCREENS_DIR = join(ASSETS_DIR, 'screenshots')
 
 mkdirSync(ICONS_DIR,   { recursive: true })
 mkdirSync(SPLASH_DIR,  { recursive: true })
@@ -26,7 +27,7 @@ mkdirSync(SCREENS_DIR, { recursive: true })
 
 const svgBuf = readFileSync(join(ICONS_DIR, 'logo.svg'))
 
-// ── App Icons ─────────────────────────────────────────────────────────────────
+// â”€â”€ App Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const icons = [
   { name: 'icon-192.png',          size: 192 },
   { name: 'icon-512.png',          size: 512 },
@@ -34,11 +35,11 @@ const icons = [
 ]
 for (const { name, size } of icons) {
   await sharp(svgBuf).resize(size, size).png({ compressionLevel: 9 }).toFile(join(ICONS_DIR, name))
-  console.log(`✓ icons/${name}`)
+  console.log(`âœ“ assets/icons/${name}`)
 }
 
-// ── iOS Splash Screens ────────────────────────────────────────────────────────
-// Physical pixels × CSS pixels × device-pixel-ratio for each major device.
+// â”€â”€ iOS Splash Screens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Physical pixels Ã— CSS pixels Ã— device-pixel-ratio for each major device.
 // The filename encodes physical dimensions so it's unambiguous.
 const splashes = [
   { w:  750, h: 1334, cssW: 375, cssH:  667, dpr: 2 }, // iPhone SE 2nd/3rd
@@ -90,10 +91,10 @@ for (const { w, h } of splashes) {
     .png({ compressionLevel: 9 })
     .toFile(join(SPLASH_DIR, name))
 
-  console.log(`✓ splash/${name}`)
+  console.log(`âœ“ assets/splash/${name}`)
 }
 
-// ── Screenshots (manifest richer install UI) ─────────────────────────────────
+// â”€â”€ Screenshots (manifest richer install UI) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Build a simple branded screenshot using pure Node PNG (no sharp text needed).
 const CRC = new Uint32Array(256)
 for (let n = 0; n < 256; n++) {
@@ -129,7 +130,9 @@ function solidPNG(w, h, r, g, b) {
 const [R,G,B] = [22,163,74]
 writeFileSync(join(SCREENS_DIR, 'screenshot-mobile.png'),  solidPNG(390,  844, R,G,B))
 writeFileSync(join(SCREENS_DIR, 'screenshot-desktop.png'), solidPNG(1280, 720, R,G,B))
-console.log('✓ screenshots/screenshot-mobile.png')
-console.log('✓ screenshots/screenshot-desktop.png')
+console.log('âœ“ assets/screenshots/screenshot-mobile.png')
+console.log('âœ“ assets/screenshots/screenshot-desktop.png')
 
 console.log('\nAll PWA assets generated.')
+
+

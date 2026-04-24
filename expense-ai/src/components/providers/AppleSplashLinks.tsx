@@ -23,7 +23,7 @@ export function AppleSplashLinks() {
         <link
           key={`${w}x${h}`}
           rel="apple-touch-startup-image"
-          href={`/splash/splash-${w}x${h}.png`}
+          href={`/assets/splash/splash-${w}x${h}.png`}
           media={`(device-width: ${cssW}px) and (device-height: ${cssH}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait)`}
         />
       ))}

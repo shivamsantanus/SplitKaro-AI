@@ -255,8 +255,11 @@ src/
   lib/
   types/
 prisma/
-public/
+assets/
   icons/
+  screenshots/
+  splash/
+public/
   sw.js
   offline.html
 scripts/

@@ -1,12 +1,14 @@
-const CACHE = 'splitkaro-v2'
+const CACHE = 'splitkaro-v3'
 
 // Static assets with content hashes — safe to cache aggressively
-const STATIC_RE = /\/_next\/static\/|\/icons\/|\.ico$|\.png$|\.svg$|\.webmanifest$/
+const STATIC_RE = /\/_next\/static\/|\/assets\/|\.ico$|\.png$|\.svg$|\.webmanifest$/
 
 const PRECACHE = [
   '/offline.html',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-512.png',
+  '/assets/icons/apple-touch-icon.png',
+  '/assets/icons/logo.svg',
 ]
 
 // ── Install ──────────────────────────────────────────────────────────────────

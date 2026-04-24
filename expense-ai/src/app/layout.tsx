@@ -40,7 +40,7 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <head>
         {/* iOS home-screen icon — Safari ignores the manifest for this */}
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png" />
         {/* Branded splash screens for every major iPhone / iPad */}
         <AppleSplashLinks />
       </head>

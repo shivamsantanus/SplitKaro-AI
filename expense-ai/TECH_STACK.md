@@ -338,7 +338,7 @@ Key files:
 - `public/offline.html` — offline fallback page
 - `src/components/providers/PWAProvider.tsx` — registers the service worker in production only
 - `src/components/providers/AppleSplashLinks.tsx` — injects 12 iOS splash screen link tags
-- `public/icons/` — PNG icons at 192px, 512px, and 180px
+- `assets/icons/` — PNG icons at 192px, 512px, and 180px
 - `scripts/generate-pwa-icons.mjs` — generates PNG icons and splash screens from the SVG logo using sharp
 
 Concepts:
@@ -689,7 +689,7 @@ Long-term direction:
 - `src/components/providers/PWAProvider.tsx`
 - `src/components/providers/AppleSplashLinks.tsx`
 - `scripts/generate-pwa-icons.mjs`
-- `public/icons/logo.svg`
+- `assets/icons/logo.svg`
 
 ### Dashboard and UI
 
