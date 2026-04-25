@@ -9,7 +9,6 @@ const isSecureCookie =
   (process.env.NEXTAUTH_URL?.startsWith("https://") ?? false);
 
 export const authOptions: NextAuthOptions = {
-  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: SESSION_MAX_AGE,
