@@ -62,8 +62,8 @@ export default function AboutPage() {
               AI-powered input to keep the experience fast and practical.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/signup">
-                <Button className="h-12 rounded-2xl px-6">Get Started</Button>
+              <Link href="/login">
+                <Button className="h-12 rounded-2xl px-6">Continue with Google</Button>
               </Link>
               <Link href="/welcome">
                 <Button variant="outline" className="h-12 rounded-2xl px-6">

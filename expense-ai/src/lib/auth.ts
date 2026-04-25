@@ -1,13 +1,36 @@
 import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { findUserByEmail, normalizeEmail } from "@/lib/users";
 
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const isSecureCookie =
+  process.env.NODE_ENV === "production" &&
+  (process.env.NEXTAUTH_URL?.startsWith("https://") ?? false);
+
 export const authOptions: NextAuthOptions = {
+  trustHost: true,
   session: {
     strategy: "jwt",
+    maxAge: SESSION_MAX_AGE,
+    updateAge: 24 * 60 * 60, // refresh token/cookie age daily
+  },
+  jwt: {
+    maxAge: SESSION_MAX_AGE,
+  },
+  cookies: {
+    sessionToken: {
+      name: isSecureCookie
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isSecureCookie,
+        maxAge: SESSION_MAX_AGE,
+      },
+    },
   },
   pages: {
     signIn: "/login",
@@ -16,43 +39,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "demo@split.ai" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const user = await findUserByEmail(credentials.email);
-
-          if (!user?.password) {
-            return null;
-          }
-
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
-
-          if (!isPasswordValid) {
-            return null;
-          }
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-          };
-        } catch {
-          return null;
-        }
-      },
     }),
   ],
   callbacks: {

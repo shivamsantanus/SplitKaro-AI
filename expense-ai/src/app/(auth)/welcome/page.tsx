@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/Button"
 import { Info, Sparkles } from "lucide-react"
 import Image from "next/image"
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
 
 export default function WelcomePage() {
   return (
@@ -20,17 +20,14 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Top Section - Illustration */}
       <div className="flex-1 flex items-center justify-center px-6 pt-8 pb-6">
         <div className="w-full max-w-md">
-          {/* App Logo Icon */}
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-10 h-10 text-white" />
             </div>
           </div>
 
-          {/* Illustration Container */}
           <div className="relative animate-in">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-blue-200/20 rounded-3xl blur-3xl" />
             <div className="relative bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/50">
@@ -42,7 +39,6 @@ export default function WelcomePage() {
                   className="object-cover"
                   priority
                 />
-                {/* Overlay gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent" />
               </div>
             </div>
@@ -50,37 +46,19 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Middle Section - App Name & Tagline */}
       <div className="px-6 pb-8 text-center animate-in delay-100">
-        <h1 className="text-4xl font-bold mb-3 text-slate-900">
-          SplitSmart AI
-        </h1>
+        <h1 className="text-4xl font-bold mb-3 text-slate-900">SplitSmart AI</h1>
         <p className="text-lg text-slate-500 max-w-md mx-auto leading-relaxed">
           Split expenses with friends effortlessly using AI.
         </p>
       </div>
 
-      {/* Bottom Section - CTA */}
-      <div className="px-6 pb-10 space-y-4 max-w-md mx-auto w-full animate-in delay-200">
-        <Link href="/signup" className="w-full">
-          <Button
-            className="w-full h-14 rounded-2xl shadow-lg text-base font-semibold"
-            size="lg"
-          >
-            Get Started
-          </Button>
-        </Link>
-
-        <div className="text-center">
-          <Link
-            href="/login"
-            className="text-primary hover:underline font-semibold transition-all"
-          >
-            Already have an account? Log in
-          </Link>
-        </div>
+      <div className="px-6 pb-10 max-w-md mx-auto w-full animate-in delay-200 space-y-3">
+        <p className="text-center text-sm text-slate-500">
+          Sign in or create an account with Google—one step for new and returning users.
+        </p>
+        <GoogleSignInButton />
       </div>
-
     </div>
   )
 }

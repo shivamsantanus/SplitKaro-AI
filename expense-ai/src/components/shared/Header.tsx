@@ -11,7 +11,11 @@ export const Header = () => {
   const { data: session } = useSession()
   
   // Don't show header on specific mobile-first screens or welcome screen
-  const isAuth = pathname?.startsWith("/login") || pathname?.startsWith("/signup") || pathname === "/welcome" || pathname === "/"
+  const isAuth =
+    pathname?.startsWith("/login") ||
+    pathname?.startsWith("/signup") ||
+    pathname === "/welcome" ||
+    pathname === "/"
   const isGroupDetail = pathname?.includes("/groups/")
 
   if (isAuth || isGroupDetail) return null
