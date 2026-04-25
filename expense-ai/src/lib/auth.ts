@@ -4,9 +4,6 @@ import prisma from "@/lib/prisma";
 import { findUserByEmail, normalizeEmail } from "@/lib/users";
 
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
-const isSecureCookie =
-  process.env.NODE_ENV === "production" &&
-  (process.env.NEXTAUTH_URL?.startsWith("https://") ?? false);
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -16,20 +13,6 @@ export const authOptions: NextAuthOptions = {
   },
   jwt: {
     maxAge: SESSION_MAX_AGE,
-  },
-  cookies: {
-    sessionToken: {
-      name: isSecureCookie
-        ? "__Secure-next-auth.session-token"
-        : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isSecureCookie,
-        maxAge: SESSION_MAX_AGE,
-      },
-    },
   },
   pages: {
     signIn: "/login",
