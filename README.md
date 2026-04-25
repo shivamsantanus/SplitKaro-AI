@@ -2,7 +2,7 @@
 
 SplitKaro-AI is an intelligent, modern web application designed to make expense tracking and splitting among friends seamless and hassle-free. What sets it apart is its **AI-powered natural language parser**, which allows users to add expenses simply by typing like they would in a chat (e.g., *"John paid ₹500 for weekend pizza"*).
 
-![SplitKaro-AI Banner](./assets/banner/banner.png)
+![SplitKaro-AI Banner](./expense-ai/assets/banner/banner.png)
 
 ## ✨ Features
 
@@ -117,10 +117,10 @@ This project is licensed under the MIT License.
 ## 📸 Screenshots
 
 ### Dashboard
-![Dashboard](./assets/screenshots/SSPC2.png)
+![Dashboard](./expense-ai/assets/screenshots/SSPC2.png)
 
 ### Groups
-![Groups](./assets/screenshots/SSPC3.png)
+![Groups](./expense-ai/assets/screenshots/SSPC3.png)
 
 ### Personal Expenses
-![Personal](./assets/screenshots/SSPC4.png)
+![Personal](./expense-ai/assets/screenshots/SSPC4.png)
