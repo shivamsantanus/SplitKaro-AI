@@ -19,30 +19,24 @@ export async function POST(
       );
     }
 
-    const { email } = await req.json();
+    const { email, emails } = await req.json();
     const { groupId } = await params;
 
-    if (!email) {
+    const requestedEmails = Array.from(
+      new Set(
+        [
+          ...(Array.isArray(emails) ? emails : []),
+          ...(email ? [email] : []),
+        ]
+          .map((value) => (typeof value === "string" ? normalizeEmail(value) : ""))
+          .filter(Boolean)
+      )
+    );
+
+    if (requestedEmails.length === 0) {
       return NextResponse.json(
-        { message: "Email is required" },
+        { message: "At least one email is required" },
         { status: 400 }
-      );
-    }
-
-    // 1. Find the target user to add
-    const targetUser = await prisma.user.findFirst({
-      where: {
-        email: {
-          equals: normalizeEmail(email),
-          mode: "insensitive",
-        },
-      },
-    });
-
-    if (!targetUser) {
-      return NextResponse.json(
-        { message: "User not found. Ask them to sign up first!" },
-        { status: 404 }
       );
     }
 
@@ -74,49 +68,106 @@ export async function POST(
       );
     }
 
-    // 3. Check if the user is already a member
-    const alreadyMember = await prisma.groupMember.findUnique({
+    // 3. Resolve requested users and reject invalid/already-added ones up front
+    const targetUsers = await prisma.user.findMany({
       where: {
-        groupId_userId: {
-          groupId,
-          userId: targetUser.id,
-        },
+        OR: requestedEmails.map((requestedEmail) => ({
+          email: {
+            equals: requestedEmail,
+            mode: "insensitive",
+          },
+        })),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
     });
 
-    if (alreadyMember) {
-       return NextResponse.json(
-        { message: "User is already in this group" },
+    const foundEmails = new Set(targetUsers.map((user) => normalizeEmail(user.email)));
+    const missingEmails = requestedEmails.filter((requestedEmail) => !foundEmails.has(requestedEmail));
+
+    if (missingEmails.length > 0) {
+      return NextResponse.json(
+        {
+          message:
+            missingEmails.length === 1
+              ? `${missingEmails[0]} has not signed up yet.`
+              : `These emails have not signed up yet: ${missingEmails.join(", ")}`,
+        },
+        { status: 404 }
+      );
+    }
+
+    const existingMemberships = await prisma.groupMember.findMany({
+      where: {
+        groupId,
+        userId: {
+          in: targetUsers.map((user) => user.id),
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    const existingMemberIds = new Set(existingMemberships.map((membership) => membership.userId));
+    const alreadyMemberEmails = targetUsers
+      .filter((user) => existingMemberIds.has(user.id))
+      .map((user) => user.email);
+
+    if (alreadyMemberEmails.length > 0) {
+      return NextResponse.json(
+        {
+          message:
+            alreadyMemberEmails.length === 1
+              ? `${alreadyMemberEmails[0]} is already in this group`
+              : `These users are already in this group: ${alreadyMemberEmails.join(", ")}`,
+        },
         { status: 400 }
       );
     }
 
-    // 4. Add the user and log activity
-    const newMember = await prisma.$transaction(async (tx) => {
-      const member = await tx.groupMember.create({
-        data: {
-          groupId,
-          userId: targetUser.id,
-        },
-      });
+    const usersToAdd = targetUsers.filter((user) => !existingMemberIds.has(user.id));
 
+    // 4. Add the users and log one activity
+    const newMembers = await prisma.$transaction(async (tx) => {
+      const members = await Promise.all(
+        usersToAdd.map((targetUser) =>
+          tx.groupMember.create({
+            data: {
+              groupId,
+              userId: targetUser.id,
+            },
+          })
+        )
+      );
+
+      const addedNames = usersToAdd.map((user) => user.name || user.email);
       await tx.activity.create({
         data: {
           type: "MEMBER_ADDED",
-          message: `${currentUser.name || currentUser.email} added ${targetUser.name || targetUser.email}`,
+          message: `${currentUser.name || currentUser.email} added ${addedNames.join(", ")}`,
           groupId,
           userId: currentUser.id,
-          metadata: { addedUserEmail: targetUser.email }
+          metadata: { addedUserEmails: usersToAdd.map((user) => user.email) }
         }
       });
 
-      return member;
+      return members;
     });
 
-    await publishUserEvent(targetUser.id, "MEMBER_ADDED");
+    await Promise.all(usersToAdd.map((targetUser) => publishUserEvent(targetUser.id, "MEMBER_ADDED")));
     await publishGroupEvent(groupId, "MEMBER_ADDED");
 
-    return NextResponse.json(newMember, { status: 201 });
+    return NextResponse.json(
+      {
+        addedCount: newMembers.length,
+        members: newMembers,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Add member error:", error);
     return NextResponse.json(

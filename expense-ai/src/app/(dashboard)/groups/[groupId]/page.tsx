@@ -71,6 +71,12 @@ type BrowserSpeechRecognition = {
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
+type FriendOption = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
 function CategoryIcon({ category, className }: { category: string; className?: string }) {
   const iconName = getExpenseCategoryIconName(category)
 
@@ -129,6 +135,9 @@ export default function GroupDetailPage() {
   const [description, setDescription] = useState("")
   const [expenseCategory, setExpenseCategory] = useState("OTHER")
   const [targetEmail, setTargetEmail] = useState("")
+  const [selectedMemberEmails, setSelectedMemberEmails] = useState<string[]>([])
+  const [friends, setFriends] = useState<FriendOption[]>([])
+  const [loadingFriends, setLoadingFriends] = useState(false)
   const [paidByUserId, setPaidByUserId] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingMember, setIsAddingMember] = useState(false)
@@ -254,6 +263,41 @@ export default function GroupDetailPage() {
       eventSource.close()
     }
   }, [groupId, fetchGroupData])
+
+  useEffect(() => {
+    if (!showMemberModal || isSoloGroup) {
+      return
+    }
+
+    const loadFriends = async () => {
+      setLoadingFriends(true)
+
+      try {
+        const response = await fetch("/api/friends")
+
+        if (response.ok) {
+          const data = await response.json()
+          setFriends(data)
+        }
+      } catch (error) {
+        console.error("Failed to load friends", error)
+      } finally {
+        setLoadingFriends(false)
+      }
+    }
+
+    void loadFriends()
+  }, [isSoloGroup, showMemberModal])
+
+  useEffect(() => {
+    if (showMemberModal) {
+      return
+    }
+
+    setTargetEmail("")
+    setSelectedMemberEmails([])
+    setMemberError("")
+  }, [showMemberModal])
 
   const handleUpdateGroup = async () => {
     if (!editGroupName.trim()) return;
@@ -688,7 +732,16 @@ export default function GroupDetailPage() {
   }
 
   const handleAddMember = async () => {
-    if (!targetEmail) return
+    const emails = Array.from(
+      new Set(
+        [
+          ...selectedMemberEmails,
+          ...(targetEmail.trim() ? [targetEmail.trim()] : []),
+        ].map((email) => email.toLowerCase())
+      )
+    )
+
+    if (emails.length === 0) return
     setIsAddingMember(true)
     setMemberError("")
 
@@ -696,13 +749,14 @@ export default function GroupDetailPage() {
       const response = await fetch(`/api/groups/${groupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: targetEmail }),
+        body: JSON.stringify({ emails }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
         setTargetEmail("")
+        setSelectedMemberEmails([])
         setShowMemberModal(false)
         fetchGroupData()
       } else {
@@ -768,6 +822,36 @@ export default function GroupDetailPage() {
   const currentUserId = (session?.user as { id?: string } | undefined)?.id
   const currentMembership = group.members.find((member: { userId: string; role: string }) => member.userId === currentUserId)
   const isGroupAdmin = currentMembership?.role === "ADMIN"
+  const currentMemberEmails = new Set(
+    group.members.map((member: any) => String(member.user.email).toLowerCase())
+  )
+  const normalizedInputEmail = targetEmail.trim().toLowerCase()
+  const eligibleFriends = friends
+    .filter((friend) => !currentMemberEmails.has(friend.email.toLowerCase()))
+    .filter((friend) => {
+      if (!targetEmail.trim()) {
+        return true
+      }
+
+      const query = normalizedInputEmail
+      return (
+        (friend.name || "").toLowerCase().includes(query) ||
+        friend.email.toLowerCase().includes(query)
+      )
+    })
+  const friendLookup = new Map(
+    friends.map((friend) => [friend.email.toLowerCase(), friend] as const)
+  )
+  const selectedPeople = selectedMemberEmails.map((email) => ({
+    email,
+    friend: friendLookup.get(email),
+  }))
+  const pendingMemberCount = Array.from(
+    new Set([
+      ...selectedMemberEmails,
+      ...(targetEmail.trim() ? [normalizedInputEmail] : []),
+    ])
+  ).length
 
   const allTransactions = [
     ...(group.expenses || []).map((expense: any) => ({
@@ -1227,12 +1311,143 @@ export default function GroupDetailPage() {
                   <Plus className="w-10 h-10 text-primary" />
                </div>
                <h3 className="text-lg font-bold text-slate-900">Add to Group</h3>
-               <p className="text-sm text-slate-500 mt-1">Enter your friend's email address</p>
+               <p className="text-sm text-slate-500 mt-1">
+                 Select multiple people you already know, or type a fresh email below.
+               </p>
             </div>
 
-            <div className="space-y-4">
-               <div>
-                  <label htmlFor="member-email" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email Address</label>
+            <div className="space-y-5">
+               {selectedPeople.length > 0 && (
+                 <div className="rounded-[1.6rem] border border-primary/10 bg-primary/5 p-4">
+                   <div className="mb-3 flex items-center justify-between">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                       Selected People
+                     </label>
+                     <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary shadow-sm">
+                       {selectedPeople.length}
+                     </span>
+                   </div>
+                   <div className="space-y-2">
+                     {selectedPeople.map(({ email, friend }) => {
+                       const displayName = friend?.name || email.split("@")[0]
+                       const initials = displayName.substring(0, 2).toUpperCase()
+
+                       return (
+                         <button
+                           key={email}
+                           type="button"
+                           onClick={() =>
+                             setSelectedMemberEmails((current) =>
+                               current.filter((selectedEmail) => selectedEmail !== email)
+                             )
+                           }
+                           className="flex w-full items-center justify-between rounded-2xl border border-primary/10 bg-white px-4 py-3 text-left text-primary shadow-sm transition-all hover:border-primary/25"
+                         >
+                           <div className="flex min-w-0 items-center gap-3">
+                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-[11px] font-black text-white">
+                               {initials}
+                             </div>
+                             <div className="min-w-0">
+                               <p className="truncate text-sm font-black text-slate-900">{displayName}</p>
+                               <p className="truncate text-[11px] font-medium text-slate-500">{email}</p>
+                             </div>
+                           </div>
+                           <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                             Remove
+                           </span>
+                         </button>
+                       )
+                     })}
+                   </div>
+                 </div>
+               )}
+
+               {!isSoloGroup && (
+                 <div className="rounded-[1.6rem] border border-slate-100 bg-slate-50/80 p-4">
+                   <div className="mb-3 flex items-center justify-between">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                       Suggested People
+                     </label>
+                     <span className="text-[10px] font-bold text-slate-400">
+                       Only people not already in this group
+                     </span>
+                   </div>
+
+                   {loadingFriends ? (
+                     <div className="rounded-2xl border border-slate-100 bg-white px-4 py-4 text-sm font-medium text-slate-400">
+                       Loading your people...
+                     </div>
+                   ) : eligibleFriends.length > 0 ? (
+                     <div className="grid max-h-64 grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
+                       {eligibleFriends.map((friend) => {
+                         const normalizedEmail = friend.email.toLowerCase()
+                         const isSelected = selectedMemberEmails.includes(normalizedEmail)
+                         const displayName = friend.name || friend.email.split("@")[0]
+                         const initials = displayName.substring(0, 2).toUpperCase()
+
+                         return (
+                           <button
+                             key={friend.id}
+                             type="button"
+                             onClick={() => {
+                               setSelectedMemberEmails((current) =>
+                                 isSelected
+                                   ? current.filter((email) => email !== normalizedEmail)
+                                   : [...current, normalizedEmail]
+                               )
+                               setTargetEmail("")
+                               setMemberError("")
+                             }}
+                             className={`rounded-[1.4rem] border px-4 py-3 text-left transition-all ${
+                               isSelected
+                                 ? "border-primary/20 bg-primary text-white shadow-lg shadow-primary/20"
+                                 : "border-slate-100 bg-white text-slate-700 hover:border-primary/20 hover:bg-primary/5"
+                             }`}
+                           >
+                             <div className="flex items-start justify-between gap-3">
+                               <div className="flex min-w-0 items-center gap-3">
+                                 <div
+                                   className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[11px] font-black ${
+                                     isSelected ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                                   }`}
+                                 >
+                                   {initials}
+                                 </div>
+                                 <div className="min-w-0">
+                                   <p className={`truncate text-sm font-black ${isSelected ? "text-white" : "text-slate-900"}`}>
+                                     {displayName}
+                                   </p>
+                                   <p className={`truncate text-[11px] font-medium ${isSelected ? "text-white/75" : "text-slate-500"}`}>
+                                     {friend.email}
+                                   </p>
+                                 </div>
+                               </div>
+                               <div
+                                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                                   isSelected
+                                     ? "border-white/30 bg-white/15 text-white"
+                                     : "border-slate-200 bg-slate-50 text-slate-300"
+                                 }`}
+                               >
+                                 <Check className="h-4 w-4" />
+                               </div>
+                             </div>
+                           </button>
+                         )
+                       })}
+                     </div>
+                   ) : (
+                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm font-medium text-slate-400">
+                       Everyone you already know is already in this group, or you haven&apos;t split with anyone yet.
+                     </div>
+                   )}
+                 </div>
+               )}
+
+               <div className="rounded-[1.6rem] border border-slate-100 bg-white p-4 shadow-sm">
+                  <label htmlFor="member-email" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                    Add By Email
+                  </label>
                   <Input
                     id="member-email"
                     placeholder="friend@example.com"
@@ -1242,6 +1457,9 @@ export default function GroupDetailPage() {
                     type="email"
                     autoFocus
                   />
+                  <p className="mt-2 ml-1 text-[11px] font-medium text-slate-400">
+                    Type one extra email here if someone isn&apos;t in your suggested list yet.
+                  </p>
                   {memberError && (
                     <p className="text-xs text-rose-500 mt-2 ml-1 font-bold">{memberError}</p>
                   )}
@@ -1250,10 +1468,12 @@ export default function GroupDetailPage() {
 
             <Button
                className="w-full h-16 rounded-3xl text-lg font-black shadow-xl shadow-primary/20 transition-all active:scale-95"
-               disabled={isAddingMember || !targetEmail}
+               disabled={isAddingMember || pendingMemberCount === 0}
                onClick={handleAddMember}
             >
-               {isAddingMember ? "Adding..." : "Add to Group"}
+               {isAddingMember
+                 ? "Adding..."
+                 : `Add ${pendingMemberCount} ${pendingMemberCount === 1 ? "Member" : "Members"}`}
             </Button>
          </div>
       </Modal>
