@@ -811,7 +811,7 @@ export default function GroupDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-[calc(100vh-80px)] bg-background flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )

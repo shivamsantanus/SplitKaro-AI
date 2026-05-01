@@ -7,7 +7,7 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
 
 export default function WelcomePage() {
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#F8FAFC] flex flex-col">
+    <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col">
       <div className="px-6 pt-6">
         <div className="max-w-md mx-auto flex justify-end">
           <Link

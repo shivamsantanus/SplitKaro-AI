@@ -43,7 +43,7 @@ const highlights = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#F8FAFC] px-6 py-10">
+    <div className="min-h-[calc(100vh-80px)] bg-background px-6 py-10">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="rounded-[2rem] bg-white border border-slate-200/70 shadow-xl overflow-hidden">
           <div className="px-6 py-10 sm:px-10 bg-gradient-to-br from-white via-slate-50 to-primary/5 border-b border-slate-100">

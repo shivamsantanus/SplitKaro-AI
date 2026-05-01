@@ -89,7 +89,7 @@ function OverviewContent() {
   const groupActivity = overview?.groups.recentActivity ?? []
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
+    <div className="min-h-screen bg-background pb-32 pt-20">
       <VoiceExpenseModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
@@ -295,7 +295,7 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+        <div className="flex min-h-screen items-center justify-center bg-background">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       }

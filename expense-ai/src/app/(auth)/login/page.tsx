@@ -29,7 +29,7 @@ function LoginForm() {
     urlError && (oauthErrorMessages[urlError] ?? oauthErrorMessages.Default)
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-[#F8FAFC] flex flex-col">
+    <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col">
       <div className="px-6 pt-6 pb-4 max-w-lg mx-auto w-full">
         <button
           type="button"
@@ -69,7 +69,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="animate-pulse flex flex-col items-center">
             <div className="w-12 h-12 bg-primary/20 rounded-full mb-4" />
             <div className="h-4 w-32 bg-slate-200 rounded" />

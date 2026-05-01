@@ -44,7 +44,7 @@ export default function CreateGroupPage() {
 
       if (response.ok) {
         const group = await response.json()
-        router.push(`/dashboard`) 
+        router.push("/dashboard/groups")
       } else {
         const data = await response.json()
         setError(data.message || "Something went wrong")
@@ -57,7 +57,7 @@ export default function CreateGroupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="px-6 pt-6 pb-4 max-w-lg mx-auto w-full flex items-center justify-between">
         <button

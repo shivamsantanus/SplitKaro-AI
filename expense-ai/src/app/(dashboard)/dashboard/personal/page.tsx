@@ -82,7 +82,7 @@ export default function PersonalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
+    <div className="min-h-screen bg-background pb-32 pt-20">
       <PersonalTransactionModal
         isOpen={showModal || !!editingTransaction}
         onClose={() => {

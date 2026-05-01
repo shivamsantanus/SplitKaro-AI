@@ -130,7 +130,7 @@ function GroupsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-32 pt-20">
+    <div className="min-h-screen bg-background pb-32 pt-20">
       <SoloExpenseModal
         isOpen={showSoloModal}
         onClose={() => setShowSoloModal(false)}
@@ -491,7 +491,7 @@ function GroupsContent() {
 
       {/* Tab bar — 3 tabs */}
       <div className="fixed bottom-16 left-0 right-0 z-40 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto mx-4 flex gap-1 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur px-2 py-1.5 shadow-lg">
+        <div className="pointer-events-auto mx-4 flex gap-1 rounded-2xl border border-slate-100 dark:border-white/10 bg-white/90 dark:bg-gray-900/95 backdrop-blur px-2 py-1.5 shadow-lg">
           {(["groups", "activity", "people"] as const).map((tab) => (
             <button
               key={tab}
@@ -499,7 +499,7 @@ function GroupsContent() {
               className={`rounded-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
                 activeTab === tab
                   ? "bg-primary text-white shadow-sm"
-                  : "text-slate-400 hover:text-slate-600"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
               }`}
             >
               {tab}
@@ -517,7 +517,7 @@ export default function GroupsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       }

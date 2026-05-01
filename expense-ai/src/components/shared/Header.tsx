@@ -2,15 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
-import { Button } from "../ui/Button"
-import { Sparkles, LogOut } from "lucide-react"
+import { Moon, Sparkles, Sun } from "lucide-react"
+import { useTheme } from "@/components/providers/ThemeProvider"
 
 export const Header = () => {
   const pathname = usePathname()
-  const { data: session } = useSession()
-  
-  // Don't show header on specific mobile-first screens or welcome screen
+  const { theme, toggle } = useTheme()
+
   const isAuth =
     pathname?.startsWith("/login") ||
     pathname?.startsWith("/signup") ||
@@ -21,48 +19,21 @@ export const Header = () => {
   if (isAuth || isGroupDetail) return null
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center px-6 md:px-12">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <span className="text-xl font-bold text-slate-900 tracking-tight">
-            SplitSmart AI
-          </span>
-        </Link>
-      </div>
+    <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-slate-100 dark:border-white/10 flex items-center justify-between px-6 md:px-12">
+      <Link href="/dashboard" className="flex items-center gap-3">
+        <div className="h-9 w-9 bg-primary rounded-xl flex items-center justify-center text-white shadow-md">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">SplitKaro AI</span>
+      </Link>
 
-      <nav className="ml-auto flex items-center gap-4">
-        {session ? (
-          <>
-            <div className="flex items-center gap-3">
-               <Link
-                href="/dashboard"
-                aria-label="Go to dashboard"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-               >
-                {session.user?.name?.substring(0, 2).toUpperCase() || "U"}
-               </Link>
-               <Button 
-                variant="outline" 
-                size="sm" 
-                className="rounded-xl border-slate-200 text-slate-600 font-bold gap-2"
-                onClick={() => signOut({ callbackUrl: "/welcome" })}
-               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
-            </div>
-          </>
-        ) : (
-          <Link href="/login">
-            <Button size="sm" className="rounded-xl font-bold">
-              Log in
-            </Button>
-          </Link>
-        )}
-      </nav>
+      <button
+        onClick={toggle}
+        aria-label="Toggle dark mode"
+        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+      >
+        {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </button>
     </header>
   )
 }

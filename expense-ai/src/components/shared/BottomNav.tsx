@@ -16,7 +16,7 @@ export function BottomNav({ active }: { active: ActivePage }) {
   const router = useRouter()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-100 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-lg border-t border-slate-100 dark:border-white/10 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
       <div className="flex items-center justify-around max-w-2xl mx-auto">
         {NAV_ITEMS.map(({ key, label, icon: Icon, href }) => {
           const isActive = active === key
@@ -25,7 +25,7 @@ export function BottomNav({ active }: { active: ActivePage }) {
               key={key}
               onClick={() => router.push(href)}
               className={`flex flex-col items-center gap-1 transition-all ${
-                isActive ? "text-primary" : "text-slate-400 opacity-70"
+                isActive ? "text-primary" : "text-slate-400 dark:text-slate-500 opacity-70"
               }`}
             >
               <div

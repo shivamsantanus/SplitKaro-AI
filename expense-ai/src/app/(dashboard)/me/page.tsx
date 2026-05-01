@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, Mail, Smartphone, Users } from "lucide-react"
+import { CalendarDays, LogOut, Mail, Smartphone, Users } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
 import { Input } from "@/components/ui/Input"
@@ -117,7 +117,7 @@ export default function MePage() {
     : null
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] px-6 pb-32 pt-24">
+    <div className="min-h-screen bg-background px-6 pb-32 pt-20">
       {toast && <Toast toast={toast} onDismiss={dismissToast} />}
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -244,6 +244,13 @@ export default function MePage() {
             </Card>
           </div>
         </Card>
+        <button
+          onClick={() => signOut({ callbackUrl: "/welcome" })}
+          className="flex items-center gap-2 mx-auto mt-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          Log out
+        </button>
       </div>
 
       <BottomNav active="me" />
