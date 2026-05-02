@@ -255,8 +255,8 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                   key={i}
                   className={`rounded-xl p-2 space-y-1.5 overflow-hidden ${
                     uncertain
-                      ? "bg-amber-50/70 ring-1 ring-amber-200/70"
-                      : "bg-slate-50/80"
+                      ? "bg-amber-50/70 dark:bg-amber-900/20 ring-1 ring-amber-200/70 dark:ring-amber-700/40"
+                      : "bg-slate-50/80 dark:bg-slate-700/50"
                   }`}
                 >
                   {/* Top row: description + delete */}
@@ -266,7 +266,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                       value={exp.description}
                       onChange={(e) => updateExpense(i, "description", e.target.value)}
                       placeholder="Description"
-                      className="flex-1 min-w-0 h-8 rounded-lg bg-white/80 px-2.5 text-sm font-bold text-slate-900 outline-none placeholder:text-slate-300 focus:bg-white transition-colors"
+                      className="flex-1 min-w-0 h-8 rounded-lg bg-white/80 dark:bg-slate-600/80 px-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-300 focus:bg-white dark:focus:bg-slate-600 transition-colors"
                     />
                     <button
                       onClick={() => removeExpense(i)}
@@ -279,8 +279,8 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                   {/* Bottom row: amount | category | date */}
                   <div className="flex gap-1.5 min-w-0">
                     {/* Amount */}
-                    <div className={`flex items-center gap-1 w-24 shrink-0 h-8 rounded-lg px-2 focus-within:bg-white transition-colors ${
-                      exp.amount === 0 ? "bg-amber-100/60" : "bg-white/80"
+                    <div className={`flex items-center gap-1 w-24 shrink-0 h-8 rounded-lg px-2 focus-within:bg-white dark:focus-within:bg-slate-700 transition-colors ${
+                      exp.amount === 0 ? "bg-amber-100/60 dark:bg-amber-900/30" : "bg-white/80 dark:bg-slate-700/80"
                     }`}>
                       <span className="text-[10px] font-bold text-slate-400 shrink-0">₹</span>
                       <input
@@ -288,7 +288,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                         value={exp.amount || ""}
                         onChange={(e) => updateExpense(i, "amount", parseFloat(e.target.value) || 0)}
                         placeholder="0"
-                        className="flex-1 min-w-0 text-xs font-black text-slate-900 bg-transparent outline-none placeholder:text-slate-300"
+                        className="flex-1 min-w-0 text-xs font-black text-slate-900 dark:text-slate-100 bg-transparent outline-none placeholder:text-slate-300"
                       />
                     </div>
 
@@ -296,8 +296,8 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                     <select
                       value={exp.category}
                       onChange={(e) => updateExpense(i, "category", e.target.value)}
-                      className={`flex-1 min-w-0 h-8 rounded-lg px-2 text-[10px] font-black text-slate-700 outline-none focus:bg-white transition-colors cursor-pointer ${
-                        exp.category === "OTHER" ? "bg-amber-100/60" : "bg-white/80"
+                      className={`flex-1 min-w-0 h-8 rounded-lg px-2 text-[10px] font-black text-slate-700 dark:text-slate-200 outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors cursor-pointer ${
+                        exp.category === "OTHER" ? "bg-amber-100/60 dark:bg-amber-900/30" : "bg-white/80 dark:bg-slate-700/80"
                       }`}
                     >
                       {EXPENSE_CATEGORIES.map((cat) => (
@@ -308,12 +308,14 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                     </select>
 
                     {/* Date */}
-                    <input
-                      type="date"
-                      value={exp.transactionDate}
-                      onChange={(e) => updateExpense(i, "transactionDate", e.target.value)}
-                      className="w-28 shrink-0 h-8 rounded-lg bg-white/80 px-2 text-[10px] font-medium text-slate-600 outline-none focus:bg-white transition-colors"
-                    />
+                    <div className="w-28 shrink-0 h-8 rounded-lg overflow-hidden bg-white/80 dark:bg-slate-700/80 focus-within:bg-white dark:focus-within:bg-slate-700 transition-colors">
+                      <input
+                        type="date"
+                        value={exp.transactionDate}
+                        onChange={(e) => updateExpense(i, "transactionDate", e.target.value)}
+                        className="h-full w-full bg-transparent px-2 text-[10px] font-medium text-slate-600 dark:text-slate-300 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               )

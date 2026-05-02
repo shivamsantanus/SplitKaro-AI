@@ -11,11 +11,17 @@ interface SoloExpenseModalProps {
   onSuccess: () => void
 }
 
+function localDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModalProps) {
   const [email, setEmail] = useState("")
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("OTHER")
+  const [transactionDate, setTransactionDate] = useState(localDateStr())
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
   const [friends, setFriends] = useState<any[]>([])
@@ -72,6 +78,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
           description,
           category,
           groupId: null,
+          transactionDate,
           splits: [{ userId: friendId, amount: parseFloat(amount) }]
         })
       })
@@ -80,6 +87,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
         setAmount("")
         setDescription("")
         setCategory("OTHER")
+        setTransactionDate(localDateStr())
         setEmail("")
         setSelectedFriend(null)
         onSuccess()
@@ -160,7 +168,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
              <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Amount</label>
                 <div className="relative">
@@ -169,16 +177,16 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
                         placeholder="0.00"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="h-14 rounded-2xl pl-12 bg-slate-50 border-slate-100 text-lg font-black text-slate-900 focus:bg-white transition-all"
+                        className="h-14 rounded-2xl pl-8 bg-slate-50 border-slate-100 text-base font-black text-slate-900 focus:bg-white transition-all"
                     />
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Description</label>
                 <Input
-                    placeholder="E.g. Coffee, Rent, Uber"
+                    placeholder="Coffee, Rent…"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     onBlur={() => {
@@ -188,6 +196,18 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
                     }}
                     className="h-14 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white transition-all font-bold text-slate-700"
                 />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Date</label>
+                <div className="h-14 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 focus-within:border-primary/20 transition-colors">
+                  <input
+                    type="date"
+                    value={transactionDate}
+                    onChange={(e) => setTransactionDate(e.target.value)}
+                    className="h-full w-full bg-transparent px-3 text-sm font-bold text-slate-700 outline-none"
+                  />
+                </div>
               </div>
           </div>
 

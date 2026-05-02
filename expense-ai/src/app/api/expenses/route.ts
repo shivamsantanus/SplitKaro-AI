@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { amount, description, groupId, paidById, splits, category } = await req.json();
+    const { amount, description, groupId, paidById, splits, category, transactionDate } = await req.json();
 
     if (!amount || !description) {
       return NextResponse.json(
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
           paidById,
           splits,
           category,
+          transactionDate,
         });
 
         await publishGroupEvent(groupId, "EXPENSE_ADDED");
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
           category: expenseCategory,
           groupId: groupId || null,
           paidById: payerUserId,
+          transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
         },
       });
 

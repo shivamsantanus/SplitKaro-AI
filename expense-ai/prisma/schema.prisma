@@ -70,12 +70,13 @@ model GroupMember {
 }
 
 model Expense {
-  id          String         @id @default(uuid())
-  description String
-  category    String         @default("OTHER")
-  amount      Float
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  description     String
+  category        String         @default("OTHER")
+  amount          Float
+  transactionDate DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   group       Group?          @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId     String?
@@ -86,7 +87,7 @@ model Expense {
   // Relations
   splits      ExpenseSplit[]
 
-  @@index([groupId, createdAt])
+  @@index([groupId, transactionDate])
   @@index([paidById])
 }
 

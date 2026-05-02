@@ -110,6 +110,24 @@
     color: var(--foreground);
     @apply antialiased;
   }
+
+  /* Hide browser number input spinners everywhere */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Keep calendar icon tightly inside the input — no extra margin */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    margin: 0;
+    padding: 0 4px 0 0;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
 }
 
 @layer components {
@@ -167,4 +185,19 @@
   /* ── Input placeholders ──────────────────────────────────── */
   input::placeholder,
   textarea::placeholder { color: #4a6580; }
+
+  /* ── Date & select inputs ────────────────────────────────── */
+  input[type="date"] {
+    color-scheme: dark;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+  }
+  select {
+    color-scheme: dark;
+  }
+  select option {
+    background-color: #1e2d3d;
+    color: #e2e8f0;
+  }
 }

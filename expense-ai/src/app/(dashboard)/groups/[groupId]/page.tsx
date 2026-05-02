@@ -159,6 +159,10 @@ export default function GroupDetailPage() {
   const [splitMode, setSplitMode] = useState<"equal" | "custom">("equal")
   const [activeSplitMembers, setActiveSplitMembers] = useState<string[]>([])
   const [customSplits, setCustomSplits] = useState<Record<string, string>>({})
+  const [expenseDate, setExpenseDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+  })
 
   // Settlements State
   const [showInsights, setShowInsights] = useState(false)
@@ -687,6 +691,7 @@ export default function GroupDetailPage() {
           category: expenseCategory,
           groupId,
           paidById: paidByUserId || undefined,
+          transactionDate: expenseDate,
           splits: splitsToSave,
         }),
       })
@@ -697,10 +702,15 @@ export default function GroupDetailPage() {
         setExpenseCategory("OTHER")
         setPaidByUserId("")
         setEditingExpenseId(null)
+        setExpenseDate(() => {
+          const d = new Date()
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        })
         setShowExpenseModal(false)
         fetchGroupData() // Refresh group data to show new expense
       } else {
-        console.error("Failed to add/update expense");
+        const errData = await response.json().catch(() => ({}))
+        console.error("Failed to add/update expense", response.status, errData)
       }
     } catch (err) {
       console.error("Expense creation failed", err)
@@ -777,6 +787,8 @@ export default function GroupDetailPage() {
       setExpenseCategory(expense.category || "OTHER")
       setPaidByUserId(expense.paidById)
       setEditingExpenseId(expense.id)
+      const d = new Date(expense.transactionDate || expense.createdAt)
+      setExpenseDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`)
       
       if (expense.splits && expense.splits.length > 0) {
           const uIds = expense.splits.map((s: any) => s.userId);
@@ -805,6 +817,8 @@ export default function GroupDetailPage() {
       setActiveSplitMembers(group?.members.map((m: any) => m.userId) || [])
       setSplitMode("equal")
       setCustomSplits({})
+      const d = new Date()
+      setExpenseDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`)
     }
     setShowExpenseModal(true)
   }
@@ -864,7 +878,7 @@ export default function GroupDetailPage() {
     })),
   ].sort(
     (a: any, b: any) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      new Date(b.transactionDate || b.createdAt).getTime() - new Date(a.transactionDate || a.createdAt).getTime()
   )
 
   const categoryEntries = Object.entries(
@@ -1134,7 +1148,7 @@ export default function GroupDetailPage() {
                       {formatCurrency(item.amount)}
                     </span>
                     <span className="text-[9px] text-slate-300 font-medium">
-                      {new Date(item.createdAt).toLocaleDateString()}
+                      {new Date(item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </span>
                   </div>
                 </div>
@@ -1223,7 +1237,7 @@ export default function GroupDetailPage() {
                         </button>
                       </div>
                       <span className="text-[9px] text-slate-300 font-medium">
-                        {new Date(item.createdAt).toLocaleDateString()}
+                        {new Date(item.transactionDate || item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                       </span>
                     </div>
                   </div>
@@ -1497,15 +1511,28 @@ export default function GroupDetailPage() {
             </div>
 
             <div className="space-y-4">
-               <div>
-                  <label htmlFor="expense-description" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">What was this for?</label>
-                  <Input
-                    id="expense-description"
-                    placeholder="Ex. Grocery, Dinner, Taxi"
-                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:border-primary/20 text-base font-bold"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
+               <div className="flex gap-3 items-end">
+                  <div className="flex-1 min-w-0">
+                    <label htmlFor="expense-description" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">What was this for?</label>
+                    <Input
+                      id="expense-description"
+                      placeholder="Ex. Grocery, Dinner, Taxi"
+                      className="h-14 rounded-2xl bg-slate-50 border-transparent focus:border-primary/20 text-base font-bold"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="w-44 shrink-0">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Date</label>
+                    <div className="h-14 rounded-2xl overflow-hidden bg-slate-50 border border-transparent focus-within:border-primary/20 transition-colors">
+                      <input
+                        type="date"
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        className="h-full w-full bg-transparent px-3 text-sm font-bold text-slate-700 outline-none"
+                      />
+                    </div>
+                  </div>
                </div>
 
                <div>

@@ -112,7 +112,7 @@ export async function PUT(
     if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const { expenseId } = await params;
-    const { amount, description, paidById, splits, category } = await req.json();
+    const { amount, description, paidById, splits, category, transactionDate } = await req.json();
 
     if (!amount || !description) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -241,6 +241,7 @@ export async function PUT(
           description,
           category: expenseCategory,
           paidById: payerUserId,
+          ...(transactionDate && { transactionDate: new Date(transactionDate) }),
         },
       });
 

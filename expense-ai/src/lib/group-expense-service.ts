@@ -11,6 +11,7 @@ type CreateGroupExpenseInput = {
   paidById?: string | null;
   splits?: Array<{ userId: string; amount: number }>;
   category?: string | null;
+  transactionDate?: string | null;
 };
 
 export const groupExpenseService = {
@@ -50,6 +51,7 @@ export const groupExpenseService = {
         description: true,
         category: true,
         amount: true,
+        transactionDate: true,
         createdAt: true,
         updatedAt: true,
         groupId: true,
@@ -146,12 +148,14 @@ export const groupExpenseService = {
           category: expenseCategory,
           groupId: input.groupId,
           paidById: payerUserId,
+          transactionDate: input.transactionDate ? new Date(input.transactionDate) : new Date(),
         },
         select: {
           id: true,
           description: true,
           category: true,
           amount: true,
+          transactionDate: true,
           createdAt: true,
           updatedAt: true,
           groupId: true,
