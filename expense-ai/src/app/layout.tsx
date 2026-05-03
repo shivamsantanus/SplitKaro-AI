@@ -6,6 +6,7 @@ import { NextAuthProvider } from "@/components/providers/SessionProvider"
 import { PWAProvider } from "@/components/providers/PWAProvider"
 import { AppleSplashLinks } from "@/components/providers/AppleSplashLinks"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
+import { LanguageProvider } from "@/contexts/LanguageContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -49,11 +50,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} bg-background text-foreground min-h-screen flex flex-col`}>
         <NextAuthProvider>
-          <ThemeProvider>
-            <PWAProvider />
-            <Header />
-            <main className="flex-1">{children}</main>
-          </ThemeProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <PWAProvider />
+              <Header />
+              <main className="flex-1">{children}</main>
+            </ThemeProvider>
+          </LanguageProvider>
         </NextAuthProvider>
       </body>
     </html>

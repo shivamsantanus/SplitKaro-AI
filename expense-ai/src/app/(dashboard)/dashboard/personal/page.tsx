@@ -13,6 +13,7 @@ import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionMod
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -21,6 +22,7 @@ const MONTH_NAMES = [
 
 export default function PersonalPage() {
   const { data: session } = useSession()
+  const { t } = useLanguage()
   const now = new Date()
 
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -29,6 +31,7 @@ export default function PersonalPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [showExpenseMenu, setShowExpenseMenu] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -100,9 +103,9 @@ export default function PersonalPage() {
 
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Personal Expenses</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t("personal.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {session?.user?.name?.split(" ")[0] || "Your"}'s spending tracker
+            {t("personal.subtitle", { name: session?.user?.name?.split(" ")[0] || "Your" })}
           </p>
         </div>
 
@@ -117,7 +120,7 @@ export default function PersonalPage() {
             {MONTH_NAMES[month - 1]} {year}
             {isCurrentMonth && (
               <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                Current
+                {t("common.current")}
               </span>
             )}
           </p>
@@ -135,34 +138,34 @@ export default function PersonalPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-40">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("common.loading")}</p>
           </div>
         ) : !summary ? null : (
           <>
             <div className="grid grid-cols-2 gap-4">
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">This Month</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.thisMonth")}</p>
                 <p className="mt-2 text-2xl font-black text-slate-900">
                   {formatCurrency(summary.totals.monthlyAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {summary.totals.monthlyCount} entries
+                  {t("personal.stats.entries", { count: summary.totals.monthlyCount })}
                 </p>
               </Card>
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Lifetime</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.lifetime")}</p>
                 <p className="mt-2 text-2xl font-black text-slate-900">
                   {formatCurrency(summary.totals.lifetimeAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {summary.totals.lifetimeCount} total entries
+                  {t("personal.stats.lifetimeEntries", { count: summary.totals.lifetimeCount })}
                 </p>
               </Card>
             </div>
 
             {summary.monthlySummary.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">6-Month Trend</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{t("personal.trend")}</h3>
                 <div className="flex items-end gap-2 h-24">
                   {summary.monthlySummary.map((item: { month: string; amount: number }) => {
                     const max = Math.max(...summary.monthlySummary.map((entry: { amount: number }) => entry.amount), 1)
@@ -189,7 +192,7 @@ export default function PersonalPage() {
 
             {summary.categoryBreakdown.length > 0 ? (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">By Category</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{t("personal.byCategory")}</h3>
                 <div className="space-y-3">
                   {summary.categoryBreakdown.map((item: any) => {
                     const pct =
@@ -205,7 +208,7 @@ export default function PersonalPage() {
                             <div className="min-w-0">
                               <p className="truncate text-sm font-bold text-slate-900">{item.label}</p>
                               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                {item.count} entries
+                                {t("personal.categoryEntries", { count: item.count })}
                               </p>
                             </div>
                           </div>
@@ -229,16 +232,16 @@ export default function PersonalPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
                   <PieChart className="h-8 w-8" />
                 </div>
-                <h3 className="font-bold text-slate-900">No expenses this month</h3>
-                <p className="mt-1 text-sm text-slate-400">Tap + to add your first personal expense.</p>
+                <h3 className="font-bold text-slate-900">{t("personal.empty.title")}</h3>
+                <p className="mt-1 text-sm text-slate-400">{t("personal.empty.description")}</p>
               </div>
             )}
 
             {summary.recentTransactions.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Recent</h3>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Latest 8</p>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">{t("personal.recent")}</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.latestCount")}</p>
                 </div>
                 <div className="space-y-2">
                   {summary.recentTransactions.map((transaction: any) => (
@@ -287,20 +290,59 @@ export default function PersonalPage() {
         )}
       </div>
 
-      <div className="fixed bottom-28 right-6 z-40 flex flex-col items-center gap-3">
+      <div className="fixed bottom-28 right-6 z-40 flex flex-col items-end gap-3">
+        {/* Backdrop */}
+        <div
+          className={`fixed inset-0 z-[-1] transition-opacity duration-200 ${
+            showExpenseMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setShowExpenseMenu(false)}
+        />
+
+        {/* Menu items */}
+        <div className="flex flex-col items-end gap-2 mb-1">
+          <button
+            onClick={() => { setShowExpenseMenu(false); setShowVoiceModal(true) }}
+            className={`flex items-center gap-3 bg-white rounded-2xl px-4 py-2.5 shadow-lg border border-slate-100 transition-all duration-300 ease-out origin-bottom-right ${
+              showExpenseMenu
+                ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+                : "opacity-0 translate-y-4 scale-90 pointer-events-none"
+            }`}
+            style={{ transitionDelay: showExpenseMenu ? "80ms" : "0ms" }}
+          >
+            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.voiceNote")}</span>
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+          </button>
+          <button
+            onClick={() => { setShowExpenseMenu(false); setShowModal(true) }}
+            className={`flex items-center gap-3 bg-white rounded-2xl px-4 py-2.5 shadow-lg border border-slate-100 transition-all duration-300 ease-out origin-bottom-right ${
+              showExpenseMenu
+                ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+                : "opacity-0 translate-y-4 scale-90 pointer-events-none"
+            }`}
+            style={{ transitionDelay: showExpenseMenu ? "30ms" : "0ms" }}
+          >
+            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.addExpense")}</span>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+              <Plus className="w-5 h-5 text-primary" strokeWidth={2.5} />
+            </div>
+          </button>
+        </div>
+
+        {/* FAB */}
         <Button
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowExpenseMenu(!showExpenseMenu)}
           size="icon"
-          className="w-12 h-12 rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform bg-white border border-slate-200 text-primary hover:bg-slate-50"
+          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/30 hover:scale-105 transition-all duration-200"
         >
-          <Plus className="w-5 h-5 stroke-[3]" />
-        </Button>
-        <Button
-          onClick={() => setShowVoiceModal(true)}
-          size="icon"
-          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/30 hover:scale-105 transition-transform"
-        >
-          <Mic className="w-7 h-7" />
+          <Plus
+            className={`w-8 h-8 transition-transform duration-300 ease-in-out ${
+              showExpenseMenu ? "rotate-[135deg]" : "rotate-0"
+            }`}
+            strokeWidth={2.5}
+          />
         </Button>
       </div>
 
@@ -309,11 +351,11 @@ export default function PersonalPage() {
       <Modal
         isOpen={!!deletingTransaction}
         onClose={() => setDeletingTransaction(null)}
-        title="Delete Personal Expense"
+        title={t("personal.deleteModal.title")}
       >
         <div className="space-y-6">
           <p className="text-sm font-medium text-slate-600 text-center">
-            Are you sure you want to delete <span className="font-bold text-slate-900">{deletingTransaction?.description}</span>?
+            {t("personal.deleteModal.description", { description: deletingTransaction?.description ?? "" })}
           </p>
           <div className="flex flex-col gap-3 pt-2">
             <button
@@ -321,7 +363,7 @@ export default function PersonalPage() {
               onClick={handleDeleteTransaction}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete Expense"}
+              {isDeleting ? t("common.deleting") : t("groupDetail.deleteModal.confirmDeleteExpense")}
             </button>
             <Button
               variant="outline"
@@ -329,7 +371,7 @@ export default function PersonalPage() {
               onClick={() => setDeletingTransaction(null)}
               disabled={isDeleting}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

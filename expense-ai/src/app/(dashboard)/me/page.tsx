@@ -1,15 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, LogOut, Mail, Smartphone, Users } from "lucide-react"
-import { Button } from "@/components/ui/Button"
-import { Card } from "@/components/ui/Card"
-import { Input } from "@/components/ui/Input"
+import { CalendarDays, LogOut, Mail, Smartphone, Users, Languages, Pencil, Check, X, ChevronDown } from "lucide-react"
 import { Toast } from "@/components/ui/Toast"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { useToast } from "@/hooks/useToast"
+import { useLanguage, LANGUAGE_NAMES, LANGUAGES } from "@/contexts/LanguageContext"
 
 const UPI_REGEX = /^[\w.-]+@[\w.-]+$/
 
@@ -19,21 +17,40 @@ export default function MePage() {
   const router = useRouter()
   const { data: session, status, update } = useSession()
   const { toast, showToast, dismissToast } = useToast()
+  const { t, language, setLanguage } = useLanguage()
 
   const [groups, setGroups] = useState<GroupSummary[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Name
-  const [name, setName]               = useState("")
+  const [name, setName] = useState("")
+  const [editingName, setEditingName] = useState(false)
   const [isSavingName, setIsSavingName] = useState(false)
 
-  // UPI
-  const [upiId, setUpiId]             = useState("")
+  const [upiId, setUpiId] = useState("")
+  const [editingUpi, setEditingUpi] = useState(false)
   const [isSavingUpi, setIsSavingUpi] = useState(false)
-  const [upiError, setUpiError]       = useState("")
+  const [upiError, setUpiError] = useState("")
 
-  // Meta
   const [memberSince, setMemberSince] = useState<string | null>(null)
+
+  const [langOpen, setLangOpen] = useState(false)
+  const langRef = useRef<HTMLDivElement>(null)
+
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const upiInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editingName) nameInputRef.current?.focus() }, [editingName])
+  useEffect(() => { if (editingUpi) upiInputRef.current?.focus() }, [editingUpi])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/login"); return }
@@ -49,7 +66,7 @@ export default function MePage() {
         if (groupsRes.ok) setGroups(await groupsRes.json())
         if (meRes.ok) {
           const me = await meRes.json()
-          if (me.upiId)    setUpiId(me.upiId)
+          if (me.upiId) setUpiId(me.upiId)
           if (me.createdAt) setMemberSince(me.createdAt)
         }
       } catch {
@@ -76,7 +93,8 @@ export default function MePage() {
       if (!res.ok) { showToast(data.message || "Could not update name.", "error"); return }
       await update({ name: data.name })
       setName(data.name || "")
-      showToast("Name updated successfully.", "success")
+      setEditingName(false)
+      showToast("Name updated.", "success")
     } catch {
       showToast("Something went wrong.", "error")
     } finally {
@@ -84,11 +102,16 @@ export default function MePage() {
     }
   }
 
+  const handleCancelName = () => {
+    setName(session?.user?.name || "")
+    setEditingName(false)
+  }
+
   const handleSaveUpi = async () => {
     setUpiError("")
     const trimmed = upiId.trim()
     if (trimmed && !UPI_REGEX.test(trimmed)) {
-      setUpiError("Invalid format — should look like name@bank")
+      setUpiError(t("profile.upiError"))
       return
     }
     setIsSavingUpi(true)
@@ -101,12 +124,18 @@ export default function MePage() {
       const data = await res.json()
       if (!res.ok) { showToast(data.message || "Could not save UPI ID.", "error"); return }
       setUpiId(data.upiId || "")
+      setEditingUpi(false)
       showToast(trimmed ? "UPI ID saved." : "UPI ID removed.", "success")
     } catch {
       showToast("Something went wrong.", "error")
     } finally {
       setIsSavingUpi(false)
     }
+  }
+
+  const handleCancelUpi = () => {
+    setUpiError("")
+    setEditingUpi(false)
   }
 
   const initials =
@@ -117,139 +146,191 @@ export default function MePage() {
     : null
 
   return (
-    <div className="min-h-screen bg-background px-6 pb-32 pt-20">
+    <div className="min-h-screen bg-background px-4 pb-32 pt-20">
       {toast && <Toast toast={toast} onDismiss={dismissToast} />}
 
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <Card className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-lg">
-          {/* Header banner */}
-          <div className="bg-primary px-8 py-10 text-white">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-[1.75rem] border border-white/30 bg-white/15 text-2xl font-black shadow-inner">
-                {initials}
-              </div>
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/70">Profile</p>
-                <h1 className="mt-1 text-3xl font-black">{session?.user?.name || "No name set"}</h1>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                  <div className="flex items-center gap-2 text-sm text-white/85">
-                    <Mail className="h-4 w-4" />
-                    <span>{session?.user?.email || "—"}</span>
-                  </div>
-                  {memberSinceLabel && (
-                    <div className="flex items-center gap-2 text-sm text-white/70">
-                      <CalendarDays className="h-4 w-4" />
-                      <span>Member since {memberSinceLabel}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+      <div className="mx-auto w-full max-w-md flex flex-col gap-4">
+
+        {/* Profile Header */}
+        <div className="flex items-start gap-4 px-2 pt-4 pb-3">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.25rem] bg-primary text-white text-xl font-black shadow-md">
+            {initials}
           </div>
 
-          <div className="grid gap-4 border-t border-slate-100 px-6 py-6 md:grid-cols-[0.85fr_1.15fr]">
-            {/* Left column: User Details + Payment Settings */}
-            <div className="flex flex-col gap-4">
-              <Card className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-none">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">User Details</p>
-                <div className="mt-5 space-y-4">
-                  {/* Name */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Name</p>
-                    <div className="mt-3 space-y-3">
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your name"
-                        className="h-12 rounded-2xl border-slate-200 bg-white font-semibold text-slate-900"
-                      />
-                      <Button onClick={handleSaveName} disabled={isSavingName} className="h-11 rounded-2xl px-5 font-bold">
-                        {isSavingName ? "Saving…" : "Save Name"}
-                      </Button>
-                    </div>
-                  </div>
-                  {/* Email (read-only) */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Email</p>
-                    <p className="mt-2 break-all text-base font-bold text-slate-900">
-                      {session?.user?.email || "—"}
-                    </p>
-                  </div>
-                </div>
-              </Card>
+          <div className="flex-1 min-w-0">
+            {/* Inline name edit */}
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={nameInputRef}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveName()
+                    if (e.key === "Escape") handleCancelName()
+                  }}
+                  className="flex-1 min-w-0 bg-transparent text-xl font-black text-slate-900 dark:text-white border-b-2 border-primary outline-none pb-0.5"
+                  placeholder="Your name"
+                />
+                <button onClick={handleSaveName} disabled={isSavingName} className="shrink-0 text-primary">
+                  <Check className="h-5 w-5" />
+                </button>
+                <button onClick={handleCancelName} className="shrink-0 text-slate-400">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingName(true)}
+                className="group flex items-center gap-2 text-left"
+              >
+                <h1 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+                  {session?.user?.name || "No name set"}
+                </h1>
+                <Pencil className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
 
-              {/* Payment Settings */}
-              <Card className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-none">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Smartphone className="h-4 w-4 text-primary" />
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Payment Settings</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">UPI ID</p>
-                  <Input
+            {/* Inline UPI edit */}
+            {editingUpi ? (
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <input
+                    ref={upiInputRef}
                     value={upiId}
                     onChange={(e) => { setUpiId(e.target.value); setUpiError("") }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveUpi()
+                      if (e.key === "Escape") handleCancelUpi()
+                    }}
+                    className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-primary outline-none pb-0.5"
                     placeholder="yourname@upi"
-                    className="h-12 rounded-2xl border-slate-200 bg-white font-semibold text-slate-900"
                   />
-                  {upiError && (
-                    <p className="text-xs font-semibold text-rose-500 dark:text-rose-400">{upiError}</p>
-                  )}
-                  <p className="text-[11px] text-slate-400">
-                    Group members can pay you directly via UPI when settling up.
-                  </p>
-                  <Button onClick={handleSaveUpi} disabled={isSavingUpi} className="h-11 rounded-2xl px-5 font-bold">
-                    {isSavingUpi ? "Saving…" : "Save UPI ID"}
-                  </Button>
+                  <button onClick={handleSaveUpi} disabled={isSavingUpi} className="shrink-0 text-primary">
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button onClick={handleCancelUpi} className="shrink-0 text-slate-400">
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-              </Card>
+                {upiError && <p className="mt-1 text-xs text-rose-500 pl-5">{upiError}</p>}
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingUpi(true)}
+                className="group mt-1.5 flex items-center gap-1.5 text-left"
+              >
+                <Smartphone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {upiId || "Add UPI ID"}
+                </span>
+                <Pencil className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
+
+            {/* Email (read-only) */}
+            <div className="mt-1 flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <span className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                {session?.user?.email || "—"}
+              </span>
             </div>
 
-            {/* Right column: Active Groups */}
-            <Card className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-none">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Active Groups</p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-900">{groups.length}</h2>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Users className="h-6 w-6" />
-                </div>
+            {/* Member since */}
+            {memberSinceLabel && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span className="text-xs text-slate-400">
+                  {t("profile.memberSince", { date: memberSinceLabel })}
+                </span>
               </div>
-              <div className="mt-5 space-y-3">
-                {loading ? (
-                  <p className="text-sm font-medium text-slate-400">Loading your groups…</p>
-                ) : groups.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-500">
-                    You are not part of any active groups yet.
-                  </div>
-                ) : (
-                  groups.map((group) => (
-                    <button
-                      key={group.id}
-                      onClick={() => router.push(`/groups/${group.id}`)}
-                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition-all hover:border-primary/30 hover:bg-white"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{group.name}</p>
-                        <p className="mt-1 text-xs font-medium text-slate-400">Tap to open group details</p>
-                      </div>
-                      <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Open</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </Card>
+            )}
           </div>
-        </Card>
+        </div>
+
+        {/* Language */}
+        <div
+          ref={langRef}
+          className="relative rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-4 py-3.5 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2.5">
+            <Languages className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Language</span>
+          </div>
+
+          {/* Trigger */}
+          <button
+            onClick={() => setLangOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors hover:border-primary/50 hover:bg-white dark:hover:bg-slate-600"
+          >
+            <span>{LANGUAGE_NAMES[language]}</span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${langOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {/* Dropdown panel */}
+          <div
+            className={`absolute right-4 top-[calc(100%+6px)] z-50 min-w-[10rem] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/60 dark:shadow-black/30 overflow-hidden transition-all duration-200 origin-top-right
+              ${langOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-1 pointer-events-none"}`}
+          >
+            {LANGUAGES.map((lang, i) => (
+              <button
+                key={lang}
+                onClick={() => { setLanguage(lang); setLangOpen(false) }}
+                className={`flex w-full items-center justify-between px-4 py-3 text-sm font-semibold transition-colors
+                  ${i !== 0 ? "border-t border-slate-100 dark:border-slate-700" : ""}
+                  ${language === lang
+                    ? "bg-primary/8 text-primary dark:bg-primary/15"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  }`}
+              >
+                <span>{LANGUAGE_NAMES[lang]}</span>
+                {language === lang && <Check className="h-3.5 w-3.5 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Active Groups */}
+        <div className="rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t("profile.activeGroups")}</span>
+            </div>
+            <span className="text-base font-black text-primary">{groups.length}</span>
+          </div>
+          <div className="space-y-2">
+            {loading ? (
+              <p className="text-sm font-medium text-slate-400 py-1">{t("profile.loadingGroups")}</p>
+            ) : groups.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-4 py-4 text-sm font-medium text-slate-500 text-center">
+                {t("profile.noGroups")}
+              </div>
+            ) : (
+              groups.map((group) => (
+                <button
+                  key={group.id}
+                  onClick={() => router.push(`/groups/${group.id}`)}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-3 text-left transition-all hover:border-primary/30 hover:bg-white dark:hover:bg-slate-700"
+                >
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">{group.name}</p>
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">{t("common.open")}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Logout */}
         <button
           onClick={() => signOut({ callbackUrl: "/welcome" })}
-          className="flex items-center gap-2 mx-auto mt-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all dark:hover:text-rose-400 dark:hover:bg-rose-900/20"
+          className="flex items-center gap-2 mx-auto px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-900/20 transition-all"
         >
           <LogOut className="w-4 h-4" />
-          Log out
+          {t("profile.logout")}
         </button>
       </div>
 

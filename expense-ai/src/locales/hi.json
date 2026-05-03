@@ -1,0 +1,442 @@
+{
+  "app": {
+    "name": "SplitKaro AI",
+    "tagline": "AI की मदद से दोस्तों के साथ खर्च आसानी से बाँटें।"
+  },
+
+  "nav": {
+    "home": "होम",
+    "groups": "ग्रुप",
+    "personal": "व्यक्तिगत",
+    "me": "मैं"
+  },
+
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "saving": "सहेजा जा रहा है...",
+    "deleting": "हटाया जा रहा है...",
+    "recording": "रिकॉर्ड हो रहा है...",
+    "redirecting": "रीडायरेक्ट हो रहा है...",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "back": "वापस",
+    "confirm": "पुष्टि करें",
+    "close": "बंद करें",
+    "done": "हो गया",
+    "ok": "ठीक है",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी हो गया!",
+    "open": "खोलें",
+    "remove": "हटाएं",
+    "change": "बदलें",
+    "dismiss": "हटाएं",
+    "retry": "दोबारा कोशिश करें",
+    "current": "वर्तमान",
+    "error": "कुछ गलत हुआ। कृपया दोबारा कोशिश करें।",
+    "connectionError": "सर्वर से संपर्क नहीं हो पाया। कृपया दोबारा कोशिश करें।"
+  },
+
+  "auth": {
+    "continueWithGoogle": "Google से जारी रखें",
+    "signingIn": "साइन इन हो रहा है...",
+    "tagline": "AI की मदद से दोस्तों के साथ खर्च आसानी से बाँटें।",
+    "googleDescription": "Google से साइन इन करें। अगर आप नए हैं, तो हम आपकी प्रोफ़ाइल अपने आप बना देंगे—अलग से साइनअप की ज़रूरत नहीं।",
+    "errors": {
+      "startFailed": "साइन इन शुरू नहीं हो पाया। कृपया दोबारा कोशिश करें।",
+      "postSignIn": "Google से साइन इन के बाद कुछ गलत हुआ।",
+      "createAccount": "आपका अकाउंट नहीं बन पाया। कृपया दोबारा कोशिश करें।",
+      "callbackFailed": "साइन इन प्रक्रिया विफल हुई। कृपया दोबारा कोशिश करें।",
+      "emailConflict": "यह ईमेल किसी दूसरे साइन इन तरीके से जुड़ी है। इस अकाउंट के लिए Google उपयोग करें।",
+      "requiresSignIn": "जारी रखने के लिए साइन इन करें।",
+      "generic": "साइन इन विफल हुआ। कृपया दोबारा कोशिश करें।"
+    }
+  },
+
+  "about": {
+    "title": "SplitKaro AI के बारे में",
+    "heading": "असली साझा जीवन के लिए बना एक सहयोगी खर्च ऐप",
+    "description": "SplitKaro AI दोस्तों, रूममेट्स, ट्रैवल ग्रुप और छोटी टीमों के लिए साझा पैसे के प्रबंधन को आसान बनाने के लिए डिज़ाइन किया गया है। यह साफ़ खर्च ट्रैकिंग, लाइव अपडेट और AI इनपुट को मिलाकर अनुभव को तेज़ और व्यावहारिक बनाता है।",
+    "backToWelcome": "वेलकम पर वापस जाएं",
+    "features": {
+      "ai": {
+        "title": "AI-सहायक खर्च दर्ज करें",
+        "description": "सामान्य भाषा में इनपुट देकर बातचीत को बहुत तेज़ी से संरचित खर्चों में बदलें।"
+      },
+      "realtime": {
+        "title": "रियलटाइम साझा अपडेट",
+        "description": "Redis-आधारित इवेंट्स डैशबोर्ड और ग्रुप पेजों को सिंक रखते हैं जब कोई खर्च जोड़ता है या चुकता करता है।"
+      },
+      "flexible": {
+        "title": "लचीला भुगतान ट्रैकिंग",
+        "description": "ऐप ग्रुप खर्च, व्यक्तिगत भुगतान, सेटलमेंट और भूमिका-आधारित सदस्य नियंत्रण संभालता है।"
+      }
+    },
+    "team": {
+      "label": "डेवलपमेंट टीम",
+      "heading": "डेवलपर्स से मिलें"
+    }
+  },
+
+  "dashboard": {
+    "greeting": "नमस्ते, {name}",
+    "subtitle": "{month} का सारांश",
+    "loading": "सारांश लोड हो रहा है...",
+    "personalTotal": "व्यक्तिगत कुल",
+    "groupTotal": "ग्रुप कुल",
+    "personalEntries": "{count} व्यक्तिगत प्रविष्टियाँ",
+    "groupExpenses": "{count} ग्रुप खर्च",
+    "recentActivity": "हालिया गतिविधि",
+    "recentDescription": "व्यक्तिगत प्रविष्टियों और ग्रुप लेनदेन के बीच टॉगल करें।",
+    "viewAll": "सभी देखें",
+    "tabs": {
+      "personal": "व्यक्तिगत",
+      "groups": "ग्रुप"
+    },
+    "empty": {
+      "personal": "अभी कोई व्यक्तिगत गतिविधि नहीं",
+      "personalDescription": "आपके नवीनतम व्यक्तिगत खर्च यहाँ दिखाई देंगे।",
+      "groups": "अभी कोई ग्रुप गतिविधि नहीं",
+      "groupsDescription": "ग्रुप खर्च और सेटलमेंट यहाँ दिखाई देंगे।"
+    }
+  },
+
+  "groups": {
+    "title": "ग्रुप",
+    "description": "आपके खर्च ग्रुप",
+    "owedDescription": "जो लोग आप पर या आप पर बकाया हैं",
+    "recentActivity": "हालिया ग्रुप गतिविधियाँ",
+    "youAreOwed": "आपको ₹{amount} मिलना है",
+    "youOwe": "आपको ₹{amount} देना है",
+    "toCollect": "{amount} लेना है",
+    "nothingToCollect": "कुछ लेना नहीं है",
+    "toPay": "{amount} देना है",
+    "nothingToPay": "कुछ देना नहीं है",
+    "status": {
+      "owed": "बकाया",
+      "youOwe": "आप पर बकाया",
+      "settled": "चुकता"
+    },
+    "yourGroups": "आपके ग्रुप",
+    "showArchived": "संग्रहीत दिखाएं",
+    "archived": "संग्रहीत",
+    "loading": "ग्रुप लोड हो रहे हैं...",
+    "totalSpent": "कुल खर्च ₹{amount}",
+    "youAreOwedShort": "आपको मिलना है",
+    "youOweShort": "आपको देना है",
+    "settledUp": "चुकता हो गया",
+    "addIndividual": "व्यक्तिगत जोड़ें",
+    "createGroup": "ग्रुप बनाएं",
+    "spendingOverview": "खर्च अवलोकन",
+    "byCategory": "श्रेणी अनुसार",
+    "totalAmount": "₹{amount} कुल",
+    "noSpendingData": "अभी कोई खर्च डेटा नहीं",
+    "empty": {
+      "title": "अभी कोई ग्रुप नहीं",
+      "description": "दोस्तों के साथ खर्च बाँटना शुरू करने के लिए ग्रुप बनाएं।"
+    },
+    "activity": {
+      "title": "गतिविधि फ़ीड",
+      "empty": "अभी कोई गतिविधि नहीं",
+      "emptyDescription": "ग्रुप खर्च और सेटलमेंट यहाँ दिखाई देंगे।",
+      "individualPayment": "व्यक्तिगत भुगतान"
+    },
+    "people": {
+      "title": "लोगों का अवलोकन",
+      "allSettled": "सब चुकता हो गया",
+      "allSettledDescription": "कोई बकाया नहीं है। दोस्तों को खर्च बाँटने के लिए आमंत्रित करें।",
+      "inviteFriend": "नया दोस्त आमंत्रित करें",
+      "globalBalance": "कुल बकाया",
+      "owesYou": "आपका बकाया है",
+      "youOwe": "आपको देना है",
+      "settle": "चुकता करें"
+    }
+  },
+
+  "createGroup": {
+    "title": "ग्रुप बनाएं",
+    "groupName": "ग्रुप का नाम",
+    "groupNamePlaceholder": "जैसे: गोवा ट्रिप, फ्लैट खर्च",
+    "groupType": "ग्रुप का प्रकार",
+    "types": {
+      "trip": "यात्रा",
+      "home": "घर",
+      "lunch": "लंच",
+      "other": "अन्य"
+    },
+    "creating": "बन रहा है...",
+    "submit": "ग्रुप बनाएं",
+    "errors": {
+      "generic": "कुछ गलत हुआ",
+      "connection": "ग्रुप नहीं बन पाया। कृपया अपना कनेक्शन जाँचें।"
+    }
+  },
+
+  "groupDetail": {
+    "members": "{count} सदस्य",
+    "addMember": "सदस्य जोड़ें",
+    "groupSettings": "ग्रुप सेटिंग्स",
+    "balances": "बकाया",
+    "settle": "चुकता करें",
+    "insights": {
+      "title": "जानकारी",
+      "settled": "चुकता",
+      "groupTotal": "ग्रुप कुल",
+      "myShare": "मेरा हिस्सा",
+      "percentOfTotal": "% कुल का",
+      "iPaid": "मैंने चुकाया",
+      "asPayer": "भुगतानकर्ता के रूप में",
+      "netBalance": "शुद्ध बकाया",
+      "othersOweYou": "बाकी आप पर बकाया हैं",
+      "youOweOthers": "आप बाकियों पर बकाया हैं",
+      "allClear": "सब साफ़",
+      "byCategory": "श्रेणी अनुसार"
+    },
+    "activity": {
+      "empty": "अभी कोई गतिविधि नहीं",
+      "emptyDescription": "दोस्त जोड़ें, फिर खर्च जोड़ें!",
+      "youPaid": "आपने चुकाया",
+      "paidBy": "{name} ने चुकाया",
+      "total": "कुल {amount}",
+      "youLent": "आपने उधार दिया",
+      "youOwe": "आपको देना है",
+      "settled": "चुकता",
+      "splitDetails": "विभाजन विवरण"
+    },
+    "input": {
+      "placeholder": "खर्च टाइप करें या बोलें...",
+      "listening": "सुन रहे हैं...",
+      "addExpense": "खर्च जोड़ें",
+      "stopVoice": "वॉइस इनपुट बंद करें",
+      "startVoice": "वॉइस इनपुट शुरू करें",
+      "send": "संदेश भेजें"
+    },
+    "addMemberModal": {
+      "title": "दोस्त जोड़ें",
+      "heading": "ग्रुप में जोड़ें",
+      "description": "जिन लोगों को आप जानते हैं उन्हें चुनें, या नीचे नई ईमेल दर्ज करें।",
+      "selectedPeople": "चुने हुए लोग",
+      "suggestedPeople": "सुझाए गए लोग",
+      "suggestedDescription": "केवल वे लोग जो इस ग्रुप में नहीं हैं",
+      "loading": "आपके लोगों को लोड किया जा रहा है...",
+      "empty": "जिन्हें आप जानते हैं वे पहले से इस ग्रुप में हैं, या आपने अभी तक किसी के साथ खर्च नहीं बाँटा।",
+      "addByEmail": "ईमेल से जोड़ें",
+      "emailPlaceholder": "friend@example.com",
+      "emailHint": "अगर कोई आपकी सूची में नहीं है तो यहाँ ईमेल टाइप करें।",
+      "addButton": "{count} {member} जोड़ें",
+      "adding": "जोड़ा जा रहा है...",
+      "member": "सदस्य",
+      "members": "सदस्य"
+    },
+    "addExpenseModal": {
+      "title": "खर्च जोड़ें",
+      "totalAmount": "कुल राशि",
+      "amountPlaceholder": "0.00",
+      "descriptionLabel": "यह किसलिए था?",
+      "descriptionPlaceholder": "जैसे: किराना, डिनर, टैक्सी",
+      "date": "तारीख",
+      "category": "श्रेणी",
+      "whoPaid": "किसने चुकाया?",
+      "you": "आप",
+      "splitOptions": "विभाजन विकल्प",
+      "equal": "बराबर",
+      "custom": "कस्टम",
+      "splitInfo": "प्रति चुने गए व्यक्ति लगभग ₹{amount} का विभाजन होगा।",
+      "saving": "सहेजा जा रहा है...",
+      "save": "खर्च सहेजें",
+      "splitMismatch": "कस्टम विभाजन कुल (₹{totalEntered}) खर्च राशि (₹{amount}) से मेल नहीं खाता। कृपया समायोजित करें।"
+    },
+    "settingsModal": {
+      "title": "ग्रुप सेटिंग्स",
+      "heading": "ग्रुप प्रबंधित करें",
+      "groupName": "ग्रुप का नाम",
+      "groupNamePlaceholder": "ग्रुप का नाम दर्ज करें",
+      "simplifyPayments": "भुगतान सरल करें",
+      "simplifyDescription": "चक्रीय कर्जों को न्यूनतम ट्रांसफर में बदलें। उदाहरण: अगर A, B को और B, C को देता है, तो ग्रुप A को सीधे C को देते दिखा सकता है।",
+      "membersLabel": "ग्रुप सदस्य ({count})",
+      "makeAdmin": "एडमिन बनाएं",
+      "removeMember": "सदस्य हटाएं",
+      "removeMemberButton": "सदस्य हटाएं",
+      "saving": "सहेजा जा रहा है...",
+      "save": "बदलाव सहेजें",
+      "archiveGroup": "ग्रुप संग्रहीत करें",
+      "deleteGroup": "पूरा ग्रुप हटाएं",
+      "leaveGroup": "ग्रुप छोड़ें"
+    },
+    "deleteModal": {
+      "title": "क्या आप सुनिश्चित हैं?",
+      "groupDescription": "यह {groupName}, उसके सभी सदस्यों और सभी खर्चों को स्थायी रूप से हटा देगा। यह क्रिया पूर्ववत नहीं की जा सकती।",
+      "expenseTitle": "व्यक्तिगत खर्च हटाएं",
+      "expenseDescription": "क्या आप वाकई इस खर्च को हटाना चाहते हैं? गणना और कुल बकाया तुरंत अपडेट हो जाएगा।",
+      "confirmDeleteGroup": "हाँ, ग्रुप हटाएं",
+      "deletingGroup": "हटाया जा रहा है...",
+      "confirmDeleteExpense": "खर्च हटाएं"
+    },
+    "settleModal": {
+      "title": "भुगतान दर्ज करें",
+      "heading": "चुकता करना",
+      "youPaid": "आपने {name} को चुकाया",
+      "theyPaid": "{name} ने आपको चुकाया",
+      "confirm": "सेटलमेंट की पुष्टि करें",
+      "confirming": "दर्ज हो रहा है..."
+    },
+    "upiSheet": {
+      "paying": "भुगतान",
+      "to": "{name} को",
+      "upiId": "UPI ID",
+      "instructions": "ऊपर UPI ID कॉपी करें → अपना ऐप खोलें और भुगतान करें",
+      "openApp": "अपना UPI ऐप खोलें",
+      "openButton": "UPI ऐप खोलें"
+    },
+    "paymentConfirm": {
+      "title": "सेटलमेंट की पुष्टि करें",
+      "heading": "क्या आपने भुगतान किया?",
+      "description": "क्या आपने सफलतापूर्वक {name} को {amount} चुकाया?",
+      "confirm": "हाँ, मैंने चुकाया",
+      "confirming": "दर्ज हो रहा है…",
+      "cancelMessage": "भुगतान दर्ज नहीं हुआ। आप कभी भी दोबारा कोशिश कर सकते हैं।"
+    }
+  },
+
+  "personal": {
+    "title": "व्यक्तिगत खर्च",
+    "subtitle": "{name} का खर्च ट्रैकर",
+    "fab": {
+      "addExpense": "खर्च जोड़ें",
+      "voiceNote": "वॉइस नोट"
+    },
+    "stats": {
+      "thisMonth": "इस महीने",
+      "entries": "{count} प्रविष्टियाँ",
+      "lifetime": "अब तक",
+      "lifetimeEntries": "{count} कुल प्रविष्टियाँ"
+    },
+    "trend": "6 महीने का रुझान",
+    "byCategory": "श्रेणी अनुसार",
+    "categoryEntries": "{count} प्रविष्टियाँ",
+    "recent": "हालिया",
+    "latestCount": "नवीनतम 8",
+    "empty": {
+      "title": "इस महीने कोई खर्च नहीं",
+      "description": "अपना पहला व्यक्तिगत खर्च जोड़ने के लिए + टैप करें।"
+    },
+    "deleteModal": {
+      "title": "व्यक्तिगत खर्च हटाएं",
+      "description": "क्या आप वाकई {description} को हटाना चाहते हैं?"
+    }
+  },
+
+  "personalModal": {
+    "addTitle": "व्यक्तिगत खर्च जोड़ें",
+    "editTitle": "व्यक्तिगत खर्च संपादित करें",
+    "amount": "राशि",
+    "amountPlaceholder": "0.00",
+    "date": "तारीख",
+    "description": "विवरण",
+    "descriptionPlaceholder": "जैसे: कॉफ़ी, किराना, नेटफ्लिक्स",
+    "category": "श्रेणी",
+    "save": "खर्च सहेजें",
+    "update": "खर्च अपडेट करें",
+    "errors": {
+      "required": "राशि और विवरण आवश्यक हैं",
+      "saveFailed": "सहेजना विफल हुआ",
+      "generic": "कुछ गलत हुआ"
+    }
+  },
+
+  "soloExpenseModal": {
+    "title": "व्यक्तिगत भुगतान",
+    "subtitle": "किसी दोस्त के लिए भुगतान दर्ज करें",
+    "friend": "दोस्त",
+    "emailPlaceholder": "या दोस्त की ईमेल दर्ज करें...",
+    "amount": "राशि",
+    "amountPlaceholder": "0.00",
+    "descriptionLabel": "विवरण",
+    "descriptionPlaceholder": "कॉफ़ी, किराया…",
+    "date": "तारीख",
+    "category": "श्रेणी",
+    "save": "व्यक्तिगत भुगतान सहेजें",
+    "loading": "लोड हो रहा है...",
+    "errors": {
+      "required": "कृपया सभी फ़ील्ड भरें",
+      "userNotFound": "उस ईमेल से कोई उपयोगकर्ता नहीं मिला। उन्हें SplitKaro में शामिल होने के लिए कहें!",
+      "saveFailed": "सहेजना विफल हुआ",
+      "generic": "कुछ गलत हुआ"
+    }
+  },
+
+  "voiceModal": {
+    "title": "वॉइस से खर्च",
+    "idle": {
+      "tap": "बोलना शुरू करने के लिए टैप करें",
+      "description": "अपने सभी खर्च स्वाभाविक रूप से बोलें",
+      "example": "जैसे: \"कॉफ़ी 80, कैंटीन में लंच 250, Uber 120\""
+    },
+    "recording": {
+      "status": "सुन रहे हैं — रोकने के लिए टैप करें",
+      "waiting": "बोलने का इंतज़ार है..."
+    },
+    "parsing": "खर्चों का विश्लेषण हो रहा है...",
+    "preview": {
+      "found": "{count} खर्च मिले",
+      "startOver": "फिर से शुरू करें",
+      "descriptionPlaceholder": "विवरण",
+      "amountPlaceholder": "0",
+      "addButton": "{count} खर्च जोड़ें",
+      "dismiss": "हटाएं"
+    },
+    "saving": "{count} खर्च सहेजे जा रहे हैं...",
+    "errors": {
+      "browserNotSupported": "वॉइस इनपुट के लिए Chrome या Edge की आवश्यकता है। कृपया उनमें से एक उपयोग करें।",
+      "micPermission": "माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया माइक्रोफ़ोन एक्सेस की अनुमति दें।",
+      "micError": "माइक्रोफ़ोन त्रुटि: {error}",
+      "noSpeech": "कोई बोली नहीं मिली। कृपया दोबारा कोशिश करें।",
+      "parseFailed": "खर्चों का विश्लेषण विफल हुआ।",
+      "serverError": "सर्वर से संपर्क नहीं हो पाया। कृपया दोबारा कोशिश करें।",
+      "saveFailed": "सहेजते समय कुछ गलत हुआ।",
+      "partialFail": "{count} खर्च सहेजे नहीं जा सके। कृपया दोबारा कोशिश करें।"
+    }
+  },
+
+  "profile": {
+    "title": "प्रोफाइल",
+    "memberSince": "{date} से सदस्य",
+    "userDetails": "उपयोगकर्ता विवरण",
+    "name": "नाम",
+    "namePlaceholder": "अपना नाम दर्ज करें",
+    "email": "ईमेल",
+    "paymentSettings": "भुगतान सेटिंग्स",
+    "upiId": "UPI ID",
+    "upiPlaceholder": "yourname@upi",
+    "upiError": "गलत फ़ॉर्मेट — name@bank जैसा होना चाहिए",
+    "upiDescription": "ग्रुप सदस्य चुकता करते समय आपको सीधे UPI से भुगतान कर सकते हैं।",
+    "activeGroups": "सक्रिय ग्रुप",
+    "loadingGroups": "आपके ग्रुप लोड हो रहे हैं…",
+    "noGroups": "आप अभी किसी सक्रिय ग्रुप में नहीं हैं।",
+    "openGroupHint": "ग्रुप विवरण खोलने के लिए टैप करें",
+    "logout": "लॉग आउट",
+    "saving": "सहेजा जा रहा है…",
+    "saveName": "नाम सहेजें",
+    "saveUpi": "UPI ID सहेजें"
+  },
+
+  "header": {
+    "toggleDarkMode": "डार्क मोड टॉगल करें"
+  },
+
+  "categories": {
+    "food": "खाना",
+    "transport": "यातायात",
+    "shopping": "खरीदारी",
+    "entertainment": "मनोरंजन",
+    "utilities": "उपयोगिताएँ",
+    "health": "स्वास्थ्य",
+    "travel": "यात्रा",
+    "rent": "किराया",
+    "groceries": "किराना",
+    "other": "अन्य"
+  }
+}

@@ -5,6 +5,7 @@ import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Mic, MicOff, Loader2, Check, X, RefreshCw } from "lucide-react"
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 type Stage = "idle" | "recording" | "parsing" | "preview" | "saving"
 
@@ -22,6 +23,7 @@ interface VoiceExpenseModalProps {
 }
 
 export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseModalProps) {
+  const { t } = useLanguage()
   const [stage, setStage] = useState<Stage>("idle")
   const [transcript, setTranscript] = useState("")
   const [expenses, setExpenses] = useState<ParsedExpense[]>([])
@@ -48,7 +50,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      setError("Voice input requires Chrome or Edge. Please use one of those browsers.")
+      setError(t("voiceModal.errors.browserNotSupported"))
       return
     }
 
@@ -73,9 +75,9 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
 
     recognition.onerror = (event: any) => {
       if (event.error === "not-allowed") {
-        setError("Microphone permission denied. Please allow microphone access.")
+        setError(t("voiceModal.errors.micPermission"))
       } else if (event.error !== "aborted") {
-        setError("Microphone error: " + event.error)
+        setError(t("voiceModal.errors.micError", { error: event.error }))
       }
       setStage("idle")
     }
@@ -94,7 +96,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
     const text = transcriptRef.current.trim() || transcript.trim()
 
     if (!text) {
-      setError("No speech detected. Please try again.")
+      setError(t("voiceModal.errors.noSpeech"))
       setStage("idle")
       return
     }
@@ -111,7 +113,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.message || "Failed to parse expenses.")
+        setError(data.message || t("voiceModal.errors.parseFailed"))
         setStage("idle")
         return
       }
@@ -119,7 +121,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       setExpenses(data.expenses)
       setStage("preview")
     } catch {
-      setError("Failed to reach the server. Please try again.")
+      setError(t("voiceModal.errors.serverError"))
       setStage("idle")
     }
   }
@@ -154,7 +156,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
 
       const failed = results.filter((r) => r.status === "rejected").length
       if (failed > 0) {
-        setError(`${failed} expense(s) failed to save. Please retry.`)
+        setError(t("voiceModal.errors.partialFail", { count: failed }))
         setStage("preview")
         return
       }
@@ -163,13 +165,13 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       onSuccess()
       onClose()
     } catch {
-      setError("Something went wrong while saving.")
+      setError(t("voiceModal.errors.saveFailed"))
       setStage("preview")
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Voice Expenses">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t("voiceModal.title")}>
 
       {/* Idle */}
       {stage === "idle" && (
@@ -181,10 +183,10 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
             <Mic className="w-10 h-10 text-white" />
           </button>
           <div className="text-center space-y-1">
-            <p className="text-sm font-bold text-slate-900">Tap to start speaking</p>
-            <p className="text-xs text-slate-400">Say all your expenses naturally</p>
+            <p className="text-sm font-bold text-slate-900">{t("voiceModal.idle.tap")}</p>
+            <p className="text-xs text-slate-400">{t("voiceModal.idle.description")}</p>
             <p className="text-[10px] text-slate-300 font-medium mt-2">
-              e.g. "Coffee 80, lunch 250 at canteen, Uber 120"
+              {t("voiceModal.idle.example")}
             </p>
           </div>
           {error && (
@@ -205,14 +207,14 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
             <MicOff className="w-10 h-10 text-white" />
           </button>
           <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-            Listening — tap to stop
+            {t("voiceModal.recording.status")}
           </p>
           {transcript ? (
             <div className="w-full rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
               <p className="text-sm text-slate-700 leading-relaxed">{transcript}</p>
             </div>
           ) : (
-            <p className="text-xs text-slate-300 animate-pulse">Waiting for speech...</p>
+            <p className="text-xs text-slate-300 animate-pulse">{t("voiceModal.recording.waiting")}</p>
           )}
         </div>
       )}
@@ -222,7 +224,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
         <div className="flex flex-col items-center justify-center py-16 gap-4 min-h-[260px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary opacity-60" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Parsing your expenses...
+            {t("voiceModal.parsing")}
           </p>
         </div>
       )}
@@ -234,14 +236,14 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
           {/* Tight header */}
           <div className="flex items-center justify-between px-6 pb-3">
             <p className="text-xs font-black text-slate-700 uppercase tracking-widest">
-              Found <span className="text-primary">{expenses.length}</span> expense{expenses.length !== 1 ? "s" : ""}
+              {t("voiceModal.preview.found", { count: expenses.length })}
             </p>
             <button
               onClick={reset}
               className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
             >
               <RefreshCw className="w-2.5 h-2.5" />
-              Start over
+              {t("voiceModal.preview.startOver")}
             </button>
           </div>
 
@@ -265,7 +267,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                       type="text"
                       value={exp.description}
                       onChange={(e) => updateExpense(i, "description", e.target.value)}
-                      placeholder="Description"
+                      placeholder={t("voiceModal.preview.descriptionPlaceholder")}
                       className="flex-1 min-w-0 h-8 rounded-lg bg-white/80 dark:bg-slate-600/80 px-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 outline-none placeholder:text-slate-300 focus:bg-white dark:focus:bg-slate-600 transition-colors"
                     />
                     <button
@@ -338,13 +340,13 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
               className="w-full rounded-2xl py-4 font-black text-sm"
             >
               <Check className="w-4 h-4 mr-2 stroke-[3]" />
-              Add {expenses.length} Expense{expenses.length !== 1 ? "s" : ""}
+              {t("voiceModal.preview.addButton", { count: expenses.length })}
             </Button>
             <button
               onClick={handleClose}
               className="w-full mt-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
             >
-              Dismiss
+              {t("voiceModal.preview.dismiss")}
             </button>
           </div>
         </div>
@@ -355,7 +357,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
         <div className="flex flex-col items-center justify-center py-16 gap-4 min-h-[260px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary opacity-60" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Saving {expenses.length} expense{expenses.length !== 1 ? "s" : ""}...
+            {t("voiceModal.saving", { count: expenses.length })}
           </p>
         </div>
       )}

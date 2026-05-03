@@ -5,6 +5,7 @@ import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Check, Loader2 } from "lucide-react"
 import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface PersonalTransactionModalProps {
   isOpen: boolean
@@ -38,6 +39,7 @@ function localDateStr(d = new Date()) {
 }
 
 export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transaction = null }: PersonalTransactionModalProps) {
+  const { t } = useLanguage()
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("OTHER")
@@ -72,7 +74,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
 
   const handleSave = async () => {
     if (!amount || !description) {
-      setError("Amount and description are required")
+      setError(t("personalModal.errors.required"))
       return
     }
 
@@ -101,31 +103,31 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
         onClose()
       } else {
         const data = await res.json()
-        setError(data.message || "Failed to save")
+        setError(data.message || t("personalModal.errors.saveFailed"))
       }
     } catch {
-      setError("Something went wrong")
+      setError(t("personalModal.errors.generic"))
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Edit Personal Expense" : "Add Personal Expense"}>
+    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? t("personalModal.editTitle") : t("personalModal.addTitle")}>
       <div className="space-y-5">
 
         {/* Amount + Date — identical wrapper enforces same height on iOS */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">
-              Amount
+              {t("personalModal.amount")}
             </label>
             <FieldWrapper>
               <span className="text-sm font-bold text-slate-400 shrink-0">₹</span>
               <input
                 type="number"
                 inputMode="decimal"
-                placeholder="0.00"
+                placeholder={t("personalModal.amountPlaceholder")}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className={`${baseInput} text-lg font-black`}
@@ -135,7 +137,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">
-              Date
+              {t("personalModal.date")}
             </label>
             <FieldWrapper>
               <input
@@ -151,12 +153,12 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
         {/* Description */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">
-            Description
+            {t("personalModal.description")}
           </label>
           <FieldWrapper>
             <input
               type="text"
-              placeholder="E.g. Coffee, Groceries, Netflix"
+              placeholder={t("personalModal.descriptionPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() => {
@@ -172,7 +174,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
         {/* Category */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">
-            Category
+            {t("personalModal.category")}
           </label>
           <div className="grid grid-cols-2 gap-2">
             {EXPENSE_CATEGORIES.map((item) => {
@@ -211,7 +213,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
           ) : (
             <Check className="w-5 h-5 mr-4 stroke-[4]" />
           )}
-          {transaction ? "Update Expense" : "Save Expense"}
+          {transaction ? t("personalModal.update") : t("personalModal.save")}
         </Button>
       </div>
     </Modal>

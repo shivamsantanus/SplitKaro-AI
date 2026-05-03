@@ -4,8 +4,10 @@ import Link from "next/link"
 import { Info, Sparkles } from "lucide-react"
 import Image from "next/image"
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export default function WelcomePage() {
+  const { t } = useLanguage()
   return (
     <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col">
       <div className="px-6 pt-6">
@@ -47,15 +49,15 @@ export default function WelcomePage() {
       </div>
 
       <div className="px-6 pb-8 text-center animate-in delay-100">
-        <h1 className="text-4xl font-bold mb-3 text-slate-900">SplitSmart AI</h1>
+        <h1 className="text-4xl font-bold mb-3 text-slate-900">{t("app.name")}</h1>
         <p className="text-lg text-slate-500 max-w-md mx-auto leading-relaxed">
-          Split expenses with friends effortlessly using AI.
+          {t("app.tagline")}
         </p>
       </div>
 
       <div className="px-6 pb-10 max-w-md mx-auto w-full animate-in delay-200 space-y-3">
         <p className="text-center text-sm text-slate-500">
-          Sign in or create an account with Google—one step for new and returning users.
+          {t("auth.googleDescription")}
         </p>
         <GoogleSignInButton />
       </div>

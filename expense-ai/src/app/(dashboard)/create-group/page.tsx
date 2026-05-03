@@ -13,16 +13,18 @@ import {
   UtensilsCrossed 
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const groupTypes = [
-  { id: "trip", name: "Trip", icon: MapPin, color: "text-blue-500", bg: "bg-blue-50" },
-  { id: "home", name: "Home", icon: Home, color: "text-rose-500", bg: "bg-rose-50" },
-  { id: "lunch", name: "Lunch", icon: UtensilsCrossed, color: "text-amber-500", bg: "bg-amber-50" },
-  { id: "other", name: "Other", icon: ShoppingBag, color: "text-slate-500", bg: "bg-slate-50" },
-]
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export default function CreateGroupPage() {
   const router = useRouter()
+  const { t } = useLanguage()
+
+  const groupTypes = [
+    { id: "trip",  nameKey: "createGroup.types.trip",  icon: MapPin,         color: "text-blue-500",  bg: "bg-blue-50" },
+    { id: "home",  nameKey: "createGroup.types.home",  icon: Home,           color: "text-rose-500",  bg: "bg-rose-50" },
+    { id: "lunch", nameKey: "createGroup.types.lunch", icon: UtensilsCrossed,color: "text-amber-500", bg: "bg-amber-50" },
+    { id: "other", nameKey: "createGroup.types.other", icon: ShoppingBag,    color: "text-slate-500", bg: "bg-slate-50" },
+  ]
   const [groupName, setGroupName] = useState("")
   const [selectedType, setSelectedType] = useState("trip")
   const [loading, setLoading] = useState(false)
@@ -47,10 +49,10 @@ export default function CreateGroupPage() {
         router.push("/dashboard/groups")
       } else {
         const data = await response.json()
-        setError(data.message || "Something went wrong")
+        setError(data.message || t("createGroup.errors.generic"))
       }
     } catch (err) {
-      setError("Failed to create group. Please check your connection.")
+      setError(t("createGroup.errors.connection"))
     } finally {
       setLoading(false)
     }
@@ -67,7 +69,7 @@ export default function CreateGroupPage() {
         >
           <ArrowLeft className="w-5 h-5 text-slate-900" />
         </button>
-        <h1 className="text-xl font-bold text-slate-900">Create Group</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t("createGroup.title")}</h1>
         <div className="w-10" /> {/* Spacer */}
       </div>
 
@@ -88,10 +90,10 @@ export default function CreateGroupPage() {
 
              <div className="space-y-2">
                <label className="text-sm font-bold text-slate-700 pl-1 uppercase tracking-tight">
-                 Group Name
+                 {t("createGroup.groupName")}
                </label>
                <Input
-                placeholder="Ex. Goa Trip, Flat Expenses"
+                placeholder={t("createGroup.groupNamePlaceholder")}
                 className="h-14 rounded-2xl bg-white border-slate-200 shadow-sm text-lg focus:ring-primary focus:border-primary"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
@@ -103,7 +105,7 @@ export default function CreateGroupPage() {
            {/* Type Selector */}
            <div className="space-y-4">
               <label className="text-sm font-bold text-slate-700 pl-1 uppercase tracking-tight">
-                 Group Type
+                 {t("createGroup.groupType")}
               </label>
               <div className="grid grid-cols-4 gap-3">
                 {groupTypes.map((type) => (
@@ -113,15 +115,15 @@ export default function CreateGroupPage() {
                     onClick={() => setSelectedType(type.id)}
                     className={cn(
                       "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border",
-                      selectedType === type.id 
-                        ? "bg-white border-primary shadow-md ring-2 ring-primary/10" 
+                      selectedType === type.id
+                        ? "bg-white border-primary shadow-md ring-2 ring-primary/10"
                         : "bg-white/50 border-transparent hover:bg-white hover:border-slate-200"
                     )}
                   >
                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", type.bg)}>
                       <type.icon className={cn("w-5 h-5", type.color)} />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500">{type.name}</span>
+                    <span className="text-[10px] font-bold text-slate-500">{t(type.nameKey)}</span>
                   </button>
                 ))}
               </div>
@@ -140,7 +142,7 @@ export default function CreateGroupPage() {
                 className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
                 size="lg"
              >
-               {loading ? "Creating..." : "Create Group"}
+               {loading ? t("createGroup.creating") : t("createGroup.submit")}
              </Button>
            </div>
         </form>

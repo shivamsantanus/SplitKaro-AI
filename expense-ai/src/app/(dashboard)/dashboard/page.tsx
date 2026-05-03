@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { ArrowRight, HandCoins, Handshake, Loader2, Wallet } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 type PersonalActivityItem = {
   id: string
@@ -61,6 +62,7 @@ type OverviewResponse = {
 function OverviewContent() {
   const { data: session } = useSession()
   const router = useRouter()
+  const { t } = useLanguage()
   const [overview, setOverview] = useState<OverviewResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [activityView, setActivityView] = useState<"personal" | "groups">("personal")
@@ -99,16 +101,16 @@ function OverviewContent() {
       <div className="mx-auto max-w-4xl px-6 pb-6 pt-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">
-            Hello, {session?.user?.name?.split(" ")[0] || "User"}
+            {t("dashboard.greeting", { name: session?.user?.name?.split(" ")[0] || "User" })}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">{monthLabel} overview</p>
+          <p className="mt-1 text-sm text-slate-500">{t("dashboard.subtitle", { month: monthLabel })}</p>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center space-y-4 py-20 opacity-40">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Loading overview...
+              {t("dashboard.loading")}
             </p>
           </div>
         ) : !overview ? null : (
@@ -123,14 +125,14 @@ function OverviewContent() {
                     <Wallet className="h-4 w-4" />
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Personal Total
+                    {t("dashboard.personalTotal")}
                   </p>
                 </div>
                 <p className="text-xl font-black text-slate-900 sm:text-2xl">
                   {formatCurrency(overview.personal.lifetimeAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {overview.personal.lifetimeCount} personal entries
+                  {t("dashboard.personalEntries", { count: overview.personal.lifetimeCount })}
                 </p>
               </Card>
 
@@ -143,14 +145,14 @@ function OverviewContent() {
                     <Handshake className="h-4 w-4" />
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Group Total
+                    {t("dashboard.groupTotal")}
                   </p>
                 </div>
                 <p className="text-xl font-black text-slate-900 sm:text-2xl">
                   {formatCurrency(overview.groups.totalPaid)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {overview.groups.expenseCount} group expenses
+                  {t("dashboard.groupExpenses", { count: overview.groups.expenseCount })}
                 </p>
               </Card>
             </div>
@@ -159,10 +161,10 @@ function OverviewContent() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
-                    Recent Activity
+                    {t("dashboard.recentActivity")}
                   </h2>
                   <p className="mt-1 text-sm font-medium text-slate-500">
-                    Toggle between personal entries and group transactions.
+                    {t("dashboard.recentDescription")}
                   </p>
                 </div>
                 <button
@@ -171,7 +173,7 @@ function OverviewContent() {
                   }
                   className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-primary"
                 >
-                  View all <ArrowRight className="h-3 w-3" />
+                  {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
 
@@ -186,7 +188,7 @@ function OverviewContent() {
                         : "text-slate-400 hover:text-slate-600"
                     }`}
                   >
-                    {view}
+                    {t(`dashboard.tabs.${view}`)}
                   </button>
                 ))}
               </div>
@@ -218,9 +220,9 @@ function OverviewContent() {
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-                    <p className="text-sm font-bold text-slate-900">No personal activity yet</p>
+                    <p className="text-sm font-bold text-slate-900">{t("dashboard.empty.personal")}</p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Your latest individual expenses will show here.
+                      {t("dashboard.empty.personalDescription")}
                     </p>
                   </div>
                 )
@@ -266,9 +268,9 @@ function OverviewContent() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
-                  <p className="text-sm font-bold text-slate-900">No group activity yet</p>
+                  <p className="text-sm font-bold text-slate-900">{t("dashboard.empty.groups")}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    Group expenses and settlements will show here.
+                    {t("dashboard.empty.groupsDescription")}
                   </p>
                 </div>
               )}

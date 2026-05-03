@@ -1,0 +1,442 @@
+{
+  "app": {
+    "name": "SplitKaro AI",
+    "tagline": "AI ସାହାଯ୍ୟରେ ବନ୍ଧୁମାନଙ୍କ ସହ ଖର୍ଚ୍ଚ ସହଜରେ ଭାଗ କରନ୍ତୁ।"
+  },
+
+  "nav": {
+    "home": "ହୋମ",
+    "groups": "ଗ୍ରୁପ",
+    "personal": "ବ୍ୟକ୍ତିଗତ",
+    "me": "ମୁଁ"
+  },
+
+  "common": {
+    "loading": "ଲୋଡ ହେଉଛି...",
+    "saving": "ସଞ୍ଚୟ ହେଉଛି...",
+    "deleting": "ଡିଲିଟ ହେଉଛି...",
+    "recording": "ରେକର୍ଡ ହେଉଛି...",
+    "redirecting": "ରିଡାଇରେକ୍ଟ ହେଉଛି...",
+    "save": "ସଞ୍ଚୟ କରନ୍ତୁ",
+    "cancel": "ବାତିଲ କରନ୍ତୁ",
+    "delete": "ଡିଲିଟ କରନ୍ତୁ",
+    "edit": "ସଂପାଦନ କରନ୍ତୁ",
+    "back": "ପଛକୁ",
+    "confirm": "ନିଶ୍ଚିତ କରନ୍ତୁ",
+    "close": "ବନ୍ଦ କରନ୍ତୁ",
+    "done": "ସମ୍ପୂର୍ଣ",
+    "ok": "ଠିକ ଅଛି",
+    "yes": "ହଁ",
+    "no": "ନାହିଁ",
+    "copy": "କପି କରନ୍ତୁ",
+    "copied": "କପି ହୋଇଗଲା!",
+    "open": "ଖୋଲନ୍ତୁ",
+    "remove": "ହଟାନ୍ତୁ",
+    "change": "ପରିବର୍ତ୍ତନ କରନ୍ତୁ",
+    "dismiss": "ଖାରଜ କରନ୍ତୁ",
+    "retry": "ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ",
+    "current": "ବର୍ତ୍ତମାନ",
+    "error": "କିଛି ଭୁଲ ହୋଇଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+    "connectionError": "ସର୍ଭର ସହ ଯୋଗାଯୋଗ ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
+  },
+
+  "auth": {
+    "continueWithGoogle": "Google ସହ ଜାରି ରଖନ୍ତୁ",
+    "signingIn": "ସାଇନ ଇନ ହେଉଛି...",
+    "tagline": "AI ସାହାଯ୍ୟରେ ବନ୍ଧୁମାନଙ୍କ ସହ ଖର୍ଚ୍ଚ ସହଜରେ ଭାଗ କରନ୍ତୁ।",
+    "googleDescription": "Google ଦ୍ୱାରା ସାଇନ ଇନ କରନ୍ତୁ। ଯଦି ଆପଣ ନୂଆ, ଅନୁମୋଦନ ପରେ ଆମେ ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ ସ୍ୱୟଂଚାଳିତ ଭାବେ ତିଆରି କରିଦେବୁ।",
+    "errors": {
+      "startFailed": "ସାଇନ ଇନ ଆରମ୍ଭ ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+      "postSignIn": "Google ସହ ସାଇନ ଇନ ପରେ କିଛି ଭୁଲ ହୋଇଗଲା।",
+      "createAccount": "ଆପଣଙ୍କ ଆକାଉଣ୍ଟ ତିଆରି ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+      "callbackFailed": "ସାଇନ ଇନ ପ୍ରକ୍ରିୟା ବିଫଳ ହୋଇଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+      "emailConflict": "ଏହି ଇମେଲ ଅନ୍ୟ ସାଇନ ଇନ ପ୍ରଣାଳୀ ସହ ଯୁକ୍ତ। ଏହି ଆକାଉଣ୍ଟ ପାଇଁ Google ବ୍ୟବହାର କରନ୍ତୁ।",
+      "requiresSignIn": "ଜାରି ରଖିବା ପାଇଁ ସାଇନ ଇନ କରନ୍ତୁ।",
+      "generic": "ସାଇନ ଇନ ବିଫଳ ହୋଇଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
+    }
+  },
+
+  "about": {
+    "title": "SplitKaro AI ବିଷୟରେ",
+    "heading": "ବାସ୍ତବ ଜୀବନ ପାଇଁ ତିଆରି ଏକ ସହଯୋଗୀ ଖର୍ଚ୍ଚ ଆପ",
+    "description": "SplitKaro AI ବନ୍ଧୁ, ରୁମମେଟ, ଭ୍ରମଣ ଗ୍ରୁପ ଏବଂ ଛୋଟ ଦଳ ପାଇଁ ଆର୍ଥିକ ପରିଚାଳନା ସହଜ କରିବା ଲକ୍ଷ୍ୟରେ ଡିଜାଇନ କରାଯାଇଛି।",
+    "backToWelcome": "ୱେଲକମ ପୃଷ୍ଠାକୁ ଫେରନ୍ତୁ",
+    "features": {
+      "ai": {
+        "title": "AI-ସହାୟକ ଖର୍ଚ୍ଚ ଏଣ୍ଟ୍ରି",
+        "description": "ସ୍ୱାଭାବିକ ଭାଷାରେ ଇନପୁଟ ଦେଇ ଖର୍ଚ୍ଚ ଶୀଘ୍ର ଲେଖନ୍ତୁ।"
+      },
+      "realtime": {
+        "title": "ରିୟଲଟାଇମ ଅଦ୍ୟତନ",
+        "description": "ଖର୍ଚ୍ଚ ଯୋଡ଼ିଲେ ବା ଚୁକ୍ତି ହେଲେ ଡ୍ୟାଶବୋର୍ଡ ଏବଂ ଗ୍ରୁପ ପୃଷ୍ଠା ଆପଣ-ଆପ ଅଦ୍ୟତନ ହୁଏ।"
+      },
+      "flexible": {
+        "title": "ନମନୀୟ ଭୁଗତାନ ଟ୍ରାକିଂ",
+        "description": "ଆପ ଗ୍ରୁପ ଖର୍ଚ୍ଚ, ବ୍ୟକ୍ତିଗତ ଭୁଗତାନ, ସେଟଲମେଣ୍ଟ ଏବଂ ଭୂମିକା-ଆଧାରିତ ନିୟନ୍ତ୍ରଣ ସମ୍ଭାଳେ।"
+      }
+    },
+    "team": {
+      "label": "ଡେଭଲପମେଣ୍ଟ ଦଳ",
+      "heading": "ଡେଭଲପରମାନଙ୍କୁ ଭେଟନ୍ତୁ"
+    }
+  },
+
+  "dashboard": {
+    "greeting": "ନମସ୍କାର, {name}",
+    "subtitle": "{month} ସାରାଂଶ",
+    "loading": "ସାରାଂଶ ଲୋଡ ହେଉଛି...",
+    "personalTotal": "ବ୍ୟକ୍ତିଗତ ମୋଟ",
+    "groupTotal": "ଗ୍ରୁପ ମୋଟ",
+    "personalEntries": "{count} ବ୍ୟକ୍ତିଗତ ଏଣ୍ଟ୍ରି",
+    "groupExpenses": "{count} ଗ୍ରୁପ ଖର୍ଚ୍ଚ",
+    "recentActivity": "ସାମ୍ପ୍ରତିକ କାର୍ଯ୍ୟକଳାପ",
+    "recentDescription": "ବ୍ୟକ୍ତିଗତ ଏଣ୍ଟ୍ରି ଏବଂ ଗ୍ରୁପ ଲେନଦେନ ମଧ୍ୟରେ ଟଗଲ କରନ୍ତୁ।",
+    "viewAll": "ସବୁ ଦେଖନ୍ତୁ",
+    "tabs": {
+      "personal": "ବ୍ୟକ୍ତିଗତ",
+      "groups": "ଗ୍ରୁପ"
+    },
+    "empty": {
+      "personal": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ବ୍ୟକ୍ତିଗତ କାର୍ଯ୍ୟକଳାପ ନାହିଁ",
+      "personalDescription": "ଆପଣଙ୍କ ସାମ୍ପ୍ରତିକ ଖର୍ଚ୍ଚ ଏଠାରେ ଦେଖାଯିବ।",
+      "groups": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଗ୍ରୁପ କାର୍ଯ୍ୟକଳାପ ନାହିଁ",
+      "groupsDescription": "ଗ୍ରୁପ ଖର୍ଚ୍ଚ ଏବଂ ସେଟଲମେଣ୍ଟ ଏଠାରେ ଦେଖାଯିବ।"
+    }
+  },
+
+  "groups": {
+    "title": "ଗ୍ରୁପ",
+    "description": "ଆପଣଙ୍କ ଖର୍ଚ୍ଚ ଗ୍ରୁପ",
+    "owedDescription": "ଯେଉଁ ଲୋକ ଆପଣଙ୍କୁ ବା ଆପଣ ତାଙ୍କୁ ଦେୟ ଦେବାର ଅଛି",
+    "recentActivity": "ସାମ୍ପ୍ରତିକ ଗ୍ରୁପ କାର୍ଯ୍ୟକଳାପ",
+    "youAreOwed": "ଆପଣ ₹{amount} ପାଇବେ",
+    "youOwe": "ଆପଣ ₹{amount} ଦେବେ",
+    "toCollect": "{amount} ସଂଗ୍ରହ କରିବାର ଅଛି",
+    "nothingToCollect": "କିଛି ସଂଗ୍ରହ କରିବାର ନାହିଁ",
+    "toPay": "{amount} ଦେବାର ଅଛି",
+    "nothingToPay": "କିଛି ଦେବାର ନାହିଁ",
+    "status": {
+      "owed": "ବକାୟା",
+      "youOwe": "ଆପଣ ଦେବେ",
+      "settled": "ସମ୍ପୂର୍ଣ"
+    },
+    "yourGroups": "ଆପଣଙ୍କ ଗ୍ରୁପ",
+    "showArchived": "ସଂରକ୍ଷିତ ଦେଖନ୍ତୁ",
+    "archived": "ସଂରକ୍ଷିତ",
+    "loading": "ଗ୍ରୁପ ଲୋଡ ହେଉଛି...",
+    "totalSpent": "ମୋଟ ଖର୍ଚ୍ଚ ₹{amount}",
+    "youAreOwedShort": "ଆପଣ ପାଇବେ",
+    "youOweShort": "ଆପଣ ଦେବେ",
+    "settledUp": "ସବୁ ଚୁକ୍ତି ହୋଇଗଲା",
+    "addIndividual": "ବ୍ୟକ୍ତିଗତ ଯୋଡ଼ନ୍ତୁ",
+    "createGroup": "ଗ୍ରୁପ ତିଆରି କରନ୍ତୁ",
+    "spendingOverview": "ଖର୍ଚ୍ଚ ଅବଲୋକନ",
+    "byCategory": "ବର୍ଗ ଅନୁଯାୟୀ",
+    "totalAmount": "₹{amount} ମୋଟ",
+    "noSpendingData": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଖର୍ଚ୍ଚ ଡାଟା ନାହିଁ",
+    "empty": {
+      "title": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଗ୍ରୁପ ନାହିଁ",
+      "description": "ବନ୍ଧୁମାନଙ୍କ ସହ ଖର୍ଚ୍ଚ ଭାଗ ଆରମ୍ଭ କରିବା ପାଇଁ ଗ୍ରୁପ ତିଆରି କରନ୍ତୁ।"
+    },
+    "activity": {
+      "title": "କାର୍ଯ୍ୟକଳାପ ଫିଡ",
+      "empty": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି କାର୍ଯ୍ୟକଳାପ ନାହିଁ",
+      "emptyDescription": "ଗ୍ରୁପ ଖର୍ଚ୍ଚ ଏବଂ ସେଟଲମେଣ୍ଟ ଏଠାରେ ଦେଖାଯିବ।",
+      "individualPayment": "ବ୍ୟକ୍ତିଗତ ଭୁଗତାନ"
+    },
+    "people": {
+      "title": "ଲୋକ ଅବଲୋକନ",
+      "allSettled": "ସବୁ ଚୁକ୍ତି ହୋଇଗଲା",
+      "allSettledDescription": "କୌଣସି ବକାୟା ନାହିଁ। ଖର୍ଚ୍ଚ ଭାଗ ପାଇଁ ବନ୍ଧୁମାନଙ୍କୁ ଆମନ୍ତ୍ରଣ ଦିଅନ୍ତୁ।",
+      "inviteFriend": "ନୂଆ ବନ୍ଧୁ ଆମନ୍ତ୍ରଣ ଦିଅନ୍ତୁ",
+      "globalBalance": "ମୋଟ ବକାୟା",
+      "owesYou": "ଆପଣଙ୍କ ବକାୟା ଅଛି",
+      "youOwe": "ଆପଣ ଦେବେ",
+      "settle": "ଚୁକ୍ତି କରନ୍ତୁ"
+    }
+  },
+
+  "createGroup": {
+    "title": "ଗ୍ରୁପ ତିଆରି କରନ୍ତୁ",
+    "groupName": "ଗ୍ରୁପ ନାମ",
+    "groupNamePlaceholder": "ଯଥା: ଗୋଆ ଭ୍ରମଣ, ଫ୍ଲାଟ ଖର୍ଚ୍ଚ",
+    "groupType": "ଗ୍ରୁପ ପ୍ରକାର",
+    "types": {
+      "trip": "ଭ୍ରମଣ",
+      "home": "ଘର",
+      "lunch": "ଲଞ୍ଚ",
+      "other": "ଅନ୍ୟ"
+    },
+    "creating": "ତିଆରି ହେଉଛି...",
+    "submit": "ଗ୍ରୁପ ତିଆରି କରନ୍ତୁ",
+    "errors": {
+      "generic": "କିଛି ଭୁଲ ହୋଇଗଲା",
+      "connection": "ଗ୍ରୁପ ତିଆରି ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ଆପଣଙ୍କ ସଂଯୋଗ ଯାଞ୍ଚ କରନ୍ତୁ।"
+    }
+  },
+
+  "groupDetail": {
+    "members": "{count} ସଦସ୍ୟ",
+    "addMember": "ସଦସ୍ୟ ଯୋଡ଼ନ୍ତୁ",
+    "groupSettings": "ଗ୍ରୁପ ସେଟିଂ",
+    "balances": "ବକାୟା",
+    "settle": "ଚୁକ୍ତି କରନ୍ତୁ",
+    "insights": {
+      "title": "ଜ୍ଞାନ",
+      "settled": "ଚୁକ୍ତି",
+      "groupTotal": "ଗ୍ରୁପ ମୋଟ",
+      "myShare": "ମୋ ଅଂଶ",
+      "percentOfTotal": "% ମୋଟର",
+      "iPaid": "ମୁଁ ଦେଇଛି",
+      "asPayer": "ଦାତା ଭାବେ",
+      "netBalance": "ନେଟ ବକାୟା",
+      "othersOweYou": "ଅନ୍ୟ ଆପଣଙ୍କ ଉପରେ ଋଣୀ",
+      "youOweOthers": "ଆପଣ ଅନ୍ୟ ଉପରେ ଋଣୀ",
+      "allClear": "ସବୁ ପରିଷ୍କାର",
+      "byCategory": "ବର୍ଗ ଅନୁଯାୟୀ"
+    },
+    "activity": {
+      "empty": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି କାର୍ଯ୍ୟକଳାପ ନାହିଁ",
+      "emptyDescription": "ବନ୍ଧୁ ଯୋଡ଼ନ୍ତୁ, ତାପରେ ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ!",
+      "youPaid": "ଆପଣ ଦେଇଛନ୍ତି",
+      "paidBy": "{name} ଦେଇଛନ୍ତି",
+      "total": "ମୋଟ {amount}",
+      "youLent": "ଆପଣ ଋଣ ଦେଇଛନ୍ତି",
+      "youOwe": "ଆପଣ ଦେବେ",
+      "settled": "ଚୁକ୍ତି",
+      "splitDetails": "ବିଭାଜନ ବିବରଣ"
+    },
+    "input": {
+      "placeholder": "ଖର୍ଚ୍ଚ ଟାଇପ କରନ୍ତୁ ବା ବୋଲନ୍ତୁ...",
+      "listening": "ଶୁଣୁଛି...",
+      "addExpense": "ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+      "stopVoice": "ଭଏସ ଇନପୁଟ ବନ୍ଦ କରନ୍ତୁ",
+      "startVoice": "ଭଏସ ଇନପୁଟ ଆରମ୍ଭ କରନ୍ତୁ",
+      "send": "ବାର୍ତ୍ତା ପଠାନ୍ତୁ"
+    },
+    "addMemberModal": {
+      "title": "ବନ୍ଧୁ ଯୋଡ଼ନ୍ତୁ",
+      "heading": "ଗ୍ରୁପରେ ଯୋଡ଼ନ୍ତୁ",
+      "description": "ଆପଣ ଚିହ୍ନୁଥିବା ଲୋକଙ୍କୁ ବାଛନ୍ତୁ ବା ନୀଚରେ ନୂଆ ଇମେଲ ଦିଅନ୍ତୁ।",
+      "selectedPeople": "ବାଛିଥିବା ଲୋକ",
+      "suggestedPeople": "ପ୍ରସ୍ତାବିତ ଲୋକ",
+      "suggestedDescription": "କେବଳ ଯେଉଁ ଲୋକ ଏହି ଗ୍ରୁପରେ ନାହାଁନ୍ତି",
+      "loading": "ଆପଣଙ୍କ ଲୋକ ଲୋଡ ହେଉଛି...",
+      "empty": "ଆପଣ ଚିହ୍ନୁଥିବା ଲୋକ ଈ ଗ୍ରୁପରେ ଅଛନ୍ତି, ବା ଆପଣ ଏ ପର୍ଯ୍ୟନ୍ତ କାହାରି ସହ ଭାଗ କରି ନାହାଁନ୍ତି।",
+      "addByEmail": "ଇମେଲ ଦ୍ୱାରା ଯୋଡ଼ନ୍ତୁ",
+      "emailPlaceholder": "friend@example.com",
+      "emailHint": "ଯଦି କେହି ତାଲିକାରେ ନାହାଁନ୍ତି ଏଠାରେ ଇମେଲ ଟାଇପ କରନ୍ତୁ।",
+      "addButton": "{count} {member} ଯୋଡ଼ନ୍ତୁ",
+      "adding": "ଯୋଡ଼ାଯାଉଛି...",
+      "member": "ସଦସ୍ୟ",
+      "members": "ସଦସ୍ୟ"
+    },
+    "addExpenseModal": {
+      "title": "ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+      "totalAmount": "ମୋଟ ରାଶି",
+      "amountPlaceholder": "0.00",
+      "descriptionLabel": "ଏହା କିସ ପାଇଁ ଥିଲା?",
+      "descriptionPlaceholder": "ଯଥା: ରାସଦ, ଡିନର, ଟ୍ୟାକ୍ସି",
+      "date": "ତାରିଖ",
+      "category": "ବର୍ଗ",
+      "whoPaid": "କିଏ ଦେଇଛନ୍ତି?",
+      "you": "ଆପଣ",
+      "splitOptions": "ବିଭାଜନ ବିକଳ୍ପ",
+      "equal": "ସମାନ",
+      "custom": "କଷ୍ଟମ",
+      "splitInfo": "ପ୍ରତ୍ୟେକ ବ୍ୟକ୍ତି ପ୍ରାୟ ₹{amount} ଦେବେ।",
+      "saving": "ସଞ୍ଚୟ ହେଉଛି...",
+      "save": "ଖର୍ଚ୍ଚ ସଞ୍ଚୟ କରନ୍ତୁ",
+      "splitMismatch": "କଷ୍ଟମ ବିଭାଜନ ମୋଟ (₹{totalEntered}) ଖର୍ଚ୍ଚ ରାଶି (₹{amount}) ସହ ମେଳ ଖାଉ ନାହିଁ।"
+    },
+    "settingsModal": {
+      "title": "ଗ୍ରୁପ ସେଟିଂ",
+      "heading": "ଗ୍ରୁପ ପରିଚାଳନା",
+      "groupName": "ଗ୍ରୁପ ନାମ",
+      "groupNamePlaceholder": "ଗ୍ରୁପ ନାମ ଦିଅନ୍ତୁ",
+      "simplifyPayments": "ଭୁଗତାନ ସରଳ କରନ୍ତୁ",
+      "simplifyDescription": "ଚକ୍ରୀୟ ଋଣ ସର୍ବନିମ୍ନ ସ୍ଥାନାନ୍ତରରେ ରୂପାନ୍ତରିତ କରନ୍ତୁ।",
+      "membersLabel": "ଗ୍ରୁପ ସଦସ୍ୟ ({count})",
+      "makeAdmin": "ଆଡ୍ମିନ କରନ୍ତୁ",
+      "removeMember": "ସଦସ୍ୟ ହଟାନ୍ତୁ",
+      "removeMemberButton": "ସଦସ୍ୟ ହଟାନ୍ତୁ",
+      "saving": "ସଞ୍ଚୟ ହେଉଛି...",
+      "save": "ପରିବର୍ତ୍ତନ ସଞ୍ଚୟ କରନ୍ତୁ",
+      "archiveGroup": "ଗ୍ରୁପ ସଂରକ୍ଷଣ କରନ୍ତୁ",
+      "deleteGroup": "ସମ୍ପୂର୍ଣ ଗ୍ରୁପ ଡିଲିଟ କରନ୍ତୁ",
+      "leaveGroup": "ଗ୍ରୁପ ଛାଡ଼ନ୍ତୁ"
+    },
+    "deleteModal": {
+      "title": "ଆପଣ ନିଶ୍ଚିତ?",
+      "groupDescription": "ଏହା {groupName}, ସମସ୍ତ ସଦସ୍ୟ ଏବଂ ଖର୍ଚ୍ଚ ସ୍ଥାୟୀ ଭାବେ ଡିଲିଟ ହୋଇଯିବ।",
+      "expenseTitle": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ଡିଲିଟ",
+      "expenseDescription": "ଆପଣ ଏହି ଖର୍ଚ୍ଚ ଡିଲିଟ କରିବାକୁ ଚାହୁଁଛନ୍ତି? ହିସାବ ତୁରନ୍ତ ଅଦ୍ୟତନ ହୋଇଯିବ।",
+      "confirmDeleteGroup": "ହଁ, ଗ୍ରୁପ ଡିଲିଟ କରନ୍ତୁ",
+      "deletingGroup": "ଡିଲିଟ ହେଉଛି...",
+      "confirmDeleteExpense": "ଖର୍ଚ୍ଚ ଡିଲିଟ କରନ୍ତୁ"
+    },
+    "settleModal": {
+      "title": "ଭୁଗତାନ ଦର୍ଜ କରନ୍ତୁ",
+      "heading": "ଚୁକ୍ତି କରୁଛନ୍ତି",
+      "youPaid": "ଆପଣ {name}ଙ୍କୁ ଦେଇଛନ୍ତି",
+      "theyPaid": "{name} ଆପଣଙ୍କୁ ଦେଇଛନ୍ତି",
+      "confirm": "ସେଟଲମେଣ୍ଟ ନିଶ୍ଚିତ କରନ୍ତୁ",
+      "confirming": "ଦର୍ଜ ହେଉଛି..."
+    },
+    "upiSheet": {
+      "paying": "ଭୁଗତାନ",
+      "to": "{name}ଙ୍କୁ",
+      "upiId": "UPI ID",
+      "instructions": "ଉପରୋକ୍ତ UPI ID କପି କରନ୍ତୁ → ଆପଣଙ୍କ ଆପ ଖୋଲନ୍ତୁ ଏବଂ ଦିଅନ୍ତୁ",
+      "openApp": "ଆପଣଙ୍କ UPI ଆପ ଖୋଲନ୍ତୁ",
+      "openButton": "UPI ଆପ ଖୋଲନ୍ତୁ"
+    },
+    "paymentConfirm": {
+      "title": "ସେଟଲମେଣ୍ଟ ନିଶ୍ଚିତ କରନ୍ତୁ",
+      "heading": "ଆପଣ ଦେଇଛନ୍ତି?",
+      "description": "ଆପଣ ସଫଳତାର ସହ {name}ଙ୍କୁ {amount} ଦେଇଛନ୍ତି?",
+      "confirm": "ହଁ, ମୁଁ ଦେଇଛି",
+      "confirming": "ଦର୍ଜ ହେଉଛି…",
+      "cancelMessage": "ଭୁଗତାନ ଦର୍ଜ ହୋଇ ନାହିଁ। ଆପଣ ଯେ କୌଣସି ସମୟରେ ପୁଣି ଚେଷ୍ଟା କରିପାରିବେ।"
+    }
+  },
+
+  "personal": {
+    "title": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ",
+    "subtitle": "{name}ଙ୍କ ଖର୍ଚ୍ଚ ଟ୍ରାକର",
+    "fab": {
+      "addExpense": "ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+      "voiceNote": "ଭଏସ ନୋଟ"
+    },
+    "stats": {
+      "thisMonth": "ଏ ମାସ",
+      "entries": "{count} ଏଣ୍ଟ୍ରି",
+      "lifetime": "ସବୁ ସମୟ",
+      "lifetimeEntries": "{count} ମୋଟ ଏଣ୍ଟ୍ରି"
+    },
+    "trend": "6 ମାସ ଧାରା",
+    "byCategory": "ବର୍ଗ ଅନୁଯାୟୀ",
+    "categoryEntries": "{count} ଏଣ୍ଟ୍ରି",
+    "recent": "ସାମ୍ପ୍ରତିକ",
+    "latestCount": "ସର୍ବଶେଷ 8",
+    "empty": {
+      "title": "ଏ ମାସ କୌଣସି ଖର୍ଚ୍ଚ ନାହିଁ",
+      "description": "ପ୍ରଥମ ଖର୍ଚ୍ଚ ଯୋଡ଼ିବା ପାଇଁ + ଟ୍ୟାପ କରନ୍ତୁ।"
+    },
+    "deleteModal": {
+      "title": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ଡିଲିଟ",
+      "description": "ଆପଣ ଏ {description} ଡିଲିଟ କରିବାକୁ ଚାହୁଁଛନ୍ତି?"
+    }
+  },
+
+  "personalModal": {
+    "addTitle": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+    "editTitle": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ସଂପାଦନ",
+    "amount": "ରାଶି",
+    "amountPlaceholder": "0.00",
+    "date": "ତାରିଖ",
+    "description": "ବିବରଣ",
+    "descriptionPlaceholder": "ଯଥା: କଫି, ରାସଦ, ନେଟଫ୍ଲିକ୍ସ",
+    "category": "ବର୍ଗ",
+    "save": "ଖର୍ଚ୍ଚ ସଞ୍ଚୟ କରନ୍ତୁ",
+    "update": "ଖର୍ଚ୍ଚ ଅଦ୍ୟତନ କରନ୍ତୁ",
+    "errors": {
+      "required": "ରାଶି ଏବଂ ବିବରଣ ଆବଶ୍ୟକ",
+      "saveFailed": "ସଞ୍ଚୟ ବିଫଳ ହୋଇଗଲା",
+      "generic": "କିଛି ଭୁଲ ହୋଇଗଲା"
+    }
+  },
+
+  "soloExpenseModal": {
+    "title": "ବ୍ୟକ୍ତିଗତ ଭୁଗତାନ",
+    "subtitle": "ଜଣ ବନ୍ଧୁ ପାଇଁ ଭୁଗତାନ ଦର୍ଜ କରନ୍ତୁ",
+    "friend": "ବନ୍ଧୁ",
+    "emailPlaceholder": "ବା ବନ୍ଧୁଙ୍କ ଇମେଲ ଦିଅନ୍ତୁ...",
+    "amount": "ରାଶି",
+    "amountPlaceholder": "0.00",
+    "descriptionLabel": "ବିବରଣ",
+    "descriptionPlaceholder": "କଫି, ଭଡ଼ା…",
+    "date": "ତାରିଖ",
+    "category": "ବର୍ଗ",
+    "save": "ବ୍ୟକ୍ତିଗତ ଭୁଗତାନ ସଞ୍ଚୟ କରନ୍ତୁ",
+    "loading": "ଲୋଡ ହେଉଛି...",
+    "errors": {
+      "required": "ଦୟାକରି ସମସ୍ତ ଫିଲ୍ଡ ପୂରଣ କରନ୍ତୁ",
+      "userNotFound": "ସେ ଇମେଲ ଦ୍ୱାରା କୌଣସି ଉପଭୋକ୍ତା ମିଳିଲା ନାହିଁ। ତାଙ୍କୁ SplitKaro ଯୋଗ ଦେବାକୁ କୁହନ୍ତୁ!",
+      "saveFailed": "ସଞ୍ଚୟ ବିଫଳ ହୋଇଗଲା",
+      "generic": "କିଛି ଭୁଲ ହୋଇଗଲା"
+    }
+  },
+
+  "voiceModal": {
+    "title": "ଭଏସ ଖର୍ଚ୍ଚ",
+    "idle": {
+      "tap": "କଥା ଆରମ୍ଭ କରିବା ପାଇଁ ଟ୍ୟାପ କରନ୍ତୁ",
+      "description": "ଆପଣଙ୍କ ସମସ୍ତ ଖର୍ଚ୍ଚ ସ୍ୱାଭାବିକ ଭାବେ କୁହନ୍ତୁ",
+      "example": "ଯଥା: \" କଫି 80, କ୍ୟାଣ୍ଟିନ ଲଞ୍ଚ 250, Uber 120\""
+    },
+    "recording": {
+      "status": "ଶୁଣୁଛି — ବନ୍ଦ କରିବା ପାଇଁ ଟ୍ୟାପ କରନ୍ତୁ",
+      "waiting": "କଥା ପ୍ରତୀକ୍ଷା କରୁଛି..."
+    },
+    "parsing": "ଖର୍ଚ୍ଚ ବିଶ୍ଳେଷଣ ହେଉଛି...",
+    "preview": {
+      "found": "{count} ଖର୍ଚ୍ଚ ମିଳିଲା",
+      "startOver": "ପୁଣି ଆରମ୍ଭ କରନ୍ତୁ",
+      "descriptionPlaceholder": "ବିବରଣ",
+      "amountPlaceholder": "0",
+      "addButton": "{count} ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+      "dismiss": "ଖାରଜ କରନ୍ତୁ"
+    },
+    "saving": "{count} ଖର୍ଚ୍ଚ ସଞ୍ଚୟ ହେଉଛି...",
+    "errors": {
+      "browserNotSupported": "ଭଏସ ଇନପୁଟ ପାଇଁ Chrome ବା Edge ଆବଶ୍ୟକ। ଦୟାକରି ସେଥିରୁ ଗୋଟିଏ ବ୍ୟବହାର କରନ୍ତୁ।",
+      "micPermission": "ମାଇକ୍ରୋଫୋନ ଅନୁମତି ମିଳିଲା ନାହିଁ। ଦୟାକରି ଅ‌ନୁମତି ଦିଅନ୍ତୁ।",
+      "micError": "ମାଇକ୍ରୋଫୋନ ତ୍ରୁଟି: {error}",
+      "noSpeech": "କୌଣସି ଭଏସ ମିଳିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+      "parseFailed": "ଖର୍ଚ୍ଚ ବିଶ୍ଳେଷଣ ବିଫଳ ହୋଇଗଲା।",
+      "serverError": "ସର୍ଭର ସହ ଯୋଗାଯୋଗ ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+      "saveFailed": "ସଞ୍ଚୟ ସମୟରେ କିଛି ଭୁଲ ହୋଇଗଲା।",
+      "partialFail": "{count} ଖର୍ଚ୍ଚ ସଞ୍ଚୟ ହୋଇ ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
+    }
+  },
+
+  "profile": {
+    "title": "ପ୍ରୋଫାଇଲ",
+    "memberSince": "{date} ଠାରୁ ସଦସ୍ୟ",
+    "userDetails": "ଉପଭୋକ୍ତା ବିବରଣ",
+    "name": "ନାମ",
+    "namePlaceholder": "ଆପଣଙ୍କ ନାମ ଦିଅନ୍ତୁ",
+    "email": "ଇମେଲ",
+    "paymentSettings": "ଭୁଗତାନ ସେଟିଂ",
+    "upiId": "UPI ID",
+    "upiPlaceholder": "yourname@upi",
+    "upiError": "ଭୁଲ ଫର୍ମାଟ — name@bank ପରି ହେବା ଉଚିତ",
+    "upiDescription": "ଗ୍ରୁପ ସଦସ୍ୟ ଚୁକ୍ତି ସময়ে ଆପଣଙ୍କୁ UPI ଦ୍ୱାରା ସିଧାସଳଖ ଦେଇ ପାରିବେ।",
+    "activeGroups": "ସକ୍ରିୟ ଗ୍ରୁପ",
+    "loadingGroups": "ଆପଣଙ୍କ ଗ୍ରୁପ ଲୋଡ ହେଉଛି…",
+    "noGroups": "ଆପଣ ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ସକ୍ରିୟ ଗ୍ରୁପରେ ନାହାଁନ୍ତି।",
+    "openGroupHint": "ଗ୍ରୁପ ବିବରଣ ଖୋଲିବା ପାଇଁ ଟ୍ୟାପ କରନ୍ତୁ",
+    "logout": "ଲଗ ଆଉଟ",
+    "saving": "ସଞ୍ଚୟ ହେଉଛି…",
+    "saveName": "ନାମ ସଞ୍ଚୟ କରନ୍ତୁ",
+    "saveUpi": "UPI ID ସଞ୍ଚୟ କରନ୍ତୁ"
+  },
+
+  "header": {
+    "toggleDarkMode": "ଡାର୍କ ମୋଡ ଟଗଲ"
+  },
+
+  "categories": {
+    "food": "ଖାଦ୍ୟ",
+    "transport": "ଯାତାୟାତ",
+    "shopping": "କେନାକଟା",
+    "entertainment": "ମନୋରଞ୍ଜନ",
+    "utilities": "ଉପଯୋଗ",
+    "health": "ସ୍ୱାସ୍ଥ୍ୟ",
+    "travel": "ଭ୍ରମଣ",
+    "rent": "ଭଡ଼ା",
+    "groceries": "ରାସଦ",
+    "other": "ଅନ୍ୟ"
+  }
+}

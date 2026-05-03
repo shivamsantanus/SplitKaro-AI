@@ -4,10 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Moon, Sparkles, Sun } from "lucide-react"
 import { useTheme } from "@/components/providers/ThemeProvider"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export const Header = () => {
   const pathname = usePathname()
   const { theme, toggle } = useTheme()
+  const { t } = useLanguage()
 
   const isAuth =
     pathname?.startsWith("/login") ||
@@ -29,7 +31,7 @@ export const Header = () => {
 
       <button
         onClick={toggle}
-        aria-label="Toggle dark mode"
+        aria-label={t("header.toggleDarkMode")}
         className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
       >
         {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
