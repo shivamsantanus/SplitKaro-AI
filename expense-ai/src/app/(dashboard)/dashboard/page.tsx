@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
@@ -63,8 +63,12 @@ type OverviewResponse = {
 }
 
 function OverviewContent() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.replace("/welcome")
+  }, [status, router])
   const { t } = useLanguage()
   const queryClient = useQueryClient()
   const { data: overview, isLoading: loading } = useOverviewQuery()

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { ArrowLeft } from "lucide-react"
 import { Suspense } from "react"
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
@@ -22,8 +23,15 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get("error")
+  const { status } = useSession()
 
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
 
   const oauthUrlMessage =
     urlError && (oauthErrorMessages[urlError] ?? oauthErrorMessages.Default)

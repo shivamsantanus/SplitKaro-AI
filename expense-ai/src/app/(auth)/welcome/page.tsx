@@ -5,9 +5,29 @@ import { Info, Sparkles } from "lucide-react"
 import Image from "next/image"
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function WelcomePage() {
   const { t } = useLanguage()
+  const { status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard")
+    }
+  }, [status, router])
+
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col">
       <div className="px-6 pt-6">

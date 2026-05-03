@@ -9,10 +9,24 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: SESSION_MAX_AGE,
-    updateAge: 24 * 60 * 60, // refresh token/cookie age daily
+    updateAge: 24 * 60 * 60,
   },
   jwt: {
     maxAge: SESSION_MAX_AGE,
+  },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production"
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: SESSION_MAX_AGE,
+      },
+    },
   },
   pages: {
     signIn: "/login",
