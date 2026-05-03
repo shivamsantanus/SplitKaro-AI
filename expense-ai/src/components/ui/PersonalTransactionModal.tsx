@@ -196,7 +196,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
         </div>
 
         {error && (
-          <p className="text-xs font-bold text-rose-500 text-center bg-rose-50 py-2 rounded-xl border border-rose-100">
+          <p className="text-xs font-bold text-rose-500 text-center bg-rose-50 py-2 rounded-xl border border-rose-100 dark:text-rose-400 dark:bg-rose-900/20 dark:border-rose-800/40">
             {error}
           </p>
         )}

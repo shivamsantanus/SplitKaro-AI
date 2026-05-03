@@ -17,9 +17,9 @@ export function Toast({ toast, onDismiss, duration = 3500 }: ToastProps) {
   }, [toast.id, duration, onDismiss])
 
   const styles = {
-    success: "bg-emerald-50 border-emerald-200 text-emerald-800",
-    error:   "bg-rose-50   border-rose-200   text-rose-800",
-    info:    "bg-white     border-slate-200   text-slate-800",
+    success: "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-700/40 dark:text-emerald-300",
+    error:   "bg-rose-50   border-rose-200   text-rose-800   dark:bg-rose-900/20   dark:border-rose-700/40   dark:text-rose-300",
+    info:    "bg-white     border-slate-200   text-slate-800  dark:bg-slate-800     dark:border-slate-700     dark:text-slate-200",
   }[toast.type]
 
   const Icon =
@@ -27,8 +27,8 @@ export function Toast({ toast, onDismiss, duration = 3500 }: ToastProps) {
     toast.type === "error"   ? AlertCircle  : Info
 
   const iconColor =
-    toast.type === "success" ? "text-emerald-500" :
-    toast.type === "error"   ? "text-rose-500"    : "text-slate-400"
+    toast.type === "success" ? "text-emerald-500 dark:text-emerald-400" :
+    toast.type === "error"   ? "text-rose-500 dark:text-rose-400"      : "text-slate-400"
 
   return (
     <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[200] animate-in px-4 w-full max-w-sm">

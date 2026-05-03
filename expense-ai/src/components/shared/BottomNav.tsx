@@ -12,12 +12,22 @@ const NAV_ITEMS: { key: ActivePage; label: string; icon: React.ElementType; href
   { key: "me",        label: "Me",       icon: User,   href: "/me" },
 ]
 
-export function BottomNav({ active }: { active: ActivePage }) {
+interface BottomNavProps {
+  active: ActivePage
+  topBar?: React.ReactNode
+}
+
+export function BottomNav({ active, topBar }: BottomNavProps) {
   const router = useRouter()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-lg border-t border-slate-100 dark:border-white/10 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 py-2.5 pb-safe md:pb-4">
-      <div className="flex items-center justify-around max-w-2xl mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-lg border-t border-slate-100 dark:border-white/10 shadow-[-1px_-5px_20px_-10px_rgba(0,0,0,0.1)] z-50 px-4 pb-safe md:pb-4">
+      {topBar && (
+        <div className="flex justify-center pt-2 pb-1">
+          {topBar}
+        </div>
+      )}
+      <div className={`flex items-center justify-around max-w-2xl mx-auto ${topBar ? "py-2" : "py-2.5"}`}>
         {NAV_ITEMS.map(({ key, label, icon: Icon, href }) => {
           const isActive = active === key
           return (

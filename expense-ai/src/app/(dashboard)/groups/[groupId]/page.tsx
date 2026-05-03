@@ -1231,7 +1231,7 @@ export default function GroupDetailPage() {
                         <button
                           aria-label="Delete expense"
                           onClick={(e) => { e.stopPropagation(); handleDeleteExpense(item.id) }}
-                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors"
+                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors dark:hover:text-rose-400 dark:hover:bg-rose-900/20"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

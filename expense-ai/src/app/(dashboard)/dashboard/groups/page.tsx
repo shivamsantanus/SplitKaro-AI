@@ -130,7 +130,7 @@ function GroupsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32 pt-20">
+    <div className="min-h-screen bg-background pb-36 pt-20">
       <SoloExpenseModal
         isOpen={showSoloModal}
         onClose={() => setShowSoloModal(false)}
@@ -152,7 +152,7 @@ function GroupsContent() {
         <Card className="px-4 py-3 rounded-2xl border border-slate-100 bg-white shadow-sm mb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className={`text-lg font-black leading-tight ${totalBalance >= 0 ? "text-primary" : "text-rose-600"}`}>
+              <p className={`text-lg font-black leading-tight ${totalBalance >= 0 ? "text-primary" : "text-rose-600 dark:text-rose-400"}`}>
                 {totalBalance >= 0
                   ? `You are owed ₹${totalBalance.toLocaleString()}`
                   : `You owe ₹${Math.abs(totalBalance).toLocaleString()}`}
@@ -168,7 +168,7 @@ function GroupsContent() {
                 totalBalance > 0
                   ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                   : totalBalance < 0
-                  ? "bg-rose-50 text-rose-500 border border-rose-100"
+                  ? "bg-rose-50 text-rose-500 border border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/40"
                   : "bg-slate-50 text-slate-400 border border-slate-100"
               }`}
             >
@@ -461,7 +461,7 @@ function GroupsContent() {
                   </div>
                   <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
                     <div className="sm:text-right">
-                      <p className={`text-base font-black ${person.amount > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      <p className={`text-base font-black ${person.amount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                         {person.amount > 0
                           ? `+₹${person.amount.toLocaleString()}`
                           : `-₹${Math.abs(person.amount).toLocaleString()}`}
@@ -489,26 +489,26 @@ function GroupsContent() {
         )}
       </div>
 
-      {/* Tab bar — 3 tabs */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto mx-4 flex gap-1 rounded-2xl border border-slate-100 dark:border-white/10 bg-white/90 dark:bg-gray-900/95 backdrop-blur px-2 py-1.5 shadow-lg">
-          {(["groups", "activity", "people"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => navigateToTab(tab)}
-              className={`rounded-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
-                activeTab === tab
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <BottomNav active="groups" />
+      <BottomNav
+        active="groups"
+        topBar={
+          <div className="flex gap-1 rounded-2xl border border-slate-100 dark:border-white/10 bg-white/90 dark:bg-gray-900/95 backdrop-blur px-2 py-1.5 shadow-sm">
+            {(["groups", "activity", "people"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => navigateToTab(tab)}
+                className={`rounded-xl px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${
+                  activeTab === tab
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        }
+      />
     </div>
   )
 }

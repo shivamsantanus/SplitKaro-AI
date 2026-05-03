@@ -195,7 +195,7 @@ export default function MePage() {
                     className="h-12 rounded-2xl border-slate-200 bg-white font-semibold text-slate-900"
                   />
                   {upiError && (
-                    <p className="text-xs font-semibold text-rose-500">{upiError}</p>
+                    <p className="text-xs font-semibold text-rose-500 dark:text-rose-400">{upiError}</p>
                   )}
                   <p className="text-[11px] text-slate-400">
                     Group members can pay you directly via UPI when settling up.
@@ -246,7 +246,7 @@ export default function MePage() {
         </Card>
         <button
           onClick={() => signOut({ callbackUrl: "/welcome" })}
-          className="flex items-center gap-2 mx-auto mt-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+          className="flex items-center gap-2 mx-auto mt-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all dark:hover:text-rose-400 dark:hover:bg-rose-900/20"
         >
           <LogOut className="w-4 h-4" />
           Log out

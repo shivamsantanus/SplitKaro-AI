@@ -20,7 +20,7 @@ export const GroupCard = ({ id, name, memberCount, balance }: GroupCardProps) =>
             <div className="h-12 w-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
               <Users className="h-6 w-6" />
             </div>
-            <div className={`text-right ${isPositive ? 'text-teal-600' : 'text-rose-600'}`}>
+            <div className={`text-right ${isPositive ? 'text-teal-600 dark:text-teal-400' : 'text-rose-600 dark:text-rose-400'}`}>
               <p className="text-xs font-medium uppercase tracking-wider opacity-60">
                 {isPositive ? 'You are owed' : 'You owe'}
               </p>

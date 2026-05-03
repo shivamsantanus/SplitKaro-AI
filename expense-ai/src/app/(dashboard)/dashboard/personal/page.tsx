@@ -263,19 +263,19 @@ export default function PersonalPage() {
                         </p>
                         <button
                           onClick={() => setEditingTransaction(transaction)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
                           aria-label={`Edit ${transaction.description}`}
                           title="Edit expense"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => setDeletingTransaction(transaction)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30"
                           aria-label={`Delete ${transaction.description}`}
                           title="Delete expense"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
@@ -317,7 +317,7 @@ export default function PersonalPage() {
           </p>
           <div className="flex flex-col gap-3 pt-2">
             <button
-              className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+              className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-600/20 dark:bg-rose-500 dark:hover:bg-rose-600 dark:shadow-rose-500/20"
               onClick={handleDeleteTransaction}
               disabled={isDeleting}
             >

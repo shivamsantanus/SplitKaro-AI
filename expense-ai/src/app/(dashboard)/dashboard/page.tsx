@@ -10,7 +10,7 @@ import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { Card } from "@/components/ui/Card"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
-import { ArrowRight, HandCoins, Handshake, Loader2, Mic, Wallet } from "lucide-react"
+import { ArrowRight, HandCoins, Handshake, Loader2, Wallet } from "lucide-react"
 
 type PersonalActivityItem = {
   id: string
@@ -276,15 +276,6 @@ function OverviewContent() {
           </div>
         )}
       </div>
-
-      <button
-        onClick={() => setShowVoiceModal(true)}
-        className="fixed bottom-28 right-6 z-40 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 active:scale-95"
-        aria-label="Add personal expense with voice"
-        title="Nightly voice entry"
-      >
-        <Mic className="h-7 w-7" />
-      </button>
 
       <BottomNav active="overview" />
     </div>
