@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   title: "SplitKaro AI | Effortless Expense Splitting",
   description: "AI-powered group expense splitting and personal expense tracking",
   applicationName: "SplitKaro",
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: "/icon.png",
+    apple: "/assets/icons/apple-touch-icon.png",
+  },
   // iOS home-screen behaviour
   appleWebApp: {
     capable: true,
