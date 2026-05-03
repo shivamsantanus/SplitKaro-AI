@@ -24,7 +24,6 @@ export async function GET(
 
     // Await params in Next.js 15+ / 16
     const { groupId } = await params;
-    console.log("Fetching group with ID:", groupId);
 
     const user = await findUserByEmailWithSelect(session.user.email, {
       id: true,
@@ -38,7 +37,6 @@ export async function GET(
     const cached = await getCache(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    // Check if it's the virtual solo-transactions group
     if (groupId === "solo-transactions") {
         const [soloExpensesPaid, soloExpensesOwed, soloSettlements] = await Promise.all([
           prisma.expense.findMany({
@@ -117,27 +115,14 @@ export async function GET(
             settlements: soloSettlements,
             debts: Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01)
         };
-        await setCache(cacheKey, soloResult, 120);
+        await setCache(cacheKey, soloResult, 300);
         return NextResponse.json(soloResult);
     }
 
-    const membership = await prisma.groupMember.findUnique({
-      where: {
-        groupId_userId: {
-          groupId,
-          userId: user.id,
-        },
-      },
-    });
-
-    if (!membership) {
-      return NextResponse.json(
-        { message: "You are not a member of this group" },
-        { status: 403 }
-      );
-    }
-
-    const [group, members, expenses, settlements] = await Promise.all([
+    const [membership, group, members, expenses, settlements] = await Promise.all([
+      prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } },
+      }),
       prisma.group.findUnique({
         where: { id: groupId },
         select: {
@@ -171,37 +156,26 @@ export async function GET(
         },
       }),
       prisma.expense.findMany({
-        where: {
-          groupId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
+        where: { groupId },
+        orderBy: { transactionDate: "desc" },
         select: {
           id: true,
           description: true,
           category: true,
           amount: true,
+          transactionDate: true,
           createdAt: true,
           updatedAt: true,
           groupId: true,
           paidById: true,
-          payer: {
-            select: {
-              name: true,
-            },
-          },
+          payer: { select: { name: true } },
           splits: {
             select: {
               id: true,
               amount: true,
               expenseId: true,
               userId: true,
-              user: {
-                select: {
-                  name: true,
-                },
-              },
+              user: { select: { name: true } },
             },
           },
         },
@@ -235,6 +209,13 @@ export async function GET(
         },
       }),
     ]);
+
+    if (!membership) {
+      return NextResponse.json(
+        { message: "You are not a member of this group" },
+        { status: 403 }
+      );
+    }
 
     if (!group) {
       return NextResponse.json(

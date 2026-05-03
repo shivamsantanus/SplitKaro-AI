@@ -762,8 +762,36 @@ export default function GroupDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-background flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      <div className="min-h-screen bg-slate-50 flex flex-col overflow-x-hidden">
+        {/* Header skeleton */}
+        <div className="bg-primary text-white px-6 py-4 shadow-lg shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-4 max-w-4xl mx-auto w-full">
+            <div className="w-10 h-10 rounded-full bg-white/20 animate-pulse shrink-0" />
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="h-5 w-36 bg-white/25 rounded-lg animate-pulse" />
+              <div className="h-3 w-24 bg-white/15 rounded-md animate-pulse" />
+            </div>
+          </div>
+        </div>
+        {/* Balance strip skeleton */}
+        <div className="bg-white border-b border-slate-100 px-4 py-2 flex gap-2">
+          <div className="h-7 w-14 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="h-7 w-24 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="h-7 w-20 bg-slate-100 rounded-xl animate-pulse" />
+        </div>
+        {/* Transaction feed skeleton */}
+        <div className="flex-1 px-4 py-4 space-y-3 max-w-4xl mx-auto w-full">
+          {[72, 56, 64, 48, 72, 56].map((w, i) => (
+            <div key={i} className="bg-white rounded-2xl p-4 flex items-center gap-3 border border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className={`h-4 bg-slate-100 rounded-md animate-pulse`} style={{ width: `${w}%` }} />
+                <div className="h-3 w-20 bg-slate-100 rounded-md animate-pulse" />
+              </div>
+              <div className="h-5 w-16 bg-slate-100 rounded-lg animate-pulse shrink-0" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
