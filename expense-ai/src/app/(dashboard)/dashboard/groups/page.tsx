@@ -11,19 +11,23 @@ import { useActivitiesQuery } from "@/hooks/queries/useActivities"
 import { useGroupAnalyticsQuery } from "@/hooks/queries/useAnalytics"
 import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation"
 import { Card } from "@/components/ui/Card"
+import { Modal } from "@/components/ui/Modal"
+import { Input } from "@/components/ui/Input"
+import { Button } from "@/components/ui/Button"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { SoloExpenseModal } from "@/components/ui/SoloExpenseModal"
+import { formatCurrency } from "@/lib/currency"
 import {
   Users,
   Activity,
   User,
   Loader2,
   UserPlus,
-  PieChart,
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  Check,
 } from "lucide-react"
 
 function GroupsContent() {
@@ -36,6 +40,9 @@ function GroupsContent() {
   const [showArchived, setShowArchived] = useState(false)
   const [showSoloModal, setShowSoloModal] = useState(false)
   const [showSpending, setShowSpending] = useState(false)
+  const [settleTarget, setSettleTarget] = useState<{ userId: string; name: string; amount: number } | null>(null)
+  const [settleInputAmount, setSettleInputAmount] = useState("")
+  const [isSettling, setIsSettling] = useState(false)
 
   const { data: groups = [], isLoading: loading } = useGroupsQuery(showArchived)
   const { data: activities = [], isLoading: loadingActivities } = useActivitiesQuery(activeTab === "activity")
@@ -59,6 +66,22 @@ function GroupsContent() {
   })
   const peopleList = Object.values(consolidatedDebts).filter((p) => Math.abs(p.amount) > 0.01)
 
+  // Per-person breakdown: individual (solo-transactions) vs real groups
+  const soloGroup = groups.find((g: any) => g.id === "solo-transactions")
+  const soloDebtByUser: Record<string, number> = {}
+  soloGroup?.debts?.forEach((d: any) => { soloDebtByUser[d.userId] = d.amount })
+
+  type GroupDebtEntry = { groupId: string; groupName: string; amount: number }
+  const groupDebtsByUser: Record<string, GroupDebtEntry[]> = {}
+  groups
+    .filter((g: any) => g.id !== "solo-transactions")
+    .forEach((g: any) => {
+      g.debts?.forEach((d: any) => {
+        if (!groupDebtsByUser[d.userId]) groupDebtsByUser[d.userId] = []
+        groupDebtsByUser[d.userId].push({ groupId: g.id, groupName: g.name, amount: d.amount })
+      })
+    })
+
   useEffect(() => {
     const tab = searchParams.get("tab")
     if (tab === "activity" || tab === "people") {
@@ -75,6 +98,44 @@ function GroupsContent() {
 
   const handleSpendingToggle = () => {
     setShowSpending((v) => !v)
+  }
+
+  const openSettleSheet = (person: { userId: string; name: string; amount: number }) => {
+    const soloAmount = soloDebtByUser[person.userId] ?? 0
+    setSettleTarget({ ...person, amount: soloAmount })
+    setSettleInputAmount(Math.abs(soloAmount).toFixed(2))
+  }
+
+  const handlePeerSettle = async () => {
+    if (!settleTarget || !settleInputAmount || parseFloat(settleInputAmount) <= 0) return
+    setIsSettling(true)
+    try {
+      const currentUserId = (session?.user as any)?.id as string
+      const payerId = settleTarget.amount > 0 ? settleTarget.userId : currentUserId
+      const receiverId = settleTarget.amount > 0 ? currentUserId : settleTarget.userId
+
+      const response = await fetch("/api/settlements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(settleInputAmount),
+          groupId: null,
+          payerId,
+          receiverId,
+        }),
+      })
+
+      if (response.ok) {
+        setSettleTarget(null)
+        setSettleInputAmount("")
+        queryClient.invalidateQueries({ queryKey: ["groups"] })
+        queryClient.invalidateQueries({ queryKey: ["analytics"] })
+      }
+    } catch (err) {
+      console.error("Settlement failed", err)
+    } finally {
+      setIsSettling(false)
+    }
   }
 
   return (
@@ -391,51 +452,136 @@ function GroupsContent() {
                 </button>
               </div>
             ) : (
-              peopleList.map((person) => (
-                <Card
-                  key={person.userId}
-                  className="group flex flex-col gap-3 rounded-2xl border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {person.name.substring(0, 2).toUpperCase()}
+              peopleList.map((person) => {
+                const soloAmt = soloDebtByUser[person.userId] ?? 0
+                const groupDebts = groupDebtsByUser[person.userId] ?? []
+                const hasSolo = Math.abs(soloAmt) > 0.01
+
+                return (
+                  <Card
+                    key={person.userId}
+                    className="group rounded-2xl border-slate-100 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
+                          {person.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm">{person.name}</h3>
+                          <p className={`text-base font-black mt-0.5 ${person.amount > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                            {person.amount > 0
+                              ? `+${formatCurrency(person.amount)}`
+                              : `-${formatCurrency(Math.abs(person.amount))}`}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                            {person.amount > 0 ? "owes you" : "you owe"} · total
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm">{person.name}</h3>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                        Global Balance
-                      </p>
+
+                    {/* Breakdown row */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {hasSolo && (
+                        <button
+                          onClick={() => openSettleSheet(person)}
+                          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                            soloAmt > 0
+                              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                              : "border-rose-100 bg-rose-50 text-rose-600"
+                          }`}
+                        >
+                          <span>
+                            {soloAmt > 0
+                              ? `+${formatCurrency(soloAmt)}`
+                              : `-${formatCurrency(Math.abs(soloAmt))}`}
+                          </span>
+                          <span className="opacity-60">individual · settle</span>
+                        </button>
+                      )}
+                      {groupDebts.map((gd) => (
+                        <button
+                          key={gd.groupId}
+                          onClick={() => router.push(`/groups/${gd.groupId}`)}
+                          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                            gd.amount > 0
+                              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                              : "border-rose-100 bg-rose-50 text-rose-600"
+                          }`}
+                        >
+                          <span>
+                            {gd.amount > 0
+                              ? `+${formatCurrency(gd.amount)}`
+                              : `-${formatCurrency(Math.abs(gd.amount))}`}
+                          </span>
+                          <span className="opacity-60">{gd.groupName} · go</span>
+                        </button>
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-                    <div className="sm:text-right">
-                      <p className={`text-base font-black ${person.amount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        {person.amount > 0
-                          ? `+₹${person.amount.toLocaleString()}`
-                          : `-₹${Math.abs(person.amount).toLocaleString()}`}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
-                        {person.amount > 0 ? "owes you" : "you owe"}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const sharedGroup = groups.find((g: any) =>
-                          g.debts.some((d: any) => d.userId === person.userId)
-                        )
-                        if (sharedGroup) router.push(`/groups/${sharedGroup.id}`)
-                      }}
-                      className="rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all hover:scale-105 active:scale-95"
-                    >
-                      Settle
-                    </button>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                )
+              })
             )}
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={!!settleTarget}
+        onClose={() => { setSettleTarget(null); setSettleInputAmount("") }}
+        title="Record Payment"
+      >
+        {settleTarget && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-emerald-500" />
+              </div>
+              <p className="text-sm font-bold text-slate-900">
+                {settleTarget.amount > 0
+                  ? `${settleTarget.name} owes you ${formatCurrency(Math.abs(settleTarget.amount))}`
+                  : `You owe ${settleTarget.name} ${formatCurrency(Math.abs(settleTarget.amount))}`}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {settleTarget.amount > 0
+                  ? `Record how much ${settleTarget.name} paid you`
+                  : `Record how much you paid ${settleTarget.name}`}
+              </p>
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-3xl font-black text-slate-300">₹</span>
+              <Input
+                type="number"
+                placeholder="0.00"
+                className="h-20 pl-14 text-3xl font-black rounded-3xl bg-slate-50 border-transparent focus:border-emerald-200"
+                value={settleInputAmount}
+                onChange={(e) => setSettleInputAmount(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full h-14 rounded-2xl text-base font-black shadow-lg shadow-emerald-200 bg-emerald-500 hover:bg-emerald-600 text-white transition-all active:scale-95"
+                disabled={isSettling || !settleInputAmount || parseFloat(settleInputAmount) <= 0}
+                onClick={handlePeerSettle}
+              >
+                {isSettling ? "Recording..." : "Confirm Payment"}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-14 rounded-2xl text-base font-black border-slate-200"
+                onClick={() => { setSettleTarget(null); setSettleInputAmount("") }}
+                disabled={isSettling}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <BottomNav
         active="groups"

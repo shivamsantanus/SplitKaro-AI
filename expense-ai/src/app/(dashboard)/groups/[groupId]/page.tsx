@@ -274,7 +274,7 @@ export default function GroupDetailPage() {
         method: "DELETE",
       });
       if (response.ok) {
-        router.push("/dashboard");
+        router.push("/dashboard/groups");
       } else {
         setNotice({
           title: "Couldn’t Delete Group",
@@ -298,7 +298,7 @@ export default function GroupDetailPage() {
         body: JSON.stringify({ isArchived: true }),
       });
       if (response.ok) {
-        router.push("/dashboard");
+        router.push("/dashboard/groups");
       } else {
         const data = await response.json()
         setNotice({
@@ -370,7 +370,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       if (response.ok) {
-        router.push("/dashboard")
+        router.push("/dashboard/groups")
       } else {
         setNotice({
           title: "Couldn’t Leave Group",
@@ -865,9 +865,9 @@ export default function GroupDetailPage() {
         <div className="flex items-center justify-between max-w-4xl mx-auto w-full">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/dashboard/groups")}
               className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Back to dashboard"
+              aria-label="Back to groups"
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
@@ -1058,7 +1058,7 @@ export default function GroupDetailPage() {
       )}
 
       {/* Expense/Chat Feed */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 max-w-4xl mx-auto w-full pb-24">
+      <div className={`flex-1 overflow-y-auto px-4 py-3 space-y-2 max-w-4xl mx-auto w-full ${isSoloGroup ? "pb-8" : "pb-24"}`}>
         {allTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
             <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mb-6">
@@ -1212,7 +1212,7 @@ export default function GroupDetailPage() {
       </div>
 
       {/* Bottom Input Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100/60 bg-white/70 backdrop-blur-xl px-4 py-2 md:px-12 shrink-0 shadow-[0_-6px_16px_rgba(0,0,0,0.03)] z-20 pb-safe">
+      {!isSoloGroup && <div className="fixed bottom-0 left-0 right-0 border-t border-slate-100/60 bg-white/70 backdrop-blur-xl px-4 py-2 md:px-12 shrink-0 shadow-[0_-6px_16px_rgba(0,0,0,0.03)] z-20 pb-safe">
         <div className="flex gap-2 items-center max-w-4xl mx-auto w-full">
           <button
             onClick={() => openExpenseModal()}
@@ -1253,7 +1253,7 @@ export default function GroupDetailPage() {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
       {/* Add Member Modal */}
       <Modal isOpen={showMemberModal} onClose={() => setShowMemberModal(false)} title="Add Friend">
          <div className="space-y-6">

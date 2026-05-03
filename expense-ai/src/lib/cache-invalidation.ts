@@ -5,6 +5,7 @@ async function deleteUserCacheKeys(userId: string): Promise<void> {
   await Promise.all([
     deleteCache(`groups:${userId}:active`),
     deleteCache(`groups:${userId}:archived`),
+    deleteCache(`group:solo-transactions:${userId}`),
     deleteCache(`analytics:overview:${userId}`),
     deleteCache(`analytics:groups:${userId}`),
     deleteCache(`activities:${userId}`),
@@ -32,6 +33,21 @@ export async function invalidateGroupCaches(groupId: string): Promise<void> {
 export async function invalidateUserCaches(userId: string): Promise<void> {
   try {
     await deleteUserCacheKeys(userId);
+  } catch {
+    // fail-open
+  }
+}
+
+export async function invalidatePersonalCaches(
+  userId: string,
+  year: number,
+  month: number
+): Promise<void> {
+  try {
+    await Promise.all([
+      deleteCache(`personal:summary:${userId}:${year}:${month}`),
+      deleteCache(`analytics:overview:${userId}`),
+    ]);
   } catch {
     // fail-open
   }

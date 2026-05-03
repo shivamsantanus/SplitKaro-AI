@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { personalTransactionService } from "@/lib/personal-transaction-service";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { invalidatePersonalCaches } from "@/lib/cache-invalidation";
 
 export async function PUT(
   req: Request,
@@ -34,6 +35,9 @@ export async function PUT(
       category,
       transactionDate,
     });
+
+    const d = new Date(transactionDate);
+    await invalidatePersonalCaches(user.id, d.getFullYear(), d.getMonth() + 1);
 
     return NextResponse.json(transaction);
   } catch (error) {
@@ -68,6 +72,12 @@ export async function DELETE(
 
     const { transactionId } = await params;
     await personalTransactionService.remove(transactionId, user.id);
+
+    const rawDate = new URL(req.url).searchParams.get("transactionDate");
+    if (rawDate) {
+      const d = new Date(rawDate);
+      await invalidatePersonalCaches(user.id, d.getFullYear(), d.getMonth() + 1);
+    }
 
     return NextResponse.json({ message: "Transaction deleted successfully" });
   } catch (error) {

@@ -2,8 +2,9 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import { useSession } from "next-auth/react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { Modal } from "@/components/ui/Modal"
@@ -14,6 +15,7 @@ import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { usePersonalSummaryQuery } from "@/hooks/queries/usePersonalSummary"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -23,12 +25,11 @@ const MONTH_NAMES = [
 export default function PersonalPage() {
   const { data: session } = useSession()
   const { t } = useLanguage()
+  const queryClient = useQueryClient()
   const now = new Date()
 
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [summary, setSummary] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showVoiceModal, setShowVoiceModal] = useState(false)
   const [showExpenseMenu, setShowExpenseMenu] = useState(false)
@@ -36,23 +37,10 @@ export default function PersonalPage() {
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const fetchSummary = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/personal/summary?month=${month}&year=${year}`)
-      if (res.ok) {
-        setSummary(await res.json())
-      }
-    } catch {
-      console.error("Failed to fetch personal summary")
-    } finally {
-      setLoading(false)
-    }
-  }, [month, year])
+  const { data: summary, isLoading: loading } = usePersonalSummaryQuery(month, year)
 
-  useEffect(() => {
-    fetchSummary()
-  }, [fetchSummary])
+  const invalidateSummary = () =>
+    queryClient.invalidateQueries({ queryKey: ["personal", "summary"] })
 
   const stepMonth = (dir: 1 | -1) => {
     const date = new Date(year, month - 1 + dir, 1)
@@ -63,19 +51,18 @@ export default function PersonalPage() {
   const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear()
 
   const handleDeleteTransaction = async () => {
-    if (!deletingTransaction) {
-      return
-    }
+    if (!deletingTransaction) return
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/personal/transactions/${deletingTransaction.id}`, {
-        method: "DELETE",
-      })
+      const response = await fetch(
+        `/api/personal/transactions/${deletingTransaction.id}?transactionDate=${encodeURIComponent(deletingTransaction.transactionDate)}`,
+        { method: "DELETE" }
+      )
 
       if (response.ok) {
         setDeletingTransaction(null)
-        fetchSummary()
+        invalidateSummary()
       }
     } catch (error) {
       console.error("Failed to delete personal transaction", error)
@@ -92,13 +79,13 @@ export default function PersonalPage() {
           setShowModal(false)
           setEditingTransaction(null)
         }}
-        onSuccess={fetchSummary}
+        onSuccess={invalidateSummary}
         transaction={editingTransaction}
       />
       <VoiceExpenseModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
-        onSuccess={fetchSummary}
+        onSuccess={invalidateSummary}
       />
 
       <div className="px-6 pt-8 pb-6 max-w-4xl mx-auto">
@@ -291,7 +278,6 @@ export default function PersonalPage() {
       </div>
 
       <div className="fixed bottom-28 right-6 z-40 flex flex-col items-end gap-3">
-        {/* Backdrop */}
         <div
           className={`fixed inset-0 z-[-1] transition-opacity duration-200 ${
             showExpenseMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -299,7 +285,6 @@ export default function PersonalPage() {
           onClick={() => setShowExpenseMenu(false)}
         />
 
-        {/* Menu items */}
         <div className="flex flex-col items-end gap-2 mb-1">
           <button
             onClick={() => { setShowExpenseMenu(false); setShowVoiceModal(true) }}
@@ -331,7 +316,6 @@ export default function PersonalPage() {
           </button>
         </div>
 
-        {/* FAB */}
         <Button
           onClick={() => setShowExpenseMenu(!showExpenseMenu)}
           size="icon"
