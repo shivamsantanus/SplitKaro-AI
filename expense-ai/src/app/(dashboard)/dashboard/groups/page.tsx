@@ -2,9 +2,14 @@
 
 export const dynamic = "force-dynamic"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
+import { useGroupsQuery } from "@/hooks/queries/useGroups"
+import { useActivitiesQuery } from "@/hooks/queries/useActivities"
+import { useGroupAnalyticsQuery } from "@/hooks/queries/useAnalytics"
+import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation"
 import { Card } from "@/components/ui/Card"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
@@ -25,24 +30,25 @@ function GroupsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
+  const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<"groups" | "activity" | "people">("groups")
-  const [groups, setGroups] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activities, setActivities] = useState<any[]>([])
-  const [loadingActivities, setLoadingActivities] = useState(false)
-  const [groupAnalytics, setGroupAnalytics] = useState<any>(null)
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showSoloModal, setShowSoloModal] = useState(false)
   const [showSpending, setShowSpending] = useState(false)
 
-  const totalBalance = groups.reduce((acc, g) => acc + (g.yourBalance || 0), 0)
-  const toCollect = groups.reduce((acc, g) => acc + (g.yourBalance > 0 ? g.yourBalance : 0), 0)
-  const toPay = groups.reduce((acc, g) => acc + (g.yourBalance < 0 ? Math.abs(g.yourBalance) : 0), 0)
+  const { data: groups = [], isLoading: loading } = useGroupsQuery(showArchived)
+  const { data: activities = [], isLoading: loadingActivities } = useActivitiesQuery(activeTab === "activity")
+  const { data: groupAnalytics, isLoading: loadingAnalytics } = useGroupAnalyticsQuery(showSpending)
+
+  useRealtimeInvalidation()
+
+  const totalBalance = groups.reduce((acc: number, g: any) => acc + (g.yourBalance || 0), 0)
+  const toCollect = groups.reduce((acc: number, g: any) => acc + (g.yourBalance > 0 ? g.yourBalance : 0), 0)
+  const toPay = groups.reduce((acc: number, g: any) => acc + (g.yourBalance < 0 ? Math.abs(g.yourBalance) : 0), 0)
 
   const consolidatedDebts: Record<string, { userId: string; name: string; amount: number }> = {}
-  groups.forEach((group) => {
+  groups.forEach((group: any) => {
     group.debts?.forEach((debt: any) => {
       if (!consolidatedDebts[debt.userId]) {
         consolidatedDebts[debt.userId] = { ...debt }
@@ -53,46 +59,6 @@ function GroupsContent() {
   })
   const peopleList = Object.values(consolidatedDebts).filter((p) => Math.abs(p.amount) > 0.01)
 
-  const fetchGroups = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/groups${showArchived ? "?archived=true" : ""}`)
-      if (res.ok) setGroups(await res.json())
-    } catch {
-      console.error("Failed to fetch groups")
-    } finally {
-      setLoading(false)
-    }
-  }, [showArchived])
-
-  const fetchActivities = useCallback(async () => {
-    setLoadingActivities(true)
-    try {
-      const res = await fetch("/api/activities")
-      if (res.ok) setActivities(await res.json())
-    } catch {
-      console.error("Failed to fetch activities")
-    } finally {
-      setLoadingActivities(false)
-    }
-  }, [])
-
-  const fetchGroupAnalytics = useCallback(async () => {
-    setLoadingAnalytics(true)
-    try {
-      const res = await fetch("/api/analytics/groups")
-      if (res.ok) setGroupAnalytics(await res.json())
-    } catch {
-      console.error("Failed to fetch group analytics")
-    } finally {
-      setLoadingAnalytics(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchGroups()
-  }, [fetchGroups])
-
   useEffect(() => {
     const tab = searchParams.get("tab")
     if (tab === "activity" || tab === "people") {
@@ -102,30 +68,12 @@ function GroupsContent() {
     setActiveTab("groups")
   }, [searchParams])
 
-  useEffect(() => {
-    if (activeTab === "activity") fetchActivities()
-  }, [activeTab, fetchActivities])
-
-  useEffect(() => {
-    const eventSource = new EventSource("/api/events")
-    const handleUpdate = () => {
-      fetchGroups()
-      if (activeTab === "activity") fetchActivities()
-    }
-    eventSource.addEventListener("update", handleUpdate)
-    return () => {
-      eventSource.removeEventListener("update", handleUpdate)
-      eventSource.close()
-    }
-  }, [activeTab, fetchActivities, fetchGroups])
-
   const navigateToTab = (tab: "groups" | "activity" | "people") => {
     setActiveTab(tab)
     router.push(tab === "groups" ? "/dashboard/groups" : `/dashboard/groups?tab=${tab}`)
   }
 
   const handleSpendingToggle = () => {
-    if (!showSpending && !groupAnalytics) fetchGroupAnalytics()
     setShowSpending((v) => !v)
   }
 
@@ -134,7 +82,7 @@ function GroupsContent() {
       <SoloExpenseModal
         isOpen={showSoloModal}
         onClose={() => setShowSoloModal(false)}
-        onSuccess={fetchGroups}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["groups"] })}
       />
 
       {/* Header */}
@@ -235,7 +183,7 @@ function GroupsContent() {
               </div>
             ) : (
               <div className="space-y-2">
-                {groups.map((group) => {
+                {groups.map((group: any) => {
                   const balance = group.yourBalance || 0
                   const isOwed = balance > 0.01
                   const owes = balance < -0.01
@@ -387,7 +335,7 @@ function GroupsContent() {
                 <p className="text-xs text-slate-400 mt-1">Group expenses and settlements will appear here.</p>
               </div>
             ) : (
-              activities.map((activity) => (
+              activities.map((activity: any) => (
                 <Card
                   key={activity.id}
                   className="p-4 border-slate-100 rounded-2xl flex gap-3 items-start bg-white shadow-sm hover:shadow-md transition-shadow"
@@ -472,7 +420,7 @@ function GroupsContent() {
                     </div>
                     <button
                       onClick={() => {
-                        const sharedGroup = groups.find((g) =>
+                        const sharedGroup = groups.find((g: any) =>
                           g.debts.some((d: any) => d.userId === person.userId)
                         )
                         if (sharedGroup) router.push(`/groups/${sharedGroup.id}`)

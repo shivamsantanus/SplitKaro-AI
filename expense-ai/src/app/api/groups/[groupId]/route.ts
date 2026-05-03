@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { publishGroupEvent } from "@/lib/realtime";
 import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { getCache, setCache } from "@/lib/cache";
+import { invalidateGroupCaches } from "@/lib/cache-invalidation";
 
 export async function GET(
   req: Request,
@@ -31,6 +33,10 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
+
+    const cacheKey = `group:${groupId}:${user.id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     // Check if it's the virtual solo-transactions group
     if (groupId === "solo-transactions") {
@@ -101,7 +107,7 @@ export async function GET(
             }
         });
 
-        return NextResponse.json({
+        const soloResult = {
             id: "solo-transactions",
             name: "Individual Payments",
             isSolo: true,
@@ -110,7 +116,9 @@ export async function GET(
             expenses: allSoloExpenses,
             settlements: soloSettlements,
             debts: Object.values(pairwiseDebts).filter(d => Math.abs(d.amount) > 0.01)
-        });
+        };
+        await setCache(cacheKey, soloResult, 120);
+        return NextResponse.json(soloResult);
     }
 
     const membership = await prisma.groupMember.findUnique({
@@ -325,13 +333,9 @@ export async function GET(
       debtsArray = Object.values(pairwiseDebts).filter((debt) => Math.abs(debt.amount) > 0.01);
     }
 
-    return NextResponse.json({
-      ...group,
-      members,
-      expenses,
-      settlements,
-      debts: debtsArray
-    });
+    const groupResult = { ...group, members, expenses, settlements, debts: debtsArray };
+    await setCache(cacheKey, groupResult, 120);
+    return NextResponse.json(groupResult);
   } catch (error) {
     console.error("Group fetch error:", error);
     return NextResponse.json(
@@ -381,6 +385,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Only group admins can delete this group" }, { status: 403 });
     }
 
+    await invalidateGroupCaches(groupId);
     await prisma.group.delete({ where: { id: groupId } });
     return NextResponse.json({ message: "Group deleted successfully" }, { status: 200 });
   } catch (error) {
@@ -480,7 +485,10 @@ export async function PUT(
       return updated;
     });
 
-    await publishGroupEvent(groupId, "GROUP_UPDATED");
+    await Promise.all([
+      publishGroupEvent(groupId, "GROUP_UPDATED"),
+      invalidateGroupCaches(groupId),
+    ]);
 
     return NextResponse.json(updatedGroup, { status: 200 });
   } catch (error) {

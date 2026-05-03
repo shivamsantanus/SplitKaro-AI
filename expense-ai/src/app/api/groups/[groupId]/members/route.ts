@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { invalidateGroupCaches } from "@/lib/cache-invalidation";
 import { findUserByEmailWithSelect, normalizeEmail } from "@/lib/users";
 
 export async function POST(
@@ -158,8 +159,11 @@ export async function POST(
       return members;
     });
 
-    await Promise.all(usersToAdd.map((targetUser) => publishUserEvent(targetUser.id, "MEMBER_ADDED")));
-    await publishGroupEvent(groupId, "MEMBER_ADDED");
+    await Promise.all([
+      ...usersToAdd.map((targetUser) => publishUserEvent(targetUser.id, "MEMBER_ADDED")),
+      publishGroupEvent(groupId, "MEMBER_ADDED"),
+      invalidateGroupCaches(groupId),
+    ]);
 
     return NextResponse.json(
       {

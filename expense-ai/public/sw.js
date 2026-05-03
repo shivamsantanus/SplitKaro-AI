@@ -1,4 +1,4 @@
-const CACHE = 'splitkaro-v3'
+const CACHE = 'splitkaro-v4'
 
 // Static assets with content hashes — safe to cache aggressively
 const STATIC_RE = /\/_next\/static\/|\/assets\/|\.ico$|\.png$|\.svg$|\.webmanifest$/
@@ -49,7 +49,10 @@ self.addEventListener('fetch', (event) => {
         (hit) =>
           hit ||
           fetch(request).then((res) => {
-            if (res.ok) caches.open(CACHE).then((c) => c.put(request, res.clone()))
+            if (res.ok) {
+              const cloned = res.clone()
+              caches.open(CACHE).then((c) => c.put(request, cloned))
+            }
             return res
           })
       )

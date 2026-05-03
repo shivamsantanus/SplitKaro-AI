@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 import { findUserByEmailWithSelect } from "@/lib/users";
 
@@ -82,18 +83,16 @@ export async function DELETE(
     });
 
     if (expense.groupId) {
-      await publishGroupEvent(expense.groupId, "EXPENSE_DELETED");
-    } else {
-      const participantIds = new Set([
-        expense.paidById,
-        ...expense.splits.map((split) => split.userId),
+      await Promise.all([
+        publishGroupEvent(expense.groupId, "EXPENSE_DELETED"),
+        invalidateGroupCaches(expense.groupId),
       ]);
-
-      for (const participantId of participantIds) {
-        if (participantId !== user.id) {
-          await publishUserEvent(participantId, "EXPENSE_DELETED");
-        }
-      }
+    } else {
+      const participantIds = [...new Set([expense.paidById, ...expense.splits.map(s => s.userId)])];
+      await Promise.all([
+        ...participantIds.map(id => publishUserEvent(id, "EXPENSE_DELETED")),
+        ...participantIds.map(id => invalidateUserCaches(id)),
+      ]);
     }
 
     return NextResponse.json({ message: "Expense deleted successfully" }, { status: 200 });
@@ -274,18 +273,16 @@ export async function PUT(
     });
 
     if (expense.groupId) {
-      await publishGroupEvent(expense.groupId, "EXPENSE_UPDATED");
-    } else {
-      const participantIds = new Set([
-        payerUserId,
-        ...expenseSplitData.map((split) => split.userId),
+      await Promise.all([
+        publishGroupEvent(expense.groupId, "EXPENSE_UPDATED"),
+        invalidateGroupCaches(expense.groupId),
       ]);
-
-      for (const participantId of participantIds) {
-        if (participantId !== user.id) {
-          await publishUserEvent(participantId, "EXPENSE_UPDATED");
-        }
-      }
+    } else {
+      const participantIds = [...new Set([payerUserId, ...expenseSplitData.map(s => s.userId)])];
+      await Promise.all([
+        ...participantIds.map(id => publishUserEvent(id, "EXPENSE_UPDATED")),
+        ...participantIds.map(id => invalidateUserCaches(id)),
+      ]);
     }
 
     return NextResponse.json(updatedExpense, { status: 200 });

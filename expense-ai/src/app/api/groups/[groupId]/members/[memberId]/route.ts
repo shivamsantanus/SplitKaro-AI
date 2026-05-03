@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ensureUserCanExitGroup } from "@/lib/group-membership";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { normalizeEmail } from "@/lib/users";
 
 async function getRequestContext(groupId: string, memberId: string, email: string) {
@@ -131,8 +132,11 @@ export async function PATCH(
       return updated;
     });
 
-    await publishUserEvent(memberId, "MEMBER_ROLE_UPDATED", { groupId });
-    await publishGroupEvent(groupId, "MEMBER_ROLE_UPDATED");
+    await Promise.all([
+      publishUserEvent(memberId, "MEMBER_ROLE_UPDATED", { groupId }),
+      publishGroupEvent(groupId, "MEMBER_ROLE_UPDATED"),
+      invalidateGroupCaches(groupId),
+    ]);
 
     return NextResponse.json(updatedMembership);
   } catch (error) {
@@ -218,8 +222,12 @@ export async function DELETE(
       });
     });
 
-    await publishUserEvent(memberId, "MEMBER_REMOVED", { groupId });
-    await publishGroupEvent(groupId, "MEMBER_REMOVED");
+    await Promise.all([
+      publishUserEvent(memberId, "MEMBER_REMOVED", { groupId }),
+      publishGroupEvent(groupId, "MEMBER_REMOVED"),
+      invalidateGroupCaches(groupId),
+      invalidateUserCaches(memberId),
+    ]);
 
     return NextResponse.json({ message: "Member removed successfully" });
   } catch (error) {

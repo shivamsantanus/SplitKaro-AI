@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { groupSettlementService } from "@/lib/group-settlement-service";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { findUserByEmailWithSelect } from "@/lib/users";
 
 export async function POST(req: Request) {
@@ -53,7 +54,10 @@ export async function POST(req: Request) {
           receiverId,
         });
 
-        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
+        await Promise.all([
+          publishGroupEvent(groupId, "SETTLEMENT_ADDED"),
+          invalidateGroupCaches(groupId),
+        ]);
         return NextResponse.json(settlement, { status: 201 });
       } catch (error) {
         if (error instanceof Error) {
@@ -94,10 +98,17 @@ export async function POST(req: Request) {
     });
 
     if (groupId) {
-        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
+        await Promise.all([
+          publishGroupEvent(groupId, "SETTLEMENT_ADDED"),
+          invalidateGroupCaches(groupId),
+        ]);
     } else {
-        await publishUserEvent(resolvedPayerId, "SETTLEMENT_ADDED");
-        await publishUserEvent(receiverId, "SETTLEMENT_ADDED");
+        await Promise.all([
+          publishUserEvent(resolvedPayerId, "SETTLEMENT_ADDED"),
+          publishUserEvent(receiverId, "SETTLEMENT_ADDED"),
+          invalidateUserCaches(resolvedPayerId),
+          invalidateUserCaches(receiverId),
+        ]);
     }
 
     return NextResponse.json(settlement, { status: 201 });

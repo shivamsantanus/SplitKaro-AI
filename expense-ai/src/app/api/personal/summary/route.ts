@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getExpenseCategoryLabel } from "@/lib/expense-categories";
 import { personalTransactionService } from "@/lib/personal-transaction-service";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { getCache, setCache } from "@/lib/cache";
 
 function parseOptionalInt(value: string | null) {
   if (!value) {
@@ -34,15 +35,21 @@ export async function GET(req: Request) {
     const month = parseOptionalInt(searchParams.get("month"));
     const year = parseOptionalInt(searchParams.get("year"));
 
+    const cacheKey = `personal:summary:${user.id}:${year ?? "all"}:${month ?? "all"}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const summary = await personalTransactionService.getSummary(user.id, { month, year });
 
-    return NextResponse.json({
+    const result = {
       ...summary,
       categoryBreakdown: summary.categoryBreakdown.map((item: { category: string; amount: number; count: number }) => ({
         ...item,
         label: getExpenseCategoryLabel(item.category),
       })),
-    });
+    };
+    await setCache(cacheKey, result, 120);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Personal summary fetch error:", error);
     return NextResponse.json({ message: "Something went wrong" }, { status: 500 });

@@ -2,9 +2,10 @@
 
 export const dynamic = "force-dynamic"
 
-import { Suspense, useCallback, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { Card } from "@/components/ui/Card"
@@ -12,6 +13,8 @@ import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { ArrowRight, HandCoins, Handshake, Loader2, Wallet } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useOverviewQuery } from "@/hooks/queries/useAnalytics"
+import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation"
 
 type PersonalActivityItem = {
   id: string
@@ -63,28 +66,12 @@ function OverviewContent() {
   const { data: session } = useSession()
   const router = useRouter()
   const { t } = useLanguage()
-  const [overview, setOverview] = useState<OverviewResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: overview, isLoading: loading } = useOverviewQuery()
   const [activityView, setActivityView] = useState<"personal" | "groups">("personal")
   const [showVoiceModal, setShowVoiceModal] = useState(false)
 
-  const fetchOverview = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/analytics/overview")
-      if (res.ok) {
-        setOverview(await res.json())
-      }
-    } catch {
-      console.error("Failed to fetch overview")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchOverview()
-  }, [fetchOverview])
+  useRealtimeInvalidation()
 
   const monthLabel = new Date().toLocaleString("default", { month: "long", year: "numeric" })
   const personalActivity = overview?.personal.recentTransactions ?? []
@@ -95,7 +82,7 @@ function OverviewContent() {
       <VoiceExpenseModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
-        onSuccess={fetchOverview}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["analytics"] })}
       />
 
       <div className="mx-auto max-w-4xl px-6 pb-6 pt-8">
@@ -196,7 +183,7 @@ function OverviewContent() {
               {activityView === "personal" ? (
                 personalActivity.length > 0 ? (
                   <div className="space-y-2">
-                    {personalActivity.map((txn) => (
+                    {personalActivity.map((txn: any) => (
                       <div
                         key={txn.id}
                         className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
@@ -228,7 +215,7 @@ function OverviewContent() {
                 )
               ) : groupActivity.length > 0 ? (
                 <div className="space-y-2">
-                  {groupActivity.map((item) => (
+                  {groupActivity.map((item: any) => (
                     <div
                       key={`${item.type}-${item.id}`}
                       className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"

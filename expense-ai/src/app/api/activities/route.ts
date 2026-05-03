@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { getCache, setCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -19,6 +20,10 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
+
+    const cacheKey = `activities:${user.id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     const memberships = await prisma.groupMember.findMany({
       where: {
@@ -94,6 +99,7 @@ export async function GET() {
       })
       .slice(0, 30);
 
+    await setCache(cacheKey, dedupedActivities, 60);
     return NextResponse.json(dedupedActivities);
   } catch (error) {
     console.error("Activities fetch error:", error);

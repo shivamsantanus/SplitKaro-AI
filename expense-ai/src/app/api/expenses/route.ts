@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { groupExpenseService } from "@/lib/group-expense-service";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
+import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 import { findUserByEmailWithSelect } from "@/lib/users";
 
@@ -56,7 +57,10 @@ export async function POST(req: Request) {
           transactionDate,
         });
 
-        await publishGroupEvent(groupId, "EXPENSE_ADDED");
+        await Promise.all([
+          publishGroupEvent(groupId, "EXPENSE_ADDED"),
+          invalidateGroupCaches(groupId),
+        ]);
         return NextResponse.json(expense, { status: 201 });
       } catch (error) {
         if (error instanceof Error) {
@@ -128,15 +132,16 @@ export async function POST(req: Request) {
     });
 
     if (groupId) {
-        await publishGroupEvent(groupId, "EXPENSE_ADDED");
+        await Promise.all([
+          publishGroupEvent(groupId, "EXPENSE_ADDED"),
+          invalidateGroupCaches(groupId),
+        ]);
     } else {
-        await publishUserEvent(user.id, "EXPENSE_ADDED");
-        // Individual update: broadcast to all split participants
-        for (const split of expenseSplitData) {
-            if (split.userId !== user.id) {
-                await publishUserEvent(split.userId, "EXPENSE_ADDED");
-            }
-        }
+        const participantIds = [user.id, ...expenseSplitData.map(s => s.userId).filter(id => id !== user.id)];
+        await Promise.all([
+          ...participantIds.map(id => publishUserEvent(id, "EXPENSE_ADDED")),
+          ...participantIds.map(id => invalidateUserCaches(id)),
+        ]);
     }
 
     return NextResponse.json(expense, { status: 201 });

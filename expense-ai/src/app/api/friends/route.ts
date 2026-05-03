@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { getCache, setCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -17,6 +18,10 @@ export async function GET() {
     });
 
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
+
+    const cacheKey = `friends:${user.id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     // 1. Get all members of all groups I'm in
     const groupMembers = await prisma.groupMember.findMany({
@@ -82,7 +87,9 @@ export async function GET() {
       if (s.receiverId !== user.id) friendsMap.set(s.receiverId, s.receiver);
     });
 
-    return NextResponse.json(Array.from(friendsMap.values()));
+    const friends = Array.from(friendsMap.values());
+    await setCache(cacheKey, friends, 300);
+    return NextResponse.json(friends);
   } catch (error) {
     console.error("Friends fetch error:", error);
     return NextResponse.json({ message: "Something went wrong" }, { status: 500 });

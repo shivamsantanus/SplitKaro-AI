@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useQueryClient } from "@tanstack/react-query"
+import { useGroupDetailQuery } from "@/hooks/queries/useGroupDetail"
+import { useFriendsQuery } from "@/hooks/queries/useFriends"
+import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card } from "@/components/ui/Card"
@@ -123,21 +127,23 @@ export default function GroupDetailPage() {
   const router = useRouter()
   const params = useParams()
   const { data: session } = useSession()
+  const queryClient = useQueryClient()
   const groupId = params.groupId as string
   const isSoloGroup = groupId === "solo-transactions"
 
-  const [group, setGroup] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  useRealtimeInvalidation()
+  const { data: group, isLoading: loading, error: groupError } = useGroupDetailQuery(groupId)
   const [message, setMessage] = useState("")
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [showMemberModal, setShowMemberModal] = useState(false)
+  const { data: friendsRaw = [], isLoading: loadingFriends } = useFriendsQuery(showMemberModal && !isSoloGroup)
+  const friends = friendsRaw as FriendOption[]
+  const groupData = group as any
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [expenseCategory, setExpenseCategory] = useState("OTHER")
   const [targetEmail, setTargetEmail] = useState("")
   const [selectedMemberEmails, setSelectedMemberEmails] = useState<string[]>([])
-  const [friends, setFriends] = useState<FriendOption[]>([])
-  const [loadingFriends, setLoadingFriends] = useState(false)
   const [paidByUserId, setPaidByUserId] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingMember, setIsAddingMember] = useState(false)
@@ -148,6 +154,13 @@ export default function GroupDetailPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [editGroupName, setEditGroupName] = useState("")
   const [editSimplifyDebts, setEditSimplifyDebts] = useState(false)
+
+  useEffect(() => {
+    if (group) {
+      setEditGroupName(group.name ?? "")
+      setEditSimplifyDebts(Boolean(group.simplifyDebts))
+    }
+  }, [group])
   
   // Custom Delete Modals
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null)
@@ -210,88 +223,12 @@ export default function GroupDetailPage() {
     setShowExpenseModal(true)
   }, [group?.members])
 
-  const fetchGroupData = useCallback(async () => {
-    if (!groupId) return;
-    try {
-      const response = await fetch(`/api/groups/${groupId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setGroup(data)
-        setEditGroupName(data.name)
-        setEditSimplifyDebts(Boolean(data.simplifyDebts))
-        return
-      }
-
-      if (response.status === 403 || response.status === 404) {
-        router.push("/dashboard")
-        return
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to fetch group:", errorData.message);
-        router.push("/dashboard")
-      }
-    } catch (err) {
-      console.error("Error in fetchGroupData:", err)
-      router.push("/dashboard")
-    } finally {
-      setLoading(false)
-    }
-  }, [groupId, router])
+  const invalidateGroup = () =>
+    queryClient.invalidateQueries({ queryKey: ["group", groupId] })
 
   useEffect(() => {
-    if (groupId) fetchGroupData()
-  }, [groupId, fetchGroupData])
-
-  useEffect(() => {
-    if (!groupId) return
-
-    const eventSource = new EventSource("/api/events")
-
-    const handleUpdate = (event: Event) => {
-      const messageEvent = event as MessageEvent<string>
-
-      try {
-        const payload = JSON.parse(messageEvent.data)
-        if (payload.groupId === groupId || (groupId === "solo-transactions" && payload.userId)) {
-          fetchGroupData()
-        }
-      } catch (error) {
-        console.error("Failed to process realtime event", error)
-      }
-    }
-
-    eventSource.addEventListener("update", handleUpdate)
-
-    return () => {
-      eventSource.removeEventListener("update", handleUpdate)
-      eventSource.close()
-    }
-  }, [groupId, fetchGroupData])
-
-  useEffect(() => {
-    if (!showMemberModal || isSoloGroup) {
-      return
-    }
-
-    const loadFriends = async () => {
-      setLoadingFriends(true)
-
-      try {
-        const response = await fetch("/api/friends")
-
-        if (response.ok) {
-          const data = await response.json()
-          setFriends(data)
-        }
-      } catch (error) {
-        console.error("Failed to load friends", error)
-      } finally {
-        setLoadingFriends(false)
-      }
-    }
-
-    void loadFriends()
-  }, [isSoloGroup, showMemberModal])
+    if (groupError) router.push("/dashboard")
+  }, [groupError, router])
 
   useEffect(() => {
     if (showMemberModal) {
@@ -314,7 +251,7 @@ export default function GroupDetailPage() {
       });
       if (response.ok) {
         setShowSettingsModal(false);
-        fetchGroupData();
+        invalidateGroup();
       } else {
          setNotice({
            title: "Couldn’t Update Group",
@@ -387,7 +324,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       if (response.ok) {
-        fetchGroupData()
+        invalidateGroup()
       } else {
         setNotice({
           title: "Couldn’t Update Role",
@@ -410,7 +347,7 @@ export default function GroupDetailPage() {
 
       const data = await response.json()
       if (response.ok) {
-        fetchGroupData()
+        invalidateGroup()
       } else {
         setNotice({
           title: "Couldn’t Remove Member",
@@ -482,7 +419,7 @@ export default function GroupDetailPage() {
       if (response.ok) {
         setShowSettleModal(false);
         setSettleAmount("");
-        fetchGroupData();
+        invalidateGroup();
       }
     } catch (err) {
       console.error("Settlement failed", err);
@@ -707,7 +644,7 @@ export default function GroupDetailPage() {
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
         })
         setShowExpenseModal(false)
-        fetchGroupData() // Refresh group data to show new expense
+        invalidateGroup() // Refresh group data to show new expense
       } else {
         const errData = await response.json().catch(() => ({}))
         console.error("Failed to add/update expense", response.status, errData)
@@ -731,7 +668,7 @@ export default function GroupDetailPage() {
         method: "DELETE",
       });
       if (response.ok) {
-        fetchGroupData()
+        invalidateGroup()
       }
     } catch (err) {
       console.error("Failed to delete expense", err);
@@ -768,7 +705,7 @@ export default function GroupDetailPage() {
         setTargetEmail("")
         setSelectedMemberEmails([])
         setShowMemberModal(false)
-        fetchGroupData()
+        invalidateGroup()
       } else {
         setMemberError(data.message || "Failed to add member")
       }
@@ -1996,7 +1933,7 @@ export default function GroupDetailPage() {
       {/* UPI payment-return confirmation */}
       <PaymentConfirmModal
         payment={pendingPayment}
-        onConfirmed={fetchGroupData}
+        onConfirmed={invalidateGroup}
         onDismiss={() => setPendingPayment(null)}
         showToast={showToast}
       />

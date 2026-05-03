@@ -5,6 +5,7 @@ import { findUserByEmailWithSelect } from "@/lib/users";
 import { personalTransactionService } from "@/lib/personal-transaction-service";
 import { groupAnalyticsService } from "@/lib/group-analytics-service";
 import { getExpenseCategoryLabel } from "@/lib/expense-categories";
+import { getCache, setCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -20,6 +21,10 @@ export async function GET() {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    const cacheKey = `analytics:overview:${user.id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
+
     const now = new Date();
     const [personalSummary, groupSummary] = await Promise.all([
       personalTransactionService.getSummary(user.id, {
@@ -29,7 +34,7 @@ export async function GET() {
       groupAnalyticsService.getSummary(user.id),
     ]);
 
-    return NextResponse.json({
+    const result = {
       personal: {
         thisMonthAmount: personalSummary.totals.monthlyAmount,
         thisMonthCount: personalSummary.totals.monthlyCount,
@@ -52,7 +57,9 @@ export async function GET() {
         recentExpenses: groupSummary.recentExpenses.slice(0, 5),
         recentActivity: groupSummary.recentActivity.slice(0, 5),
       },
-    });
+    };
+    await setCache(cacheKey, result, 180);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Overview analytics error:", error);
     return NextResponse.json({ message: "Something went wrong" }, { status: 500 });

@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { getCache, setCache } from "@/lib/cache";
+import { invalidateUserCaches } from "@/lib/cache-invalidation";
 
 type GroupMemberSummary = {
   groupId: string;
@@ -106,6 +108,7 @@ export async function POST(req: Request) {
       return newGroup;
     });
 
+    await invalidateUserCaches(user.id);
     return NextResponse.json(group, { status: 201 });
   } catch (error) {
     console.error("Group creation error:", error);
@@ -139,6 +142,10 @@ export async function GET(req: Request) {
     if (!user) {
        return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
+
+    const cacheKey = `groups:${user.id}:${includeArchived ? "archived" : "active"}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return NextResponse.json(cached);
 
     const memberships = await prisma.groupMember.findMany({
       where: {
@@ -602,6 +609,7 @@ export async function GET(req: Request) {
       });
     }
 
+    await setCache(cacheKey, groupList, 120);
     return NextResponse.json(groupList);
   } catch (error) {
     console.error("Failed to fetch groups:", error);
