@@ -277,7 +277,7 @@ export default function PersonalPage() {
         )}
       </div>
 
-      <div className="fixed bottom-28 right-6 z-40 flex flex-col items-end gap-3">
+      <div className="fixed bottom-28 right-6 z-40 flex flex-col items-end gap-3 pointer-events-none">
         <div
           className={`fixed inset-0 z-[-1] transition-opacity duration-200 ${
             showExpenseMenu ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -319,7 +319,7 @@ export default function PersonalPage() {
         <Button
           onClick={() => setShowExpenseMenu(!showExpenseMenu)}
           size="icon"
-          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/30 hover:scale-105 transition-all duration-200"
+          className="w-16 h-16 rounded-3xl shadow-xl shadow-primary/30 hover:scale-105 transition-all duration-200 pointer-events-auto"
         >
           <Plus
             className={`w-8 h-8 transition-transform duration-300 ease-in-out ${
