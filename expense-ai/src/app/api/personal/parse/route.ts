@@ -8,19 +8,18 @@ function toISODate(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-function stripMarkdown(text: string): string {
-  return text.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
-}
-
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body] = await Promise.all([
+      getServerSession(authOptions),
+      req.json(),
+    ]);
 
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { text } = await req.json();
+    const { text } = body;
 
     if (!text?.trim()) {
       return NextResponse.json({ message: "Text is required" }, { status: 400 });
@@ -45,11 +44,10 @@ Transcript: "${text.replace(/"/g, "'")}"
 Return only the JSON array, e.g.: [{"description":"coffee","amount":80,"category":"FOOD","transactionDate":"${today}"}]`;
 
     const raw = await callAI(prompt);
-    const cleaned = stripMarkdown(raw);
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(cleaned);
+      parsed = JSON.parse(raw);
     } catch {
       return NextResponse.json(
         { message: "Could not parse AI response. Please try again." },

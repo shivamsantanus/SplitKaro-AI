@@ -144,19 +144,15 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
     setStage("saving")
     setError("")
     try {
-      const results = await Promise.allSettled(
-        expenses.map((exp) =>
-          fetch("/api/personal/transactions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(exp),
-          })
-        )
-      )
+      const res = await fetch("/api/personal/transactions/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expenses }),
+      })
 
-      const failed = results.filter((r) => r.status === "rejected").length
-      if (failed > 0) {
-        setError(t("voiceModal.errors.partialFail", { count: failed }))
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.message || t("voiceModal.errors.saveFailed"))
         setStage("preview")
         return
       }
