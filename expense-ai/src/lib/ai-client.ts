@@ -2,14 +2,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-const jsonConfig = { responseMimeType: "application/json" } as const;
-
 /**
  * GEMINI 3.1 FLASH LITE (Released March 2026)
  * This is the current best option for batch processing on the free tier.
  */
-const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview", generationConfig: jsonConfig });
-const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3-flash-preview", generationConfig: jsonConfig });
+const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
 export async function callAI(prompt: string): Promise<string> {
   try {

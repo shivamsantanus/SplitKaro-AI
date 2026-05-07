@@ -8,6 +8,10 @@ function toISODate(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
+function stripMarkdown(text: string): string {
+  return text.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
+}
+
 export async function POST(req: Request) {
   try {
     const [session, body] = await Promise.all([
@@ -44,10 +48,11 @@ Transcript: "${text.replace(/"/g, "'")}"
 Return only the JSON array, e.g.: [{"description":"coffee","amount":80,"category":"FOOD","transactionDate":"${today}"}]`;
 
     const raw = await callAI(prompt);
+    const cleaned = stripMarkdown(raw);
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(cleaned);
     } catch {
       return NextResponse.json(
         { message: "Could not parse AI response. Please try again." },
