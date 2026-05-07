@@ -195,6 +195,8 @@ export default function GroupDetailPage() {
   } | null>(null)
   const [expandedExpenseId, setExpandedExpenseId] = useState<string | null>(null)
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
+  const transcriptRef = useRef("")
+  const hadErrorRef = useRef(false)
 
   const applyParsedSuggestion = useCallback((suggestion: {
     amount: number;
@@ -548,40 +550,58 @@ export default function GroupDetailPage() {
     }
 
     const recognition = new recognitionApi()
-    recognition.continuous = false
-    recognition.interimResults = false
+    recognition.continuous = true
+    recognition.interimResults = true
     recognition.lang = "en-IN"
 
     recognition.onstart = () => {
       setIsListening(true)
+      setMessage("")
+      transcriptRef.current = ""
+      hadErrorRef.current = false
     }
 
     recognition.onend = () => {
       setIsListening(false)
       recognitionRef.current = null
+      if (!hadErrorRef.current) {
+        const text = transcriptRef.current.trim()
+        if (text) void handleSendMessage(text)
+      }
     }
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      hadErrorRef.current = true
       setIsListening(false)
       recognitionRef.current = null
-      setNotice({
-        title: "Mic Error",
-        message: "We couldn’t capture your voice just now. Please allow mic access and try again.",
-      })
+      // "aborted" fires when recognition.stop() is called programmatically — not a real error
+      // "no-speech" means the user just didn’t speak — also not worth alarming about
+      if (event.error === "aborted" || event.error === "no-speech") return
+      if (event.error === "not-allowed") {
+        setNotice({
+          title: "Mic Permission Required",
+          message: "Please allow microphone access in your browser settings and try again.",
+        })
+      } else {
+        setNotice({
+          title: "Mic Error",
+          message: "We couldn’t capture your voice just now. Please try again.",
+        })
+      }
     }
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript || "")
-        .join(" ")
-        .trim()
-
-      if (!transcript) {
-        return
+      let final = ""
+      let interim = ""
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0]?.transcript ?? ""
+        } else {
+          interim += event.results[i][0]?.transcript ?? ""
+        }
       }
-
-      setMessage(transcript)
-      void handleSendMessage(transcript)
+      transcriptRef.current = final
+      setMessage(final + interim)
     }
 
     recognitionRef.current = recognition
@@ -1265,7 +1285,7 @@ export default function GroupDetailPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage();
               }}
-              placeholder={isListening ? "Listening..." : "Type or speak an expense..."}
+              placeholder={isListening ? "Tap the mic to stop..." : "Type or speak an expense..."}
               className="h-10 rounded-2xl bg-slate-50 border-0 focus-visible:ring-1 focus-visible:ring-primary/20 pl-4 pr-11 text-slate-700 font-semibold text-sm"
               disabled={isParsing || isListening}
             />

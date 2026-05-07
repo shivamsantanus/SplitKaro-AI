@@ -74,9 +74,15 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
     }
 
     recognition.onerror = (event: any) => {
+      // "aborted" fires on programmatic stop — not a real error
+      if (event.error === "aborted") return
       if (event.error === "not-allowed") {
         setError(t("voiceModal.errors.micPermission"))
-      } else if (event.error !== "aborted") {
+      } else if (event.error === "no-speech") {
+        setError(t("voiceModal.errors.noSpeech"))
+      } else if (event.error === "network") {
+        setError(t("voiceModal.errors.networkError"))
+      } else {
         setError(t("voiceModal.errors.micError", { error: event.error }))
       }
       setStage("idle")

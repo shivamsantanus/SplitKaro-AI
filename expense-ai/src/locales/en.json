@@ -393,6 +393,7 @@
       "browserNotSupported": "Voice input requires Chrome or Edge. Please use one of those browsers.",
       "micPermission": "Microphone permission denied. Please allow microphone access.",
       "micError": "Microphone error: {error}",
+      "networkError": "Speech recognition service is unavailable. Please check your connection and try again.",
       "noSpeech": "No speech detected. Please try again.",
       "parseFailed": "Failed to parse expenses.",
       "serverError": "Failed to reach the server. Please try again.",

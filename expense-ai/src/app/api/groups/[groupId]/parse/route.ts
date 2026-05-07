@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { callAI } from "@/lib/ai-client";
 
 type GroupMemberRecord = {
   userId: string;
@@ -188,12 +189,101 @@ function extractDescription(message: string, amountMatch: RegExpMatchArray, memb
   return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : "Expense";
 }
 
+type ParsedSuggestion = {
+  amount: number;
+  description: string;
+  paidByUserId: string;
+  splitMode: "equal" | "custom";
+  activeSplitMembers: string[];
+  customSplits: Record<string, number>;
+};
+
+function stripMarkdown(text: string): string {
+  return text.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
+}
+
+async function parseWithAI(
+  message: string,
+  members: GroupMemberRecord[],
+  sessionUserId: string
+): Promise<ParsedSuggestion | null> {
+  try {
+    const validIds = new Set(members.map((m) => m.userId));
+    const allIds = members.map((m) => m.userId);
+
+    const memberList = members
+      .map((m) => {
+        const name = m.user.name?.trim() || m.user.email.split("@")[0];
+        const tag = m.userId === sessionUserId ? " (you/me)" : "";
+        return `  "${name}"${tag} → id:${m.userId}`;
+      })
+      .join("\n");
+
+    const prompt = `Parse this group expense and return ONLY a raw JSON object.
+
+Members:
+${memberList}
+
+Message: "${message.replace(/"/g, "'")}"
+
+Return this exact JSON shape:
+{
+  "amount": <rupees as number, convert words like "two hundred" → 200>,
+  "description": <short string>,
+  "paidByUserId": "<id from list above, use current user id if unclear>",
+  "splitMode": "equal" or "custom",
+  "activeSplitMembers": ["<ids from list>"],
+  "customSplits": {"<id>": <amount>}
+}
+
+Current user id: "${sessionUserId}"
+If no split is specified, set activeSplitMembers to all ids: ${JSON.stringify(allIds)}
+For equal split, set customSplits to {}.`;
+
+    const raw = await callAI(prompt);
+    const cleaned = stripMarkdown(raw);
+    const parsed = JSON.parse(cleaned);
+
+    if (typeof parsed.amount !== "number" || parsed.amount <= 0) return null;
+    if (typeof parsed.description !== "string") return null;
+    if (!Array.isArray(parsed.activeSplitMembers)) return null;
+
+    const paidByUserId = validIds.has(parsed.paidByUserId) ? parsed.paidByUserId : sessionUserId;
+    const activeSplitMembers = (parsed.activeSplitMembers as string[]).filter((id) => validIds.has(id));
+    const splitMode: "equal" | "custom" = parsed.splitMode === "custom" ? "custom" : "equal";
+    const customSplits: Record<string, number> = {};
+
+    if (splitMode === "custom" && typeof parsed.customSplits === "object" && parsed.customSplits !== null) {
+      for (const [id, amt] of Object.entries(parsed.customSplits)) {
+        if (validIds.has(id) && typeof amt === "number") {
+          customSplits[id] = amt as number;
+        }
+      }
+    }
+
+    return {
+      amount: parsed.amount,
+      description: parsed.description.trim() || "Expense",
+      paidByUserId,
+      splitMode,
+      activeSplitMembers: activeSplitMembers.length > 0 ? activeSplitMembers : allIds,
+      customSplits,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const [session, body, { groupId }] = await Promise.all([
+      getServerSession(authOptions),
+      req.json(),
+      params,
+    ]);
 
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -202,14 +292,13 @@ export async function POST(
       );
     }
 
-    const { message } = await req.json();
-    const { groupId } = await params;
+    const { message } = body;
 
     if (!message || message.trim() === "") {
       return NextResponse.json({ message: "Message is required" }, { status: 400 });
     }
 
-    const sessionUserId = (session.user as { id?: string }).id;
+    const sessionUserId = (session.user as { id?: string }).id ?? "";
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
@@ -222,6 +311,13 @@ export async function POST(
       return NextResponse.json({ message: "Group not found" }, { status: 404 });
     }
 
+    // Try AI first; fall back to regex if AI is unavailable or returns null
+    const aiSuggestion = await parseWithAI(message, group.members as GroupMemberRecord[], sessionUserId);
+    if (aiSuggestion) {
+      return NextResponse.json({ suggestion: aiSuggestion });
+    }
+
+    // Regex fallback
     const normalizedMessage = normalizeText(message);
     const amountMatch = extractAmount(normalizedMessage);
 
