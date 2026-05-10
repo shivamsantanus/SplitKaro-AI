@@ -570,14 +570,15 @@ export default function GroupDetailPage() {
       }
     }
 
-    recognition.onerror = (event: Event & { error: string }) => {
+    recognition.onerror = (event: Event) => {
+      const { error } = event as Event & { error: string }
       hadErrorRef.current = true
       setIsListening(false)
       recognitionRef.current = null
       // "aborted" fires when recognition.stop() is called programmatically — not a real error
       // "no-speech" means the user just didn’t speak — also not worth alarming about
-      if (event.error === "aborted" || event.error === "no-speech") return
-      if (event.error === "not-allowed") {
+      if (error === "aborted" || error === "no-speech") return
+      if (error === "not-allowed") {
         setNotice({
           title: "Mic Permission Required",
           message: "Please allow microphone access in your browser settings and try again.",
