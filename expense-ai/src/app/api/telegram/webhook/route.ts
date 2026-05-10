@@ -17,6 +17,8 @@ import {
   EXPENSE_CATEGORIES,
   getExpenseCategoryLabel,
 } from "@/lib/expense-categories";
+import { groupExpenseService } from "@/lib/group-expense-service";
+import { invalidateGroupCaches } from "@/lib/cache-invalidation";
 
 // Derived from bot token — must match what setup/route.ts sends to Telegram
 const WEBHOOK_SECRET = crypto
@@ -58,6 +60,31 @@ const PENDING_KEY = (chatId: number) => `tg:pending:${chatId}`;
 const AWAITING_KEY = (chatId: number) => `tg:awaiting:${chatId}`;
 const PENDING_TTL = 300; // 5 min
 const AWAITING_TTL = 120; // 2 min
+
+// Group expense flow keys
+const GEXPENSE_KEY = (chatId: number) => `tg:gexp:${chatId}`;
+const GAWAITING_KEY = (chatId: number) => `tg:gawait:${chatId}`;
+const GPENDING_KEY = (chatId: number) => `tg:gpend:${chatId}`;
+const GSEL_KEY = (chatId: number) => `tg:gsel:${chatId}`;
+const GEXPENSE_TTL = 300; // 5 min
+
+interface GroupMember {
+  id: string;
+  name: string;
+}
+
+interface GroupExpensePending {
+  expense: ParsedExpense;
+  groupId: string;
+  groupName: string;
+  memberCount: number;
+  selectedMemberIds?: string[]; // undefined = all members equal split
+}
+
+interface MemberSelectionState {
+  members: GroupMember[];
+  selected: string[];
+}
 
 interface AwaitingState {
   index: number;
@@ -165,6 +192,7 @@ async function handleHelp(chatId: number): Promise<void> {
       "<b>Commands:</b>",
       "/start — link your account",
       "/recent — last 5 expenses",
+      "/group dinner 500 — add a group expense",
       "/unlink — unlink this Telegram",
       "/cancel — cancel current action",
       "/help — show this message",
@@ -557,6 +585,357 @@ async function handleAwaitingInput(
   }
 }
 
+// ── Group expense helpers & handlers ─────────────────────────────────────
+
+function buildGroupConfirmCard(pending: GroupExpensePending): {
+  text: string;
+  replyMarkup: object;
+} {
+  const splitCount = pending.selectedMemberIds?.length ?? pending.memberCount;
+  const perPerson = (pending.expense.amount / splitCount).toFixed(2);
+
+  const text = [
+    "📝 <b>Group Expense</b>",
+    "",
+    `Amount   : ₹${pending.expense.amount}`,
+    `Note     : ${pending.expense.description}`,
+    `Category : ${getExpenseCategoryLabel(pending.expense.category)}`,
+    `Group    : ${pending.groupName}`,
+    `Paid by  : You`,
+    `Split    : Equal (${splitCount} members) → ₹${perPerson} each`,
+  ].join("\n");
+
+  return {
+    text,
+    replyMarkup: {
+      inline_keyboard: [
+        [
+          { text: "✅ Save", callback_data: "gsave" },
+          { text: "👥 Change Split", callback_data: "gchsplit" },
+          { text: "❌ Cancel", callback_data: "gcancel" },
+        ],
+      ],
+    },
+  };
+}
+
+function buildMemberButtons(
+  members: GroupMember[],
+  selected: string[]
+): Array<Array<{ text: string; callback_data: string }>> {
+  const selectedSet = new Set(selected);
+  const rows: Array<Array<{ text: string; callback_data: string }>> = [];
+
+  for (let i = 0; i < members.length; i += 2) {
+    rows.push(
+      members.slice(i, i + 2).map((m) => ({
+        text: `${selectedSet.has(m.id) ? "✅" : "❌"} ${m.name}`,
+        callback_data: `gm:${m.id}`,
+      }))
+    );
+  }
+
+  rows.push([
+    { text: `✅ Done (${selected.length} selected)`, callback_data: "gmdone" },
+  ]);
+
+  return rows;
+}
+
+async function getUserGroups(userId: string) {
+  return prisma.group.findMany({
+    where: { members: { some: { userId } }, isArchived: false },
+    select: { id: true, name: true },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
+}
+
+async function showGroupSelection(
+  chatId: number,
+  groups: Array<{ id: string; name: string }>
+): Promise<void> {
+  const buttons = groups.map((g) => [
+    { text: g.name, callback_data: `gs:${g.id}` },
+  ]);
+  await sendMessage(chatId, "👥 Which group?", { inline_keyboard: buttons });
+}
+
+async function handleGroupCommand(
+  chatId: number,
+  userId: string,
+  expenseText: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const groups = await getUserGroups(userId);
+
+  if (groups.length === 0) {
+    await sendMessage(
+      chatId,
+      "You're not part of any group yet. Create or join a group in the SplitKaro app first."
+    );
+    return;
+  }
+
+  if (!expenseText.trim()) {
+    await redis.setEx(GAWAITING_KEY(chatId), AWAITING_TTL, "1");
+    await sendMessage(
+      chatId,
+      "What's the expense?\n\nSend it like: <code>dinner 500</code>"
+    );
+    return;
+  }
+
+  const expenses = await parseExpensesFromText(expenseText);
+  if (expenses.length === 0) {
+    await sendMessage(
+      chatId,
+      "❓ Couldn't detect an expense. Try: <code>/group dinner 500</code>"
+    );
+    return;
+  }
+
+  // Group expenses are single — take the first parsed item
+  const expense = expenses[0];
+  await redis.setEx(GEXPENSE_KEY(chatId), GEXPENSE_TTL, JSON.stringify(expense));
+  await showGroupSelection(chatId, groups);
+}
+
+async function handleGroupSelect(
+  chatId: number,
+  messageId: number,
+  cbqId: string,
+  userId: string,
+  groupId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(GEXPENSE_KEY(chatId));
+
+  if (!raw) {
+    await answerCallbackQuery(cbqId, "Session expired. Use /group again.");
+    return;
+  }
+
+  const expense = JSON.parse(raw) as ParsedExpense;
+
+  const group = await prisma.group.findFirst({
+    where: { id: groupId, members: { some: { userId } } },
+    select: { id: true, name: true, _count: { select: { members: true } } },
+  });
+
+  if (!group) {
+    await answerCallbackQuery(cbqId, "Group not found.");
+    return;
+  }
+
+  const pending: GroupExpensePending = {
+    expense,
+    groupId: group.id,
+    groupName: group.name,
+    memberCount: group._count.members,
+  };
+
+  await redis.setEx(GPENDING_KEY(chatId), GEXPENSE_TTL, JSON.stringify(pending));
+  await redis.del(GEXPENSE_KEY(chatId));
+
+  const { text, replyMarkup } = buildGroupConfirmCard(pending);
+  await editMessageText(chatId, messageId, text, replyMarkup);
+
+  await answerCallbackQuery(cbqId);
+}
+
+async function handleGroupSave(
+  chatId: number,
+  messageId: number,
+  cbqId: string,
+  userId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(GPENDING_KEY(chatId));
+
+  if (!raw) {
+    await answerCallbackQuery(cbqId, "Session expired. Use /group again.");
+    return;
+  }
+
+  const pending = JSON.parse(raw) as GroupExpensePending;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+
+  if (!user) {
+    await answerCallbackQuery(cbqId, "User not found.");
+    return;
+  }
+
+  // Build explicit splits when a subset of members is selected
+  // Distribute remainder to the first member to avoid floating-point drift
+  let splits: Array<{ userId: string; amount: number }> | undefined;
+  if (pending.selectedMemberIds) {
+    const n = pending.selectedMemberIds.length;
+    const base = Math.floor((pending.expense.amount / n) * 100) / 100;
+    const remainder =
+      Math.round((pending.expense.amount - base * n) * 100) / 100;
+    splits = pending.selectedMemberIds.map((uid, i) => ({
+      userId: uid,
+      amount: i === 0 ? base + remainder : base,
+    }));
+  }
+
+  await groupExpenseService.create({
+    groupId: pending.groupId,
+    requesterId: userId,
+    actorName: user.name ?? user.email,
+    actorEmail: user.email,
+    amount: pending.expense.amount,
+    description: pending.expense.description,
+    category: pending.expense.category,
+    transactionDate: pending.expense.transactionDate,
+    paidById: userId,
+    splits,
+  });
+
+  await invalidateGroupCaches(pending.groupId);
+  await redis.del(GPENDING_KEY(chatId));
+
+  await editMessageText(
+    chatId,
+    messageId,
+    `✅ Saved to <b>${pending.groupName}</b>: ₹${pending.expense.amount} · ${pending.expense.description}`
+  );
+  await answerCallbackQuery(cbqId);
+}
+
+async function handleChangeSplit(
+  chatId: number,
+  messageId: number,
+  cbqId: string,
+  userId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(GPENDING_KEY(chatId));
+
+  if (!raw) {
+    await answerCallbackQuery(cbqId, "Session expired. Use /group again.");
+    return;
+  }
+
+  const pending = JSON.parse(raw) as GroupExpensePending;
+
+  const memberships = await prisma.groupMember.findMany({
+    where: { groupId: pending.groupId },
+    select: { user: { select: { id: true, name: true, email: true } } },
+  });
+
+  const members: GroupMember[] = memberships.map((m) => ({
+    id: m.user.id,
+    name: m.user.name ?? m.user.email,
+  }));
+
+  // Use existing selection or default to all members
+  const selected = pending.selectedMemberIds ?? members.map((m) => m.id);
+
+  const selState: MemberSelectionState = { members, selected };
+  await redis.setEx(GSEL_KEY(chatId), GEXPENSE_TTL, JSON.stringify(selState));
+
+  await editMessageText(
+    chatId,
+    messageId,
+    "👥 <b>Select who to split with:</b>\n\nTap a name to toggle:",
+    { inline_keyboard: buildMemberButtons(members, selected) }
+  );
+
+  await answerCallbackQuery(cbqId);
+}
+
+async function handleToggleMember(
+  chatId: number,
+  messageId: number,
+  cbqId: string,
+  memberId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(GSEL_KEY(chatId));
+
+  if (!raw) {
+    await answerCallbackQuery(cbqId, "Session expired. Use /group again.");
+    return;
+  }
+
+  const selState = JSON.parse(raw) as MemberSelectionState;
+  const selectedSet = new Set(selState.selected);
+
+  if (selectedSet.has(memberId)) {
+    // Prevent removing the last selected member
+    if (selectedSet.size <= 1) {
+      await answerCallbackQuery(cbqId, "At least one member must be selected.");
+      return;
+    }
+    selectedSet.delete(memberId);
+  } else {
+    selectedSet.add(memberId);
+  }
+
+  selState.selected = [...selectedSet];
+  await redis.setEx(GSEL_KEY(chatId), GEXPENSE_TTL, JSON.stringify(selState));
+
+  await editMessageText(
+    chatId,
+    messageId,
+    "👥 <b>Select who to split with:</b>\n\nTap a name to toggle:",
+    { inline_keyboard: buildMemberButtons(selState.members, selState.selected) }
+  );
+
+  await answerCallbackQuery(cbqId);
+}
+
+async function handleMembersDone(
+  chatId: number,
+  messageId: number,
+  cbqId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  const [selRaw, pendingRaw] = await Promise.all([
+    redis.get(GSEL_KEY(chatId)),
+    redis.get(GPENDING_KEY(chatId)),
+  ]);
+
+  if (!selRaw || !pendingRaw) {
+    await answerCallbackQuery(cbqId, "Session expired. Use /group again.");
+    return;
+  }
+
+  const selState = JSON.parse(selRaw) as MemberSelectionState;
+  const pending = JSON.parse(pendingRaw) as GroupExpensePending;
+
+  pending.selectedMemberIds = selState.selected;
+
+  await redis.setEx(GPENDING_KEY(chatId), GEXPENSE_TTL, JSON.stringify(pending));
+  await redis.del(GSEL_KEY(chatId));
+
+  const { text, replyMarkup } = buildGroupConfirmCard(pending);
+  await editMessageText(chatId, messageId, text, replyMarkup);
+  await answerCallbackQuery(cbqId);
+}
+
+async function handleGroupCancel(
+  chatId: number,
+  messageId: number,
+  cbqId: string
+): Promise<void> {
+  const redis = await ensureRedis();
+  await Promise.all([
+    redis.del(GEXPENSE_KEY(chatId)),
+    redis.del(GPENDING_KEY(chatId)),
+    redis.del(GAWAITING_KEY(chatId)),
+    redis.del(GSEL_KEY(chatId)),
+  ]);
+  await editMessageText(chatId, messageId, "❌ Cancelled.");
+  await answerCallbackQuery(cbqId);
+}
+
 // ── Message router ────────────────────────────────────────────────────────
 
 async function processMessage(message: TelegramMessage): Promise<void> {
@@ -600,7 +979,12 @@ async function processMessage(message: TelegramMessage): Promise<void> {
 
     if (command === "/recent") await handleRecent(chatId, user.id);
     else if (command === "/unlink") await handleUnlink(chatId, user.id);
-    else await handleHelp(chatId);
+    else if (command === "/group") {
+      const expenseText = text.slice(text.indexOf(" ") + 1).trim();
+      // If "/group" with no args, indexOf returns -1, slice(0) gives full string — guard it
+      const cleanText = expenseText === text.trim() ? "" : expenseText;
+      await handleGroupCommand(chatId, user.id, cleanText);
+    } else await handleHelp(chatId);
 
     return;
   }
@@ -615,13 +999,31 @@ async function processMessage(message: TelegramMessage): Promise<void> {
     return;
   }
 
-  // Check if we're awaiting a typed value for an edit
   const redis = await ensureRedis();
-  const awaitingRaw = await redis.get(AWAITING_KEY(chatId));
 
+  // Check if awaiting a typed value for a personal expense edit
+  const awaitingRaw = await redis.get(AWAITING_KEY(chatId));
   if (awaitingRaw) {
     const state = JSON.parse(awaitingRaw) as AwaitingState;
     await handleAwaitingInput(chatId, text, state);
+    return;
+  }
+
+  // Check if awaiting expense text for the /group flow
+  const gawaitingRaw = await redis.get(GAWAITING_KEY(chatId));
+  if (gawaitingRaw) {
+    await redis.del(GAWAITING_KEY(chatId));
+    const groups = await getUserGroups(user.id);
+    const expenses = await parseExpensesFromText(text);
+    if (expenses.length === 0) {
+      await sendMessage(
+        chatId,
+        "❓ Couldn't detect an expense. Try: <code>dinner 500</code>"
+      );
+      return;
+    }
+    await redis.setEx(GEXPENSE_KEY(chatId), GEXPENSE_TTL, JSON.stringify(expenses[0]));
+    await showGroupSelection(chatId, groups);
     return;
   }
 
@@ -667,6 +1069,18 @@ async function processCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
       parseInt(idx, 10),
       category
     );
+  } else if (data.startsWith("gs:")) {
+    await handleGroupSelect(chatId, messageId, cbqId, user.id, data.slice(3));
+  } else if (data === "gsave") {
+    await handleGroupSave(chatId, messageId, cbqId, user.id);
+  } else if (data === "gcancel") {
+    await handleGroupCancel(chatId, messageId, cbqId);
+  } else if (data === "gchsplit") {
+    await handleChangeSplit(chatId, messageId, cbqId, user.id);
+  } else if (data.startsWith("gm:")) {
+    await handleToggleMember(chatId, messageId, cbqId, data.slice(3));
+  } else if (data === "gmdone") {
+    await handleMembersDone(chatId, messageId, cbqId);
   }
 }
 
