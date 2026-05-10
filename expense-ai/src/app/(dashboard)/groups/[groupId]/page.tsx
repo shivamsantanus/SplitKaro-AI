@@ -570,7 +570,7 @@ export default function GroupDetailPage() {
       }
     }
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: Event & { error: string }) => {
       hadErrorRef.current = true
       setIsListening(false)
       recognitionRef.current = null
