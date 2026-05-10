@@ -466,7 +466,7 @@ async function handleEditField(
     await redis.setEx(
       AWAITING_KEY(chatId),
       AWAITING_TTL,
-      JSON.stringify({ index, field, messageId } satisfies AwaitingState)
+      JSON.stringify({ index, field: field as "a" | "n", messageId } satisfies AwaitingState)
     );
 
     await editMessageText(
