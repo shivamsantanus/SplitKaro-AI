@@ -151,7 +151,7 @@ async function handleStart(chatId: number, firstName: string): Promise<void> {
   if (user) {
     await sendMessage(
       chatId,
-      `Welcome back, ${user.name ?? firstName}! 👋\n\nYou're already linked. Just send me your expenses!\n\nExamples:\n• <code>lunch 200</code>\n• <code>coffee 80, metro 30, groceries 500</code>`
+      `👋 Welcome back, <b>${user.name ?? firstName}</b>!\n\nYour account is linked and ready. Just send me an expense to get started.\n\n<b>Personal expense:</b>\n<code>lunch 200</code>\n<code>coffee 80, metro 30, groceries 500</code>\n\n<b>Group expense:</b>\n<code>/group dinner 500</code>\n\nType /help to see everything I can do.`
     );
     return;
   }
@@ -169,7 +169,7 @@ async function handleStart(chatId: number, firstName: string): Promise<void> {
 
   await sendMessage(
     chatId,
-    `👋 Welcome to <b>SplitKaro</b>!\n\nTap the button below to link your account.\nThe link expires in <b>15 minutes</b>.`,
+    `👋 Welcome to <b>SplitKaro</b>!\n\nAdd personal expenses and split group bills — without opening the app.\n\nTo get started, link your SplitKaro account by tapping the button below.\n\n⏱ The link expires in <b>15 minutes</b>.`,
     {
       inline_keyboard: [
         [{ text: "🔗 Link My Account", url: `${appUrl}/link-telegram?token=${token}` }],
@@ -182,20 +182,38 @@ async function handleHelp(chatId: number): Promise<void> {
   await sendMessage(
     chatId,
     [
-      "📖 <b>SplitKaro Bot Help</b>",
+      "📖 <b>SplitKaro Bot — What I can do</b>",
       "",
-      "Just send your expenses naturally:",
+      "━━━━━━━━━━━━━━━━━━",
+      "💸 <b>Personal Expenses</b>",
+      "Just send your expense naturally — no commands needed:",
       "• <code>lunch 200</code>",
       "• <code>paid 500 for groceries</code>",
-      "• <code>lunch 200, coffee 50, metro 30</code>",
+      "• <code>coffee 80, metro 30, groceries 500</code>",
       "",
-      "<b>Commands:</b>",
-      "/start — link your account",
-      "/recent — last 5 expenses",
-      "/group dinner 500 — add a group expense",
-      "/unlink — unlink this Telegram",
-      "/cancel — cancel current action",
+      "I'll parse it with AI, show a confirmation card, and save it to your account when you confirm.",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "👥 <b>Group Expenses</b>",
+      "• <code>/group dinner 500</code> — add an expense to a group",
+      "• Select which group from your list",
+      "• Choose who to split with (or keep all members)",
+      "• Confirm and save — done!",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "📋 <b>Commands</b>",
+      "/start — link your SplitKaro account",
+      "/recent — view your last 5 personal expenses",
+      "/group [expense] — add a group expense",
+      "/cancel — cancel whatever is in progress",
+      "/unlink — disconnect this Telegram account",
       "/help — show this message",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "💡 <b>Tips</b>",
+      "• Add multiple expenses in one message",
+      "• Edit amount, category, or note before saving",
+      "• Changes reflect instantly in your SplitKaro app",
     ].join("\n")
   );
 }
