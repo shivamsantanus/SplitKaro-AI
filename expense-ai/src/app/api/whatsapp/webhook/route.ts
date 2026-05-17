@@ -159,7 +159,7 @@ async function handleStart(phone: string, firstName: string): Promise<void> {
   if (user) {
     await sendMessage(
       phone,
-      `Welcome back, ${user.name ?? firstName}! 👋\n\nYou're already linked. Just send me your expenses!\n\nExamples:\n• lunch 200\n• coffee 80, metro 30, groceries 500`
+      `Welcome back, ${user.name ?? firstName}! 👋\n\nYou're all set. Just send your expenses and I'll handle the rest.\n\n*Quick examples:*\n• lunch 200\n• coffee 80, metro 30\n• paid 500 for groceries\n\nFor group expenses send: /group dinner 800\nTo see recent expenses send: /recent`
     );
     return;
   }
@@ -173,7 +173,28 @@ async function handleStart(phone: string, firstName: string): Promise<void> {
 
   await sendMessage(
     phone,
-    `👋 Welcome to *SplitKaro*!\n\nTap the link below to connect your account (expires in 15 minutes):\n\n${appUrl}/link-whatsapp?token=${token}`
+    `👋 Welcome to *SplitKaro AI!*\n\nI'm your personal expense assistant. Here's what I can do:\n\n💰 Track personal expenses instantly\n👥 Split group bills with friends\n📋 Show your recent spending\n🤖 Understand natural language\n\nTo get started, tap the link below to connect your SplitKaro account _(expires in 15 minutes)_:\n\n${appUrl}/link-whatsapp?token=${token}`
+  );
+}
+
+async function sendWelcomePrompt(phone: string): Promise<void> {
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://splitkaro.tristech.in";
+
+  await sendButtons(
+    phone,
+    `👋 Hi! I'm *SplitKaro AI* — your expense tracking assistant.\n\n💰 Track personal expenses\n👥 Split group bills\n📊 View spending history\n\nSend */start* or tap the button below to link your account and get started!`,
+    [{ id: "get_started", title: "🚀 Get Started" }]
+  );
+
+  const redis = await ensureRedis();
+  const token = crypto.randomBytes(16).toString("hex");
+  await redis.setEx(`wa:link:${token}`, 900, JSON.stringify({ phone }));
+  await redis.setEx(`wa:welcome_token:${phone}`, 900, token);
+
+  await sendMessage(
+    phone,
+    `Or open this link to connect:\n${appUrl}/link-whatsapp?token=${token}`
   );
 }
 
@@ -181,20 +202,35 @@ async function handleHelp(phone: string): Promise<void> {
   await sendMessage(
     phone,
     [
-      "📖 *SplitKaro Bot Help*",
+      "📖 *SplitKaro AI — Help*",
       "",
-      "Just send your expenses naturally:",
+      "━━━━━━━━━━━━━━━━━━",
+      "💰 *Personal Expenses*",
+      "Just type naturally:",
       "• lunch 200",
       "• paid 500 for groceries",
-      "• lunch 200, coffee 50, metro 30",
+      "• coffee 80, metro 30, movie 350",
       "",
-      "*Commands:*",
+      "I'll parse it, show a preview, and let you Save, Edit or Cancel.",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "👥 *Group Expenses*",
+      "• /group dinner 800",
+      "• /group — then type the expense",
+      "",
+      "Select your group, choose who to split with, and save.",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "📋 *Commands*",
       "/start — link your account",
       "/recent — last 5 expenses",
-      "/group dinner 500 — add a group expense",
-      "/unlink — unlink this WhatsApp",
+      "/group — add a group expense",
+      "/unlink — disconnect WhatsApp",
       "/cancel — cancel current action",
       "/help — show this message",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "🌐 *Full app:* splitkaro.tristech.in",
     ].join("\n")
   );
 }
@@ -786,13 +822,11 @@ async function processMessage(
 
     if (data === "cancel") { await handleCancel(phone); return; }
     if (data === "gcancel") { await handleGroupCancel(phone); return; }
+    if (data === "get_started") { await handleStart(phone, "there"); return; }
 
     const user = await getUserByPhone(phone);
     if (!user) {
-      await sendMessage(
-        phone,
-        "⚠️ Account not linked. Send /start to link your account."
-      );
+      await sendWelcomePrompt(phone);
       return;
     }
 
@@ -833,10 +867,7 @@ async function processMessage(
 
     const user = await getUserByPhone(phone);
     if (!user) {
-      await sendMessage(
-        phone,
-        "⚠️ Your WhatsApp is not linked to SplitKaro.\n\nSend /start to link your account."
-      );
+      await sendWelcomePrompt(phone);
       return;
     }
 
@@ -858,10 +889,7 @@ async function processMessage(
   // Non-command text — requires auth
   const user = await getUserByPhone(phone);
   if (!user) {
-    await sendMessage(
-      phone,
-      "⚠️ Your WhatsApp is not linked to SplitKaro.\n\nSend /start to link your account."
-    );
+    await sendWelcomePrompt(phone);
     return;
   }
 
