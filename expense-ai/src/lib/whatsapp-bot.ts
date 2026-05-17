@@ -1,7 +1,7 @@
 const BASE = `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}`;
 
 async function call(body: object): Promise<void> {
-  await fetch(`${BASE}/messages`, {
+  const res = await fetch(`${BASE}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -9,6 +9,11 @@ async function call(body: object): Promise<void> {
     },
     body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("[WhatsApp API Error]", res.status, JSON.stringify(err));
+  }
 }
 
 export async function sendMessage(to: string, text: string): Promise<void> {
