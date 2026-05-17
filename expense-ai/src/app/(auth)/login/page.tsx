@@ -23,15 +23,16 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get("error")
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
   const { status } = useSession()
 
   const [error, setError] = useState("")
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/dashboard")
+      router.replace(callbackUrl)
     }
-  }, [status, router])
+  }, [status, router, callbackUrl])
 
   const oauthUrlMessage =
     urlError && (oauthErrorMessages[urlError] ?? oauthErrorMessages.Default)
@@ -66,7 +67,7 @@ function LoginForm() {
             </div>
           )}
 
-          <GoogleSignInButton onError={setError} />
+          <GoogleSignInButton callbackUrl={callbackUrl} onError={setError} />
         </div>
       </div>
     </div>

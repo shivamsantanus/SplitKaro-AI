@@ -10,13 +10,13 @@ interface Props {
 }
 
 export default async function LinkTelegramPage({ searchParams }: Props) {
+  const { token } = await searchParams;
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/login");
+    const callbackUrl = token ? `/link-telegram?token=${token}` : "/link-telegram";
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
-
-  const { token } = await searchParams;
 
   if (!token) {
     return (

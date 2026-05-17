@@ -10,13 +10,13 @@ interface Props {
 }
 
 export default async function LinkWhatsAppPage({ searchParams }: Props) {
+  const { token } = await searchParams;
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/login");
+    const callbackUrl = token ? `/link-whatsapp?token=${token}` : "/link-whatsapp";
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
-
-  const { token } = await searchParams;
 
   if (!token) {
     return (
