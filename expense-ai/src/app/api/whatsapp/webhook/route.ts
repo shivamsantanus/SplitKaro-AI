@@ -797,6 +797,51 @@ async function handleGroupCancel(phone: string): Promise<void> {
   await sendMessage(phone, "❌ Cancelled.");
 }
 
+// ── Greeting & about handlers ─────────────────────────────────────────────
+
+const GREETING_PATTERNS = /^(hi|hello|hey|hii|helo|hola|namaste|sup|yo|howdy|good\s*(morning|afternoon|evening|night)|what.?s\s*up|👋|🙏)[\s!?.]*$/i;
+const ABOUT_PATTERNS = /^(what\s*(is|are|can)\s*(this|you|splitkaro)|about|info|who\s*are\s*you|tell\s*me\s*more|app\s*info|features?)[\s!?.]*$/i;
+
+async function handleGreeting(phone: string, name: string): Promise<void> {
+  await sendButtons(
+    phone,
+    `👋 Hey ${name}! Welcome to *SplitKaro AI*\n\nI'm your personal expense assistant on WhatsApp.\n\n💰 Track personal expenses instantly\n👥 Split group bills with friends\n📊 View your spending history\n🤖 Just type naturally — I understand you\n\nSend */start* to link your account and get going!`,
+    [{ id: "get_started", title: "🚀 Get Started" }]
+  );
+}
+
+async function handleGreetingLinked(phone: string, name: string): Promise<void> {
+  await sendMessage(
+    phone,
+    `👋 Hey ${name}!\n\nJust send me your expenses and I'll handle the rest.\n\n*Examples:*\n• lunch 200\n• coffee 80, metro 30\n• paid 500 for groceries yesterday\n\nFor group expenses: /group dinner 800\nRecent expenses: /recent\nAll commands: /help`
+  );
+}
+
+async function handleAbout(phone: string): Promise<void> {
+  await sendMessage(
+    phone,
+    [
+      "ℹ️ *About SplitKaro AI*",
+      "",
+      "SplitKaro AI is an expense tracking and bill splitting app that works right here on WhatsApp.",
+      "",
+      "*What I can do:*",
+      "💰 Track your personal expenses",
+      "👥 Split group bills with friends",
+      "📊 Show your recent spending",
+      "✏️ Edit expenses before saving",
+      "🤖 Understand natural language",
+      "",
+      "*How it works:*",
+      "Just send a message like _lunch 200_ and I'll parse it, show a preview, and save it with one tap.",
+      "",
+      `🌐 *Full app:* splitkaro.tristech.in`,
+      "",
+      "Send /start to link your account and begin!",
+    ].join("\n")
+  );
+}
+
 // ── Message router ────────────────────────────────────────────────────────
 
 async function processMessage(
@@ -889,7 +934,21 @@ async function processMessage(
   // Non-command text — requires auth
   const user = await getUserByPhone(phone);
   if (!user) {
-    await sendWelcomePrompt(phone);
+    if (GREETING_PATTERNS.test(text) || ABOUT_PATTERNS.test(text)) {
+      await handleGreeting(phone, contactName);
+    } else {
+      await sendWelcomePrompt(phone);
+    }
+    return;
+  }
+
+  // Greetings and about queries for linked users
+  if (GREETING_PATTERNS.test(text)) {
+    await handleGreetingLinked(phone, user.name ?? contactName);
+    return;
+  }
+  if (ABOUT_PATTERNS.test(text)) {
+    await handleAbout(phone);
     return;
   }
 
