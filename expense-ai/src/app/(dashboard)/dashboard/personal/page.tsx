@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/currency"
 import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersonalSummaryQuery } from "@/hooks/queries/usePersonalSummary"
+import Link from "next/link"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -228,7 +229,12 @@ export default function PersonalPage() {
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">{t("personal.recent")}</h3>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.latestCount")}</p>
+                  <Link
+                    href={`/dashboard/personal/transactions?month=${month}&year=${year}`}
+                    className="text-[10px] font-black uppercase tracking-[0.25em] text-primary hover:underline"
+                  >
+                    {t("personal.viewAll")}
+                  </Link>
                 </div>
                 <div className="space-y-2">
                   {summary.recentTransactions.map((transaction: any) => (

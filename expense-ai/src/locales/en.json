@@ -319,6 +319,16 @@
     "categoryEntries": "{count} entries",
     "recent": "Recent",
     "latestCount": "Latest 8",
+    "viewAll": "View All",
+    "transactions": {
+      "title": "All Expenses",
+      "subtitle": "Full month breakdown",
+      "count": "{count} entries",
+      "empty": {
+        "title": "No expenses this month",
+        "description": "Tap + to add your first expense for this month."
+      }
+    },
     "empty": {
       "title": "No expenses this month",
       "description": "Tap + to add your first personal expense."
