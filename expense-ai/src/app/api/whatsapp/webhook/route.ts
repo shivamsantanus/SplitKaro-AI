@@ -289,7 +289,14 @@ async function handleUnlink(phone: string, userId: string): Promise<void> {
 
 async function handleTextExpense(phone: string, text: string): Promise<void> {
   const redis = await ensureRedis();
-  const expenses = await parseExpensesFromText(text);
+
+  let expenses: ParsedExpense[];
+  try {
+    expenses = await parseExpensesFromText(text);
+  } catch {
+    await sendMessage(phone, "⚠️ AI parsing failed. Please try again in a moment.");
+    return;
+  }
 
   if (expenses.length === 0) {
     await sendMessage(
@@ -578,7 +585,13 @@ async function handleGroupCommand(
     return;
   }
 
-  const expenses = await parseExpensesFromText(expenseText);
+  let expenses: ParsedExpense[];
+  try {
+    expenses = await parseExpensesFromText(expenseText);
+  } catch {
+    await sendMessage(phone, "⚠️ AI parsing failed. Please try again in a moment.");
+    return;
+  }
   if (expenses.length === 0) {
     await sendMessage(
       phone,
@@ -971,7 +984,13 @@ async function processMessage(
   if (gawaitingRaw) {
     await redis.del(GAWAITING_KEY(phone));
     const groups = await getUserGroups(user.id);
-    const expenses = await parseExpensesFromText(text);
+    let expenses: ParsedExpense[];
+    try {
+      expenses = await parseExpensesFromText(text);
+    } catch {
+      await sendMessage(phone, "⚠️ AI parsing failed. Please try again in a moment.");
+      return;
+    }
     if (expenses.length === 0) {
       await sendMessage(
         phone,

@@ -273,7 +273,13 @@ async function handleUnlink(chatId: number, userId: string): Promise<void> {
 async function handleTextExpense(chatId: number, text: string): Promise<void> {
   const redis = await ensureRedis();
 
-  const expenses = await parseExpensesFromText(text);
+  let expenses: ParsedExpense[];
+  try {
+    expenses = await parseExpensesFromText(text);
+  } catch {
+    await sendMessage(chatId, "⚠️ AI parsing failed. Please try again in a moment.");
+    return;
+  }
 
   if (expenses.length === 0) {
     await sendMessage(
@@ -1032,7 +1038,13 @@ async function processMessage(message: TelegramMessage): Promise<void> {
   if (gawaitingRaw) {
     await redis.del(GAWAITING_KEY(chatId));
     const groups = await getUserGroups(user.id);
-    const expenses = await parseExpensesFromText(text);
+    let expenses: ParsedExpense[];
+    try {
+      expenses = await parseExpensesFromText(text);
+    } catch {
+      await sendMessage(chatId, "⚠️ AI parsing failed. Please try again in a moment.");
+      return;
+    }
     if (expenses.length === 0) {
       await sendMessage(
         chatId,
