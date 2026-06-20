@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
 import { Toast } from "@/components/ui/Toast"
 import { PaymentConfirmModal } from "@/components/ui/PaymentConfirmModal"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES, getExpenseCategoryIconName, getExpenseCategoryLabel, inferExpenseCategory } from "@/lib/expense-categories"
 import { formatCurrency } from "@/lib/currency"
 import { UpiPickerSheet } from "@/components/ui/UpiPickerSheet"
@@ -406,21 +407,52 @@ export default function GroupDetailPage() {
 
   const handleSettleUp = async () => {
     if (!settleAmount || parseFloat(settleAmount) <= 0) return;
+    const amount = parseFloat(settleAmount);
+    const currentUserId = (session?.user as any)?.id as string;
     setIsSaving(true);
     try {
       const response = await fetch("/api/settlements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parseFloat(settleAmount),
+          amount,
           groupId: isSoloGroup ? null : groupId,
           payerId: settlePayerId,
           receiverId: settleReceiverId,
         }),
       });
       if (response.ok) {
+        const newSettlement = await response.json();
+
+        // Immediately apply the confirmed settlement to the cache so the UI
+        // updates without waiting for the background refetch to complete.
+        queryClient.setQueryData(["group", groupId], (old: any) => {
+          if (!old) return old;
+
+          const updatedDebts = old.debts
+            .map((debt: any) => {
+              if (settlePayerId === currentUserId && debt.userId === settleReceiverId) {
+                // Current user paid — amount they owe decreases (or owed increases)
+                return { ...debt, amount: debt.amount + amount };
+              }
+              if (settleReceiverId === currentUserId && debt.userId === settlePayerId) {
+                // Current user received — amount owed to them decreases
+                return { ...debt, amount: debt.amount - amount };
+              }
+              return debt;
+            })
+            .filter((debt: any) => Math.abs(debt.amount) > 0.01);
+
+          return {
+            ...old,
+            settlements: [newSettlement, ...old.settlements],
+            debts: updatedDebts,
+          };
+        });
+
         setShowSettleModal(false);
         setSettleAmount("");
+        // Background refetch to sync debts that involve simplifyDebts recalculation
         invalidateGroup();
       }
     } catch (err) {
@@ -1961,7 +1993,12 @@ export default function GroupDetailPage() {
                disabled={isSaving || !settleAmount || parseFloat(settleAmount) <= 0}
                onClick={handleSettleUp}
             >
-               {isSaving ? "Recording..." : "Confirm Settlement"}
+               {isSaving ? (
+                 <span className="flex items-center justify-center gap-2.5">
+                   <RupeeSpinner className="w-5 h-5" />
+                   Recording...
+                 </span>
+               ) : "Confirm Settlement"}
             </Button>
          </div>
       </Modal>

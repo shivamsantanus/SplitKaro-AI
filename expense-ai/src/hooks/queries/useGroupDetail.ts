@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 
 async function fetchGroupDetail(groupId: string) {
   const res = await fetch(`/api/groups/${groupId}`)
@@ -13,5 +13,8 @@ export function useGroupDetailQuery(groupId: string | null) {
     queryFn: () => fetchGroupDetail(groupId!),
     enabled: !!groupId,
     staleTime: 30_000,
+    // Keep the previous data visible while a background refetch is in flight,
+    // preventing the skeleton flash that causes the flickering UX.
+    placeholderData: keepPreviousData,
   })
 }
