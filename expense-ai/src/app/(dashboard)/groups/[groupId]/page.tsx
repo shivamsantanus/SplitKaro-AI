@@ -686,6 +686,41 @@ export default function GroupDetailPage() {
       })
 
       if (response.ok) {
+        const savedExpense = await response.json();
+        const currentUserId = (session?.user as any)?.id as string;
+        const payerId = paidByUserId || currentUserId;
+        const payerMember = (group as any).members.find((m: any) => m.userId === payerId);
+
+        // Build the full expense shape the component expects so the list
+        // updates the instant the modal closes, without waiting for the refetch.
+        const fullExpense = {
+          ...savedExpense,
+          payer: { name: payerMember?.user?.name || "You" },
+          splits: splitsToSave.map((s: any) => {
+            const member = (group as any).members.find((m: any) => m.userId === s.userId);
+            return {
+              id: `opt-${s.userId}`,
+              amount: s.amount,
+              expenseId: savedExpense.id,
+              userId: s.userId,
+              user: { name: member?.user?.name || "Unknown" },
+            };
+          }),
+        };
+
+        queryClient.setQueryData(["group", groupId], (old: any) => {
+          if (!old) return old;
+          if (editingExpenseId) {
+            return {
+              ...old,
+              expenses: old.expenses.map((e: any) =>
+                e.id === editingExpenseId ? fullExpense : e
+              ),
+            };
+          }
+          return { ...old, expenses: [fullExpense, ...old.expenses] };
+        });
+
         setAmount("")
         setDescription("")
         setExpenseCategory("OTHER")
@@ -696,7 +731,8 @@ export default function GroupDetailPage() {
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
         })
         setShowExpenseModal(false)
-        invalidateGroup() // Refresh group data to show new expense
+        // Background refetch so debts are recalculated from the real server data
+        invalidateGroup()
       } else {
         const errData = await response.json().catch(() => ({}))
         console.error("Failed to add/update expense", response.status, errData)
@@ -714,19 +750,25 @@ export default function GroupDetailPage() {
 
   const confirmDeleteExpense = async () => {
     if (!deleteExpenseId) return;
-    setIsSaving(true);
+    const expenseIdToDelete = deleteExpenseId;
+
+    // Close the confirm modal and remove from the list immediately.
+    setDeleteExpenseId(null);
+    queryClient.setQueryData(["group", groupId], (old: any) => {
+      if (!old) return old;
+      return { ...old, expenses: old.expenses.filter((e: any) => e.id !== expenseIdToDelete) };
+    });
+
     try {
-      const response = await fetch(`/api/expenses/${deleteExpenseId}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        invalidateGroup()
+      const response = await fetch(`/api/expenses/${expenseIdToDelete}`, { method: "DELETE" });
+      if (!response.ok) {
+        // Restore the expense via a fresh fetch on failure
+        invalidateGroup();
       }
+      // On success: realtime SSE triggers a background refetch for correct debts
     } catch (err) {
+      invalidateGroup();
       console.error("Failed to delete expense", err);
-    } finally {
-      setIsSaving(false);
-      setDeleteExpenseId(null);
     }
   }
 
@@ -1966,12 +2008,7 @@ export default function GroupDetailPage() {
                 onClick={confirmDeleteExpense}
                 disabled={isSaving}
               >
-                {isSaving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <RupeeSpinner className="w-5 h-5" />
-                    Deleting...
-                  </span>
-                ) : "Delete Expense"}
+                Delete Expense
               </button>
               <Button
                 variant="outline"
