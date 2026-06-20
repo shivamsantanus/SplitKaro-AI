@@ -13,7 +13,8 @@ import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionMod
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { usePersonalTransactionsQuery } from "@/hooks/queries/usePersonalTransactions"
-import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt } from "lucide-react"
+import { Plus, Mic, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 const MONTH_NAMES = [
@@ -140,7 +141,7 @@ export default function TransactionsContent() {
       <div className="px-6 pb-6 max-w-4xl mx-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-40">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <RupeeSpinner className="w-8 h-8 text-primary" />
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("common.loading")}</p>
           </div>
         ) : !transactions || transactions.length === 0 ? (

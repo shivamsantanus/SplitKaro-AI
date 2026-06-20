@@ -2,7 +2,8 @@ import { useState, useEffect } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Input } from "./Input"
-import { User, Loader2, Search, Check } from "lucide-react"
+import { User, Search, Check } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
 
 interface SoloExpenseModalProps {
@@ -243,7 +244,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
           disabled={isSaving}
           className="w-full h-15 rounded-2xl text-base font-black shadow-[0_10px_30px_-10px_rgba(var(--primary),0.5)] active:scale-95 py-7"
         >
-          {isSaving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Check className="w-5 h-5 mr-4 stroke-[4]" />}
+          {isSaving ? <RupeeSpinner className="w-5 h-5 mr-2" /> : <Check className="w-5 h-5 mr-4 stroke-[4]" />}
           Save Individual Payment
         </Button>
       </div>

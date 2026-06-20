@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
-import { Check, Loader2 } from "lucide-react"
+import { Check } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -209,7 +210,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
           className="w-full rounded-2xl text-base font-black py-7"
         >
           {isSaving ? (
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            <RupeeSpinner className="w-5 h-5 mr-2" />
           ) : (
             <Check className="w-5 h-5 mr-4 stroke-[4]" />
           )}

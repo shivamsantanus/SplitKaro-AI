@@ -22,13 +22,13 @@ import {
   Users,
   Activity,
   User,
-  Loader2,
   UserPlus,
   TrendingUp,
   ChevronDown,
   ChevronUp,
   Check,
 } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 
 function GroupsContent() {
   const router = useRouter()
@@ -229,7 +229,7 @@ function GroupsContent() {
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 space-y-4 opacity-50">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <RupeeSpinner className="w-8 h-8 text-primary" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading groups...</p>
               </div>
             ) : groups.length === 0 ? (
@@ -331,7 +331,7 @@ function GroupsContent() {
                   <div className="mt-2">
                     {loadingAnalytics ? (
                       <div className="flex justify-center py-8">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary opacity-30" />
+                        <RupeeSpinner className="w-6 h-6 text-primary opacity-30" />
                       </div>
                     ) : !groupAnalytics || groupAnalytics.categoryBreakdown.length === 0 ? (
                       <div className="rounded-2xl border border-slate-100 bg-white px-5 py-8 text-center">
@@ -385,7 +385,7 @@ function GroupsContent() {
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Activity Feed</p>
             {loadingActivities ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
+                <RupeeSpinner className="w-8 h-8 text-primary opacity-20" />
               </div>
             ) : activities.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center rounded-3xl border border-dashed border-slate-200 bg-white">
@@ -612,7 +612,7 @@ export default function GroupsPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <RupeeSpinner className="w-8 h-8 text-primary" />
         </div>
       }
     >

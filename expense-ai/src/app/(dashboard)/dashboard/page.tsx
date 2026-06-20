@@ -11,7 +11,8 @@ import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { Card } from "@/components/ui/Card"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
-import { ArrowRight, HandCoins, Handshake, Loader2, Wallet } from "lucide-react"
+import { ArrowRight, HandCoins, Handshake, Wallet } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useOverviewQuery } from "@/hooks/queries/useAnalytics"
 import { useRealtimeInvalidation } from "@/hooks/useRealtimeInvalidation"
@@ -99,7 +100,7 @@ function OverviewContent() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center space-y-4 py-20 opacity-40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <RupeeSpinner className="h-8 w-8 text-primary" />
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               {t("dashboard.loading")}
             </p>
@@ -280,7 +281,7 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-background">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <RupeeSpinner className="h-8 w-8 text-primary" />
         </div>
       }
     >

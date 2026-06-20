@@ -3,7 +3,8 @@
 import { useState, useRef } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
-import { Mic, MicOff, Loader2, Check, X, RefreshCw } from "lucide-react"
+import { Mic, MicOff, Check, X, RefreshCw } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -224,7 +225,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       {/* Parsing */}
       {stage === "parsing" && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 min-h-[260px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary opacity-60" />
+          <RupeeSpinner className="w-8 h-8 text-primary opacity-60" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             {t("voiceModal.parsing")}
           </p>
@@ -357,7 +358,7 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
       {/* Saving */}
       {stage === "saving" && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 min-h-[260px]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary opacity-60" />
+          <RupeeSpinner className="w-8 h-8 text-primary opacity-60" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             {t("voiceModal.saving", { count: expenses.length })}
           </p>

@@ -34,7 +34,6 @@ import {
   Clock,
   ChevronRight,
   ChevronDown,
-  Loader2,
   Pencil,
   Film,
   HeartPulse,
@@ -1238,18 +1237,18 @@ export default function GroupDetailPage() {
 
                     {/* Actions + date */}
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-0.5">
                         <button
                           aria-label="Edit expense"
                           onClick={(e) => { e.stopPropagation(); openExpenseModal(item) }}
-                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           aria-label="Delete expense"
                           onClick={(e) => { e.stopPropagation(); handleDeleteExpense(item.id) }}
-                          className="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors dark:hover:text-rose-400 dark:hover:bg-rose-900/20"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-colors dark:hover:text-rose-400 dark:hover:bg-rose-900/20"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1330,7 +1329,7 @@ export default function GroupDetailPage() {
               disabled={!message.trim() || isParsing}
               aria-label="Send message"
             >
-              {isParsing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {isParsing ? <RupeeSpinner className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
@@ -1706,7 +1705,12 @@ export default function GroupDetailPage() {
                disabled={isSaving || !amount || !description}
                onClick={handleAddExpense}
             >
-               {isSaving ? "Saving..." : "Save Expense"}
+               {isSaving ? (
+                 <span className="flex items-center justify-center gap-2">
+                   <RupeeSpinner className="w-5 h-5" />
+                   Saving...
+                 </span>
+               ) : "Save Expense"}
             </Button>
          </div>
       </Modal>
@@ -1829,7 +1833,12 @@ export default function GroupDetailPage() {
                 disabled={isSaving || !editGroupName.trim()}
                 onClick={handleUpdateGroup}
               >
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <RupeeSpinner className="w-5 h-5" />
+                    Saving...
+                  </span>
+                ) : "Save Changes"}
               </Button>
               <button
                 className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -1877,7 +1886,12 @@ export default function GroupDetailPage() {
               onClick={confirmPendingAction}
               disabled={isSaving}
             >
-              {isSaving ? "Working..." : pendingAction?.confirmLabel}
+              {isSaving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RupeeSpinner className="w-5 h-5" />
+                  Working...
+                </span>
+              ) : pendingAction?.confirmLabel}
             </button>
             <Button
               variant="outline"
@@ -1921,7 +1935,12 @@ export default function GroupDetailPage() {
                 onClick={confirmDeleteGroup}
                 disabled={isSaving}
               >
-                {isSaving ? "Deleting..." : "Yes, Delete Group"}
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <RupeeSpinner className="w-5 h-5" />
+                    Deleting...
+                  </span>
+                ) : "Yes, Delete Group"}
               </button>
               <Button
                 variant="outline"
@@ -1947,7 +1966,12 @@ export default function GroupDetailPage() {
                 onClick={confirmDeleteExpense}
                 disabled={isSaving}
               >
-                {isSaving ? "Deleting..." : "Delete Expense"}
+                {isSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <RupeeSpinner className="w-5 h-5" />
+                    Deleting...
+                  </span>
+                ) : "Delete Expense"}
               </button>
               <Button
                 variant="outline"

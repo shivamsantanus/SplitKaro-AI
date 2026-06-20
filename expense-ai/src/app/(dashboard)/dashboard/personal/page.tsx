@@ -13,7 +13,8 @@ import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
-import { Loader2, Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
+import { Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
+import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersonalSummaryQuery } from "@/hooks/queries/usePersonalSummary"
 import Link from "next/link"
@@ -125,7 +126,7 @@ export default function PersonalPage() {
       <div className="px-6 pb-6 max-w-4xl mx-auto space-y-6">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-40">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <RupeeSpinner className="w-8 h-8 text-primary" />
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t("common.loading")}</p>
           </div>
         ) : !summary ? null : (
