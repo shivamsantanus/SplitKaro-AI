@@ -57,10 +57,8 @@ export async function POST(req: Request) {
           transactionDate,
         });
 
-        await Promise.all([
-          publishGroupEvent(groupId, "EXPENSE_ADDED"),
-          invalidateGroupCaches(groupId),
-        ]);
+        await invalidateGroupCaches(groupId);
+        await publishGroupEvent(groupId, "EXPENSE_ADDED");
         return NextResponse.json(expense, { status: 201 });
       } catch (error) {
         if (error instanceof Error) {
@@ -132,10 +130,8 @@ export async function POST(req: Request) {
     });
 
     if (groupId) {
-        await Promise.all([
-          publishGroupEvent(groupId, "EXPENSE_ADDED"),
-          invalidateGroupCaches(groupId),
-        ]);
+        await invalidateGroupCaches(groupId);
+        await publishGroupEvent(groupId, "EXPENSE_ADDED");
     } else {
         const participantIds = [user.id, ...expenseSplitData.map(s => s.userId).filter(id => id !== user.id)];
         await Promise.all([

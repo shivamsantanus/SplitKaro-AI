@@ -54,10 +54,8 @@ export async function POST(req: Request) {
           receiverId,
         });
 
-        await Promise.all([
-          publishGroupEvent(groupId, "SETTLEMENT_ADDED"),
-          invalidateGroupCaches(groupId),
-        ]);
+        await invalidateGroupCaches(groupId);
+        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
         return NextResponse.json(settlement, { status: 201 });
       } catch (error) {
         if (error instanceof Error) {
@@ -98,10 +96,8 @@ export async function POST(req: Request) {
     });
 
     if (groupId) {
-        await Promise.all([
-          publishGroupEvent(groupId, "SETTLEMENT_ADDED"),
-          invalidateGroupCaches(groupId),
-        ]);
+        await invalidateGroupCaches(groupId);
+        await publishGroupEvent(groupId, "SETTLEMENT_ADDED");
     } else {
         await Promise.all([
           publishUserEvent(resolvedPayerId, "SETTLEMENT_ADDED"),

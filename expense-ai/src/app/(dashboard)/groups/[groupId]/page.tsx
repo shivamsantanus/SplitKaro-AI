@@ -761,11 +761,9 @@ export default function GroupDetailPage() {
 
     try {
       const response = await fetch(`/api/expenses/${expenseIdToDelete}`, { method: "DELETE" });
-      if (!response.ok) {
-        // Restore the expense via a fresh fetch on failure
-        invalidateGroup();
-      }
-      // On success: realtime SSE triggers a background refetch for correct debts
+      // Refresh debts on success; restore list on failure — cache is cleared before this response arrives
+      invalidateGroup();
+      if (!response.ok) console.error("Delete expense failed", response.status);
     } catch (err) {
       invalidateGroup();
       console.error("Failed to delete expense", err);

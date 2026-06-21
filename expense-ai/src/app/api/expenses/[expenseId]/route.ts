@@ -83,10 +83,8 @@ export async function DELETE(
     });
 
     if (expense.groupId) {
-      await Promise.all([
-        publishGroupEvent(expense.groupId, "EXPENSE_DELETED"),
-        invalidateGroupCaches(expense.groupId),
-      ]);
+      await invalidateGroupCaches(expense.groupId);
+      await publishGroupEvent(expense.groupId, "EXPENSE_DELETED");
     } else {
       const participantIds = [...new Set([expense.paidById, ...expense.splits.map(s => s.userId)])];
       await Promise.all([
@@ -273,10 +271,8 @@ export async function PUT(
     });
 
     if (expense.groupId) {
-      await Promise.all([
-        publishGroupEvent(expense.groupId, "EXPENSE_UPDATED"),
-        invalidateGroupCaches(expense.groupId),
-      ]);
+      await invalidateGroupCaches(expense.groupId);
+      await publishGroupEvent(expense.groupId, "EXPENSE_UPDATED");
     } else {
       const participantIds = [...new Set([payerUserId, ...expenseSplitData.map(s => s.userId)])];
       await Promise.all([
