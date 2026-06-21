@@ -423,6 +423,9 @@ export default function GroupDetailPage() {
       if (response.ok) {
         const newSettlement = await response.json();
 
+        // Cancel any in-flight refetches before the optimistic update
+        await queryClient.cancelQueries({ queryKey: ["group", groupId] });
+
         // Immediately apply the confirmed settlement to the cache so the UI
         // updates without waiting for the background refetch to complete.
         queryClient.setQueryData(["group", groupId], (old: any) => {
@@ -691,6 +694,9 @@ export default function GroupDetailPage() {
         const payerId = paidByUserId || currentUserId;
         const payerMember = (group as any).members.find((m: any) => m.userId === payerId);
 
+        // Cancel any in-flight refetches before the optimistic update
+        await queryClient.cancelQueries({ queryKey: ["group", groupId] });
+
         // Build the full expense shape the component expects so the list
         // updates the instant the modal closes, without waiting for the refetch.
         const fullExpense = {
@@ -751,6 +757,9 @@ export default function GroupDetailPage() {
   const confirmDeleteExpense = async () => {
     if (!deleteExpenseId) return;
     const expenseIdToDelete = deleteExpenseId;
+
+    // Cancel any in-flight refetches — they would overwrite the optimistic remove
+    await queryClient.cancelQueries({ queryKey: ["group", groupId] });
 
     // Close the confirm modal and remove from the list immediately.
     setDeleteExpenseId(null);
