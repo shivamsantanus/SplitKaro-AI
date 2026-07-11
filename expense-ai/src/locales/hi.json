@@ -322,6 +322,11 @@
     "trend": "6 महीने का रुझान",
     "byCategory": "श्रेणी अनुसार",
     "byIncomeSource": "आय स्रोत अनुसार",
+    "insights": {
+      "title": "AI इनसाइट्स",
+      "loading": "आपके महीने का विश्लेषण हो रहा है…",
+      "disclaimer": "केवल अवलोकन, वित्तीय सलाह नहीं।"
+    },
     "categoryEntries": "{count} प्रविष्टियाँ",
     "recent": "हालिया",
     "latestCount": "नवीनतम 8",

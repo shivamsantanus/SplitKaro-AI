@@ -322,7 +322,11 @@
     "trend": "6 ମାସ ଧାରା",
     "byCategory": "ବର୍ଗ ଅନୁଯାୟୀ",
     "byIncomeSource": "ଆୟ ଉତ୍ସ ଅନୁଯାୟୀ",
-    "categoryEntries": "{count} ଏଣ୍ଟ୍ରି",
+    "insights": {
+      "title": "AI ଇନସାଇଟ",
+      "loading": "ଆପଣଙ୍କ ମାସ ବିଶ୍ଳେଷଣ ହେଉଛି…",
+      "disclaimer": "କେବଳ ପର୍ଯ୍ୟବେକ୍ଷଣ, ଆର୍ଥିକ ପରାମର୍ଶ ନୁହେଁ।"
+    },
     "recent": "ସାମ୍ପ୍ରତିକ",
     "latestCount": "ସର୍ବଶେଷ 8",
     "viewAll": "ସବୁ ଦେଖନ୍ତୁ",

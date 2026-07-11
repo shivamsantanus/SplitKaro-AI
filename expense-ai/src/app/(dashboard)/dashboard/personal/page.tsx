@@ -13,10 +13,11 @@ import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
-import { Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2, Users } from "lucide-react"
+import { Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2, Users, Sparkles } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersonalSummaryQuery } from "@/hooks/queries/usePersonalSummary"
+import { usePersonalInsightsQuery } from "@/hooks/queries/usePersonalInsights"
 import { useIncludeGroupExpenses } from "@/hooks/useIncludeGroupExpenses"
 import Link from "next/link"
 
@@ -43,9 +44,12 @@ export default function PersonalPage() {
   const [includeGroup, setIncludeGroup] = useIncludeGroupExpenses()
 
   const { data: summary, isLoading: loading } = usePersonalSummaryQuery(month, year, includeGroup)
+  const { data: insights, isLoading: insightsLoading } = usePersonalInsightsQuery(month, year)
 
-  const invalidateSummary = () =>
+  const invalidateSummary = () => {
     queryClient.invalidateQueries({ queryKey: ["personal", "summary"] })
+    queryClient.invalidateQueries({ queryKey: ["personal", "insights"] })
+  }
 
   const stepMonth = (dir: 1 | -1) => {
     const date = new Date(year, month - 1 + dir, 1)
@@ -208,6 +212,44 @@ export default function PersonalPage() {
               </div>
             </Card>
 
+            {(insightsLoading || (insights && !insights.empty && insights.insights.length > 0)) && (
+              <Card className="rounded-[2rem] border border-primary/15 bg-primary/[0.03] p-5 shadow-sm dark:bg-primary/10">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-black uppercase tracking-widest text-primary">{t("personal.insights.title")}</h3>
+                </div>
+                {insightsLoading ? (
+                  <div className="flex items-center gap-2 py-2 opacity-50">
+                    <RupeeSpinner className="h-4 w-4 text-primary" />
+                    <p className="text-xs font-medium text-slate-400">{t("personal.insights.loading")}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {insights?.summary && (
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{insights.summary}</p>
+                    )}
+                    <ul className="space-y-2">
+                      {insights?.insights.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span
+                            className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                              item.tone === "positive"
+                                ? "bg-emerald-500"
+                                : item.tone === "watch"
+                                ? "bg-rose-500"
+                                : "bg-slate-300 dark:bg-slate-600"
+                            }`}
+                          />
+                          <span className="text-sm text-slate-600 dark:text-slate-300">{item.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[10px] font-medium text-slate-300 dark:text-slate-500">{t("personal.insights.disclaimer")}</p>
+                  </div>
+                )}
+              </Card>
+            )}
+
             {summary.monthlySummary.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
@@ -369,18 +411,18 @@ export default function PersonalPage() {
                           <CategoryIcon type={transaction.type} category={transaction.category} className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                              {new Date(transaction.transactionDate).toLocaleDateString()}
-                            </p>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
                             {transaction.source === "group" && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
                                 <Users className="h-2.5 w-2.5" />
-                                {transaction.groupName || t("personal.includeGroup.badge")}
+                                {t("personal.includeGroup.badge")}
                               </span>
                             )}
                           </div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            {new Date(transaction.transactionDate).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
@@ -391,7 +433,6 @@ export default function PersonalPage() {
                               : "text-slate-900"
                           }`}
                         >
-                          {transaction.type === "INCOME" ? "+" : "−"}
                           {formatCurrency(transaction.amount)}
                         </p>
                         {transaction.source === "group" ? (

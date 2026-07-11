@@ -52,6 +52,7 @@ export async function invalidatePersonalCaches(
       // which the totals now depend on — a single-key delete left it stale.
       deleteCache(`personal:summary:${userId}:${year}:${month}`),
       deleteCachePattern(`personal:summary:${userId}:*`),
+      deleteCachePattern(`personal:insights:${userId}:*`),
       deleteCache(`analytics:overview:${userId}`),
     ]);
   } catch {

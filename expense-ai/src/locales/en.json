@@ -322,6 +322,11 @@
     "trend": "6-Month Trend",
     "byCategory": "By Category",
     "byIncomeSource": "By Income Source",
+    "insights": {
+      "title": "AI Insights",
+      "loading": "Analyzing your month…",
+      "disclaimer": "Observations only, not financial advice."
+    },
     "categoryEntries": "{count} entries",
     "recent": "Recent",
     "latestCount": "Latest 8",

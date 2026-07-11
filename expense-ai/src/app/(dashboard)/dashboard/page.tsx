@@ -226,7 +226,6 @@ function OverviewContent() {
                               : "text-slate-900"
                           }`}
                         >
-                          {txn.type === "INCOME" ? "+" : "−"}
                           {formatCurrency(txn.amount)}
                         </p>
                       </div>

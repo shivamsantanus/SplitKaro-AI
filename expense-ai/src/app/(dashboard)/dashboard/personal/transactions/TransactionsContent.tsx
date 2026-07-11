@@ -244,18 +244,18 @@ export default function TransactionsContent() {
                       <CategoryIcon type={transaction.type} category={transaction.category} className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                          {new Date(transaction.transactionDate).toLocaleDateString()}
-                        </p>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
                         {transaction.source === "group" && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
                             <Users className="h-2.5 w-2.5" />
-                            {transaction.groupName || t("personal.includeGroup.badge")}
+                            {t("personal.includeGroup.badge")}
                           </span>
                         )}
                       </div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        {new Date(transaction.transactionDate).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -266,7 +266,6 @@ export default function TransactionsContent() {
                           : "text-slate-900"
                       }`}
                     >
-                      {transaction.type === "INCOME" ? "+" : "−"}
                       {formatCurrency(transaction.amount)}
                     </p>
                     {transaction.source === "group" ? (
