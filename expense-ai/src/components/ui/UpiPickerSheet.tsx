@@ -11,10 +11,11 @@ type Props = {
   receiverUpiId: string
   groupName: string
   onPay: (url: string) => void
+  onAlreadyPaid: () => void
   onClose: () => void
 }
 
-export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, groupName, onPay, onClose }: Props) {
+export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, groupName, onPay, onAlreadyPaid, onClose }: Props) {
   const [copied, setCopied] = useState(false)
   const ios = isIOS()
 
@@ -104,6 +105,14 @@ export function UpiPickerSheet({ open, amount, receiverName, receiverUpiId, grou
             Open UPI App
           </button>
         )}
+
+        {/* Already-paid escape hatch — record the settlement without opening an app */}
+        <button
+          onClick={onAlreadyPaid}
+          className="w-full py-3 text-xs font-black text-primary hover:text-primary/80 active:scale-[0.98] transition-all"
+        >
+          Already paid? Mark as settled
+        </button>
 
         <button
           onClick={onClose}

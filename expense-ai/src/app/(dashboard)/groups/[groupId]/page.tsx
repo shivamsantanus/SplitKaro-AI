@@ -533,6 +533,16 @@ export default function GroupDetailPage() {
     window.location.href = url
   }
 
+  const handleAlreadyPaid = () => {
+    if (!upiTarget) return
+    const currentUserId = (session?.user as any)?.id as string
+    setUpiPickerOpen(false)
+    setSettlePayerId(currentUserId)
+    setSettleReceiverId(upiTarget.receiverId)
+    setSettleAmount(upiTarget.amount.toString())
+    setShowSettleModal(true)
+  }
+
   const handleSendMessage = useCallback(async (rawMessage?: string) => {
     const input = (rawMessage ?? message).trim()
     if (!input) return;
@@ -2412,6 +2422,7 @@ export default function GroupDetailPage() {
           receiverUpiId={upiTarget.upiId}
           groupName={upiTarget.groupName}
           onPay={handleUpiPay}
+          onAlreadyPaid={handleAlreadyPaid}
           onClose={() => setUpiPickerOpen(false)}
         />
       )}

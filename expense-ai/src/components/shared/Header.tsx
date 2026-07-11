@@ -17,8 +17,11 @@ export const Header = () => {
     pathname === "/welcome" ||
     pathname === "/"
   const isGroupDetail = pathname?.includes("/groups/")
+  // Pages that render their own header with a back button — the global fixed
+  // header would overlap and hide that back button.
+  const isSelfHeadered = pathname === "/create-group"
 
-  if (isAuth || isGroupDetail) return null
+  if (isAuth || isGroupDetail || isSelfHeadered) return null
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-slate-100 dark:border-white/10 flex items-center justify-between px-6 md:px-12">
