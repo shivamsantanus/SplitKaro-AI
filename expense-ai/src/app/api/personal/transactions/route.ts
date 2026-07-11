@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { personalTransactionService } from "@/lib/personal-transaction-service";
 import { findUserByEmailWithSelect } from "@/lib/users";
 import { invalidatePersonalCaches } from "@/lib/cache-invalidation";
+import { TransactionType } from "@/generated/prisma";
 
 function parseOptionalInt(value: string | null) {
   if (!value) {
@@ -12,6 +13,12 @@ function parseOptionalInt(value: string | null) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseType(value: string | null): TransactionType | null {
+  if (value === "INCOME") return TransactionType.INCOME;
+  if (value === "EXPENSE") return TransactionType.EXPENSE;
+  return null;
 }
 
 export async function GET(req: Request) {
@@ -33,8 +40,15 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const month = parseOptionalInt(searchParams.get("month"));
     const year = parseOptionalInt(searchParams.get("year"));
+    const type = parseType(searchParams.get("type"));
+    const includeGroupExpenses = searchParams.get("includeGroup") !== "false";
 
-    const transactions = await personalTransactionService.list(user.id, { month, year });
+    const transactions = await personalTransactionService.list(user.id, {
+      month,
+      year,
+      type,
+      includeGroupExpenses,
+    });
     return NextResponse.json(transactions);
   } catch (error) {
     console.error("Personal transactions fetch error:", error);
@@ -60,13 +74,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const { amount, description, category, transactionDate } = await req.json();
+    const { amount, description, category, type, transactionDate } = await req.json();
 
     const transaction = await personalTransactionService.create({
       ownerId: user.id,
       amount,
       description,
       category,
+      type: parseType(type),
       transactionDate,
     });
 

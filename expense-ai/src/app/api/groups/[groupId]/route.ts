@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent } from "@/lib/realtime";
-import { buildNetBalances, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
+import { buildNetBalances, buildPairwiseTransfers, describeTransfers, getUserDebtSummaries, simplifyGroupDebts } from "@/lib/debts";
 import { findUserByEmailWithSelect } from "@/lib/users";
 import { getCache, setCache } from "@/lib/cache";
 import { invalidateGroupCaches } from "@/lib/cache-invalidation";
@@ -255,11 +255,12 @@ export async function GET(
       }));
 
     let debtsArray: Array<{ userId: string; name: string; amount: number }>;
+    let groupTransfers: Array<{ fromUserId: string; toUserId: string; amount: number }>;
 
     if (group.simplifyDebts) {
       const balances = buildNetBalances(activeMembers, relevantExpenses, relevantSettlements);
-      const transfers = simplifyGroupDebts(balances);
-      debtsArray = getUserDebtSummaries(user.id, activeMembers, transfers);
+      groupTransfers = simplifyGroupDebts(balances);
+      debtsArray = getUserDebtSummaries(user.id, activeMembers, groupTransfers);
     } else {
       const pairwiseDebts: Record<string, { userId: string; name: string; amount: number }> = {};
 
@@ -313,9 +314,11 @@ export async function GET(
       });
 
       debtsArray = Object.values(pairwiseDebts).filter((debt) => Math.abs(debt.amount) > 0.01);
+      groupTransfers = buildPairwiseTransfers(activeMembers, relevantExpenses, relevantSettlements);
     }
 
-    const groupResult = { ...group, members, expenses, settlements, debts: debtsArray };
+    const groupDebts = describeTransfers(activeMembers, groupTransfers);
+    const groupResult = { ...group, members, expenses, settlements, debts: debtsArray, groupDebts };
     await setCache(cacheKey, groupResult, 120);
     return NextResponse.json(groupResult);
   } catch (error) {

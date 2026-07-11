@@ -6,14 +6,18 @@ import { Button } from "./Button"
 import { Mic, MicOff, Check, X, RefreshCw } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories"
+import { INCOME_CATEGORIES } from "@/lib/income-categories"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 type Stage = "idle" | "recording" | "parsing" | "preview" | "saving"
+
+type TxType = "INCOME" | "EXPENSE"
 
 type ParsedExpense = {
   description: string
   amount: number
   category: string
+  type: TxType
   transactionDate: string
 }
 
@@ -139,6 +143,22 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
     )
   }
 
+  const setType = (index: number, next: TxType) => {
+    setExpenses((prev) =>
+      prev.map((exp, i) => {
+        if (i !== index || exp.type === next) return exp
+        const validCategories = next === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+        // Drop a category that doesn't belong to the new direction.
+        const category = validCategories.some((c) => c.value === exp.category)
+          ? exp.category
+          : next === "INCOME"
+          ? "OTHER_INCOME"
+          : "OTHER"
+        return { ...exp, type: next, category }
+      })
+    )
+  }
+
   const removeExpense = (index: number) => {
     setExpenses((prev) => {
       const updated = prev.filter((_, i) => i !== index)
@@ -254,7 +274,9 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
           <div className="px-6 space-y-1.5 overflow-y-auto overscroll-contain max-h-[50vh] pb-2">
             {expenses.map((exp, i) => {
               // Heuristic: flag items the AI likely guessed at
-              const uncertain = exp.category === "OTHER" || exp.amount === 0
+              const uncertain =
+                exp.category === "OTHER" || exp.category === "OTHER_INCOME" || exp.amount === 0
+              const categories = exp.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
               return (
                 <div
                   key={i}
@@ -281,6 +303,32 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                     </button>
                   </div>
 
+                  {/* Type toggle */}
+                  <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setType(i, "EXPENSE")}
+                      className={`flex-1 rounded-md py-1 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        exp.type === "EXPENSE"
+                          ? "bg-white text-rose-600 shadow-sm dark:bg-slate-900 dark:text-rose-400"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {t("personalModal.typeExpense")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setType(i, "INCOME")}
+                      className={`flex-1 rounded-md py-1 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        exp.type === "INCOME"
+                          ? "bg-white text-emerald-600 shadow-sm dark:bg-slate-900 dark:text-emerald-400"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {t("personalModal.typeIncome")}
+                    </button>
+                  </div>
+
                   {/* Bottom row: amount | category | date */}
                   <div className="flex gap-1.5 min-w-0">
                     {/* Amount */}
@@ -302,10 +350,10 @@ export function VoiceExpenseModal({ isOpen, onClose, onSuccess }: VoiceExpenseMo
                       value={exp.category}
                       onChange={(e) => updateExpense(i, "category", e.target.value)}
                       className={`flex-1 min-w-0 h-8 rounded-lg px-2 text-[10px] font-black text-slate-700 dark:text-slate-200 outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors cursor-pointer ${
-                        exp.category === "OTHER" ? "bg-amber-100/60 dark:bg-amber-900/30" : "bg-white/80 dark:bg-slate-700/80"
+                        exp.category === "OTHER" || exp.category === "OTHER_INCOME" ? "bg-amber-100/60 dark:bg-amber-900/30" : "bg-white/80 dark:bg-slate-700/80"
                       }`}
                     >
-                      {EXPENSE_CATEGORIES.map((cat) => (
+                      {categories.map((cat) => (
                         <option key={cat.value} value={cat.value}>
                           {cat.label}
                         </option>

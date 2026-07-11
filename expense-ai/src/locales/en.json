@@ -302,46 +302,69 @@
   },
 
   "personal": {
-    "title": "Personal Expenses",
-    "subtitle": "{name}'s spending tracker",
+    "title": "Personal Finances",
+    "subtitle": "{name}'s cash-flow tracker",
     "fab": {
       "addExpense": "Add Expense",
+      "addTransaction": "Add Transaction",
       "voiceNote": "Voice Note"
     },
     "stats": {
       "thisMonth": "This Month",
       "entries": "{count} entries",
       "lifetime": "Lifetime",
-      "lifetimeEntries": "{count} total entries"
+      "lifetimeEntries": "{count} total entries",
+      "income": "Income",
+      "expense": "Expense",
+      "net": "Net Savings",
+      "savingsRate": "Savings Rate"
     },
     "trend": "6-Month Trend",
     "byCategory": "By Category",
+    "byIncomeSource": "By Income Source",
     "categoryEntries": "{count} entries",
     "recent": "Recent",
     "latestCount": "Latest 8",
     "viewAll": "View All",
+    "editEntry": "Edit {description}",
+    "deleteEntry": "Delete {description}",
+    "includeGroup": {
+      "label": "Include group expenses",
+      "badge": "Group",
+      "viewInGroup": "View"
+    },
     "transactions": {
-      "title": "All Expenses",
+      "title": "All Transactions",
       "subtitle": "Full month breakdown",
       "count": "{count} entries",
+      "filter": {
+        "all": "All",
+        "income": "Income",
+        "expense": "Expense"
+      },
       "empty": {
-        "title": "No expenses this month",
-        "description": "Tap + to add your first expense for this month."
+        "title": "No transactions this month",
+        "description": "Tap + to add your first entry for this month."
       }
     },
     "empty": {
-      "title": "No expenses this month",
-      "description": "Tap + to add your first personal expense."
+      "title": "Nothing this month",
+      "description": "Tap + to add your first income or expense."
     },
     "deleteModal": {
-      "title": "Delete Personal Expense",
-      "description": "Are you sure you want to delete {description}?"
+      "title": "Delete Transaction",
+      "description": "Are you sure you want to delete {description}?",
+      "confirm": "Delete Transaction"
     }
   },
 
   "personalModal": {
     "addTitle": "Add Personal Expense",
     "editTitle": "Edit Personal Expense",
+    "addIncomeTitle": "Add Income",
+    "editIncomeTitle": "Edit Income",
+    "typeExpense": "Expense",
+    "typeIncome": "Income",
     "amount": "Amount",
     "amountPlaceholder": "0.00",
     "date": "Date",
@@ -350,6 +373,8 @@
     "category": "Category",
     "save": "Save Expense",
     "update": "Update Expense",
+    "saveIncome": "Save Income",
+    "updateIncome": "Update Income",
     "errors": {
       "required": "Amount and description are required",
       "saveFailed": "Failed to save",

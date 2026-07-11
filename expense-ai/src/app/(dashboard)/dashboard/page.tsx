@@ -22,6 +22,7 @@ type PersonalActivityItem = {
   description: string
   amount: number
   category: string
+  type: "INCOME" | "EXPENSE"
   transactionDate: string
 }
 
@@ -52,6 +53,9 @@ type OverviewResponse = {
     thisMonthCount: number
     lifetimeAmount: number
     lifetimeCount: number
+    incomeMonthly: number
+    netMonthly: number
+    savingsRate: number
     recentTransactions: PersonalActivityItem[]
   }
   groups: {
@@ -117,14 +121,21 @@ function OverviewContent() {
                     <Wallet className="h-4 w-4" />
                   </div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    {t("dashboard.personalTotal")}
+                    {t("personal.stats.net")}
                   </p>
                 </div>
-                <p className="text-xl font-black text-slate-900 sm:text-2xl">
-                  {formatCurrency(overview.personal.lifetimeAmount)}
+                <p
+                  className={`text-xl font-black sm:text-2xl ${
+                    overview.personal.netMonthly >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {overview.personal.netMonthly >= 0 ? "+" : "−"}
+                  {formatCurrency(Math.abs(overview.personal.netMonthly))}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {t("dashboard.personalEntries", { count: overview.personal.lifetimeCount })}
+                  {Math.round(overview.personal.savingsRate * 100)}% · {t("personal.stats.savingsRate")}
                 </p>
               </Card>
 
@@ -188,14 +199,18 @@ function OverviewContent() {
               {activityView === "personal" ? (
                 personalActivity.length > 0 ? (
                   <div className="space-y-2">
-                    {personalActivity.map((txn: any) => (
+                    {personalActivity.map((txn: PersonalActivityItem) => (
                       <div
                         key={txn.id}
                         className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
                       >
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-                            <CategoryIcon category={txn.category} className="h-4 w-4" />
+                          <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ${
+                              txn.type === "INCOME" ? "text-emerald-500" : "text-primary"
+                            }`}
+                          >
+                            <CategoryIcon type={txn.type} category={txn.category} className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-bold text-slate-900">{txn.description}</p>
@@ -204,7 +219,14 @@ function OverviewContent() {
                             </p>
                           </div>
                         </div>
-                        <p className="shrink-0 text-sm font-black text-slate-900">
+                        <p
+                          className={`shrink-0 text-sm font-black ${
+                            txn.type === "INCOME"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-slate-900"
+                          }`}
+                        >
+                          {txn.type === "INCOME" ? "+" : "−"}
                           {formatCurrency(txn.amount)}
                         </p>
                       </div>

@@ -13,9 +13,10 @@ import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionMod
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { usePersonalTransactionsQuery } from "@/hooks/queries/usePersonalTransactions"
-import { Plus, Mic, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt } from "lucide-react"
+import { Plus, Mic, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt, Users } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useIncludeGroupExpenses } from "@/hooks/useIncludeGroupExpenses"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -44,8 +45,19 @@ export default function TransactionsContent() {
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "INCOME" | "EXPENSE">(() => {
+    const t = searchParams.get("type")
+    return t === "INCOME" || t === "EXPENSE" ? t : "ALL"
+  })
 
-  const { data: transactions, isLoading } = usePersonalTransactionsQuery(month, year)
+  const [includeGroup, setIncludeGroup] = useIncludeGroupExpenses()
+
+  const { data: transactions, isLoading } = usePersonalTransactionsQuery(
+    month,
+    year,
+    typeFilter === "ALL" ? undefined : typeFilter,
+    includeGroup
+  )
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["personal", "transactions"] })
@@ -138,6 +150,61 @@ export default function TransactionsContent() {
         </div>
       </div>
 
+      <div className="px-6 pb-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+          {(["ALL", "INCOME", "EXPENSE"] as const).map((filter) => {
+            const active = typeFilter === filter
+            const activeColor =
+              filter === "INCOME"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : filter === "EXPENSE"
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-slate-900 dark:text-white"
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setTypeFilter(filter)}
+                className={`rounded-xl py-2 text-xs font-black uppercase tracking-widest transition-all ${
+                  active
+                    ? `bg-white shadow-sm dark:bg-slate-900 ${activeColor}`
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                {t(`personal.transactions.filter.${filter.toLowerCase()}`)}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="px-6 pb-4 max-w-4xl mx-auto">
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <span className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              {t("personal.includeGroup.label")}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeGroup}
+            aria-label={t("personal.includeGroup.label")}
+            onClick={() => setIncludeGroup(!includeGroup)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              includeGroup ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                includeGroup ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </label>
+      </div>
+
       <div className="px-6 pb-6 max-w-4xl mx-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-40">
@@ -169,34 +236,65 @@ export default function TransactionsContent() {
                   className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-                      <CategoryIcon category={transaction.category} className="h-4 w-4" />
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ${
+                        transaction.type === "INCOME" ? "text-emerald-500" : "text-primary"
+                      }`}
+                    >
+                      <CategoryIcon type={transaction.type} category={transaction.category} className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        {new Date(transaction.transactionDate).toLocaleDateString()}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                          {new Date(transaction.transactionDate).toLocaleDateString()}
+                        </p>
+                        {transaction.source === "group" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+                            <Users className="h-2.5 w-2.5" />
+                            {transaction.groupName || t("personal.includeGroup.badge")}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <p className="text-sm font-black text-slate-900">
+                    <p
+                      className={`text-sm font-black ${
+                        transaction.type === "INCOME"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-slate-900"
+                      }`}
+                    >
+                      {transaction.type === "INCOME" ? "+" : "−"}
                       {formatCurrency(transaction.amount)}
                     </p>
-                    <button
-                      onClick={() => setEditingTransaction(transaction)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                      aria-label={`Edit ${transaction.description}`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setDeletingTransaction(transaction)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30"
-                      aria-label={`Delete ${transaction.description}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {transaction.source === "group" ? (
+                      <Link
+                        href={`/groups/${transaction.groupId}`}
+                        className="flex h-7 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-wider text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        aria-label={t("personal.includeGroup.viewInGroup")}
+                      >
+                        {t("personal.includeGroup.viewInGroup")}
+                      </Link>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setEditingTransaction(transaction)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                          aria-label={t("personal.editEntry", { description: transaction.description })}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingTransaction(transaction)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30"
+                          aria-label={t("personal.deleteEntry", { description: transaction.description })}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -236,7 +334,7 @@ export default function TransactionsContent() {
             }`}
             style={{ transitionDelay: showExpenseMenu ? "30ms" : "0ms" }}
           >
-            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.addExpense")}</span>
+            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.addTransaction")}</span>
             <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
               <Plus className="w-5 h-5 text-primary" strokeWidth={2.5} />
             </div>
@@ -273,7 +371,7 @@ export default function TransactionsContent() {
               onClick={handleDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? t("common.deleting") : t("groupDetail.deleteModal.confirmDeleteExpense")}
+              {isDeleting ? t("common.deleting") : t("personal.deleteModal.confirm")}
             </button>
             <Button
               variant="outline"

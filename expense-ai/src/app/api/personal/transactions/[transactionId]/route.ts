@@ -4,6 +4,13 @@ import { authOptions } from "@/lib/auth";
 import { personalTransactionService } from "@/lib/personal-transaction-service";
 import { findUserByEmailWithSelect } from "@/lib/users";
 import { invalidatePersonalCaches } from "@/lib/cache-invalidation";
+import { TransactionType } from "@/generated/prisma";
+
+function parseType(value: unknown): TransactionType | null {
+  if (value === "INCOME") return TransactionType.INCOME;
+  if (value === "EXPENSE") return TransactionType.EXPENSE;
+  return null;
+}
 
 export async function PUT(
   req: Request,
@@ -25,7 +32,7 @@ export async function PUT(
     }
 
     const { transactionId } = await params;
-    const { amount, description, category, transactionDate } = await req.json();
+    const { amount, description, category, type, transactionDate } = await req.json();
 
     const transaction = await personalTransactionService.update({
       transactionId,
@@ -33,6 +40,7 @@ export async function PUT(
       amount,
       description,
       category,
+      type: parseType(type),
       transactionDate,
     });
 

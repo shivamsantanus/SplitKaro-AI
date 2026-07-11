@@ -36,11 +36,14 @@ export async function GET() {
 
     const result = {
       personal: {
-        thisMonthAmount: personalSummary.totals.monthlyAmount,
-        thisMonthCount: personalSummary.totals.monthlyCount,
-        lifetimeAmount: personalSummary.totals.lifetimeAmount,
-        lifetimeCount: personalSummary.totals.lifetimeCount,
-        topCategories: personalSummary.categoryBreakdown
+        thisMonthAmount: personalSummary.totals.expense.monthlyAmount,
+        thisMonthCount: personalSummary.totals.expense.monthlyCount,
+        lifetimeAmount: personalSummary.totals.expense.lifetimeAmount,
+        lifetimeCount: personalSummary.totals.expense.lifetimeCount,
+        incomeMonthly: personalSummary.totals.income.monthlyAmount,
+        netMonthly: personalSummary.totals.net.monthlyAmount,
+        savingsRate: personalSummary.totals.savingsRate,
+        topCategories: personalSummary.expenseByCategory
           .slice(0, 3)
           .map((item: { category: string; amount: number; count: number }) => ({
             ...item,

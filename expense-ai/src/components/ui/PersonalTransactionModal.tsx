@@ -6,7 +6,10 @@ import { Button } from "./Button"
 import { Check } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
+import { INCOME_CATEGORIES, inferIncomeCategory } from "@/lib/income-categories"
 import { useLanguage } from "@/contexts/LanguageContext"
+
+type TxType = "EXPENSE" | "INCOME"
 
 interface PersonalTransactionModalProps {
   isOpen: boolean
@@ -17,9 +20,14 @@ interface PersonalTransactionModalProps {
     amount: number
     description: string
     category: string
+    type?: TxType
     transactionDate: string
   } | null
 }
+
+const defaultCategoryFor = (type: TxType) => (type === "INCOME" ? "OTHER_INCOME" : "OTHER")
+const inferCategoryFor = (type: TxType, description: string) =>
+  type === "INCOME" ? inferIncomeCategory(description) : inferExpenseCategory(description)
 
 // Shared field wrapper — enforces identical height and styling on all devices
 function FieldWrapper({ children }: { children: React.ReactNode }) {
@@ -41,6 +49,7 @@ function localDateStr(d = new Date()) {
 
 export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transaction = null }: PersonalTransactionModalProps) {
   const { t } = useLanguage()
+  const [type, setType] = useState<TxType>("EXPENSE")
   const [amount, setAmount] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("OTHER")
@@ -49,6 +58,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
   const [error, setError] = useState("")
 
   const reset = () => {
+    setType("EXPENSE")
     setAmount("")
     setDescription("")
     setCategory("OTHER")
@@ -62,9 +72,11 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
     }
 
     if (transaction) {
+      const txType = transaction.type ?? "EXPENSE"
+      setType(txType)
       setAmount(transaction.amount.toString())
       setDescription(transaction.description)
-      setCategory(transaction.category || "OTHER")
+      setCategory(transaction.category || defaultCategoryFor(txType))
       setDate(transaction.transactionDate ? transaction.transactionDate.slice(0, 10) : "")
       setError("")
       return
@@ -72,6 +84,15 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
 
     reset()
   }, [isOpen, transaction])
+
+  const switchType = (next: TxType) => {
+    if (next === type) return
+    setType(next)
+    // Reset category so an expense category can't linger on an income form (and vice-versa).
+    setCategory(defaultCategoryFor(next))
+  }
+
+  const categories = type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
   const handleSave = async () => {
     if (!amount || !description) {
@@ -94,6 +115,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
           amount: parseFloat(amount),
           description,
           category,
+          type,
           transactionDate: date || undefined,
         }),
       })
@@ -114,8 +136,42 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? t("personalModal.editTitle") : t("personalModal.addTitle")}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        transaction
+          ? t(type === "INCOME" ? "personalModal.editIncomeTitle" : "personalModal.editTitle")
+          : t(type === "INCOME" ? "personalModal.addIncomeTitle" : "personalModal.addTitle")
+      }
+    >
       <div className="space-y-5">
+
+        {/* Expense / Income toggle */}
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+          <button
+            type="button"
+            onClick={() => switchType("EXPENSE")}
+            className={`rounded-xl py-2.5 text-sm font-black transition-all ${
+              type === "EXPENSE"
+                ? "bg-white text-rose-600 shadow-sm dark:bg-slate-900 dark:text-rose-400"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+            }`}
+          >
+            {t("personalModal.typeExpense")}
+          </button>
+          <button
+            type="button"
+            onClick={() => switchType("INCOME")}
+            className={`rounded-xl py-2.5 text-sm font-black transition-all ${
+              type === "INCOME"
+                ? "bg-white text-emerald-600 shadow-sm dark:bg-slate-900 dark:text-emerald-400"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+            }`}
+          >
+            {t("personalModal.typeIncome")}
+          </button>
+        </div>
 
         {/* Amount + Date — identical wrapper enforces same height on iOS */}
         <div className="grid grid-cols-2 gap-3">
@@ -163,8 +219,8 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() => {
-                if (description.trim() && category === "OTHER") {
-                  setCategory(inferExpenseCategory(description))
+                if (description.trim() && category === defaultCategoryFor(type)) {
+                  setCategory(inferCategoryFor(type, description))
                 }
               }}
               className={`${baseInput} text-sm font-bold`}
@@ -178,7 +234,7 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
             {t("personalModal.category")}
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {EXPENSE_CATEGORIES.map((item) => {
+            {categories.map((item) => {
               const isSelected = category === item.value
               return (
                 <button
@@ -214,7 +270,9 @@ export function PersonalTransactionModal({ isOpen, onClose, onSuccess, transacti
           ) : (
             <Check className="w-5 h-5 mr-4 stroke-[4]" />
           )}
-          {transaction ? t("personalModal.update") : t("personalModal.save")}
+          {transaction
+            ? t(type === "INCOME" ? "personalModal.updateIncome" : "personalModal.update")
+            : t(type === "INCOME" ? "personalModal.saveIncome" : "personalModal.save")}
         </Button>
       </div>
     </Modal>

@@ -302,46 +302,69 @@
   },
 
   "personal": {
-    "title": "व्यक्तिगत खर्च",
-    "subtitle": "{name} का खर्च ट्रैकर",
+    "title": "व्यक्तिगत वित्त",
+    "subtitle": "{name} का कैश-फ़्लो ट्रैकर",
     "fab": {
       "addExpense": "खर्च जोड़ें",
+      "addTransaction": "लेन-देन जोड़ें",
       "voiceNote": "वॉइस नोट"
     },
     "stats": {
       "thisMonth": "इस महीने",
       "entries": "{count} प्रविष्टियाँ",
       "lifetime": "अब तक",
-      "lifetimeEntries": "{count} कुल प्रविष्टियाँ"
+      "lifetimeEntries": "{count} कुल प्रविष्टियाँ",
+      "income": "आय",
+      "expense": "खर्च",
+      "net": "शुद्ध बचत",
+      "savingsRate": "बचत दर"
     },
     "trend": "6 महीने का रुझान",
     "byCategory": "श्रेणी अनुसार",
+    "byIncomeSource": "आय स्रोत अनुसार",
     "categoryEntries": "{count} प्रविष्टियाँ",
     "recent": "हालिया",
     "latestCount": "नवीनतम 8",
     "viewAll": "सभी देखें",
+    "editEntry": "{description} संपादित करें",
+    "deleteEntry": "{description} हटाएं",
+    "includeGroup": {
+      "label": "समूह खर्च शामिल करें",
+      "badge": "समूह",
+      "viewInGroup": "देखें"
+    },
     "transactions": {
-      "title": "सभी खर्च",
+      "title": "सभी लेन-देन",
       "subtitle": "पूरे महीने का विवरण",
       "count": "{count} प्रविष्टियाँ",
+      "filter": {
+        "all": "सभी",
+        "income": "आय",
+        "expense": "खर्च"
+      },
       "empty": {
-        "title": "इस महीने कोई खर्च नहीं",
-        "description": "इस महीने का पहला खर्च जोड़ने के लिए + टैप करें।"
+        "title": "इस महीने कोई लेन-देन नहीं",
+        "description": "इस महीने की पहली प्रविष्टि जोड़ने के लिए + टैप करें।"
       }
     },
     "empty": {
-      "title": "इस महीने कोई खर्च नहीं",
-      "description": "अपना पहला व्यक्तिगत खर्च जोड़ने के लिए + टैप करें।"
+      "title": "इस महीने कुछ नहीं",
+      "description": "अपनी पहली आय या खर्च जोड़ने के लिए + टैप करें।"
     },
     "deleteModal": {
-      "title": "व्यक्तिगत खर्च हटाएं",
-      "description": "क्या आप वाकई {description} को हटाना चाहते हैं?"
+      "title": "लेन-देन हटाएं",
+      "description": "क्या आप वाकई {description} को हटाना चाहते हैं?",
+      "confirm": "लेन-देन हटाएं"
     }
   },
 
   "personalModal": {
     "addTitle": "व्यक्तिगत खर्च जोड़ें",
     "editTitle": "व्यक्तिगत खर्च संपादित करें",
+    "addIncomeTitle": "आय जोड़ें",
+    "editIncomeTitle": "आय संपादित करें",
+    "typeExpense": "खर्च",
+    "typeIncome": "आय",
     "amount": "राशि",
     "amountPlaceholder": "0.00",
     "date": "तारीख",
@@ -350,6 +373,8 @@
     "category": "श्रेणी",
     "save": "खर्च सहेजें",
     "update": "खर्च अपडेट करें",
+    "saveIncome": "आय सहेजें",
+    "updateIncome": "आय अपडेट करें",
     "errors": {
       "required": "राशि और विवरण आवश्यक हैं",
       "saveFailed": "सहेजना विफल हुआ",

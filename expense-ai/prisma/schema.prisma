@@ -116,20 +116,27 @@ model ExpenseSplit {
   @@index([userId])
 }
 
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
 model PersonalTransaction {
-  id              String   @id @default(uuid())
+  id              String          @id @default(uuid())
   description     String
-  category        String   @default("OTHER")
+  category        String          @default("OTHER")
+  type            TransactionType @default(EXPENSE)
   amount          Float
-  transactionDate DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  transactionDate DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId         String
 
   @@index([ownerId, transactionDate])
   @@index([ownerId, category])
+  @@index([ownerId, type, transactionDate])
 }
 
 model Settlement {

@@ -8,6 +8,7 @@ import { invalidateGroupCaches } from "@/lib/cache-invalidation";
 import { findUserByEmailWithSelect } from "@/lib/users";
 
 const MAX_NAME_LENGTH = 60;
+const MAX_GUESTS_PER_REQUEST = 25;
 
 export async function POST(
   req: Request,
@@ -22,15 +23,31 @@ export async function POST(
 
     const { groupId } = await params;
     const body = await req.json().catch(() => null);
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
 
-    if (!name) {
-      return NextResponse.json({ message: "A name is required" }, { status: 400 });
+    // Accept a single `name` or a batch of `names` — both normalized to a list.
+    const rawNames: unknown[] = Array.isArray(body?.names)
+      ? body.names
+      : body?.name !== undefined
+        ? [body.name]
+        : [];
+    const names = rawNames
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter(Boolean);
+
+    if (names.length === 0) {
+      return NextResponse.json({ message: "At least one name is required" }, { status: 400 });
     }
 
-    if (name.length > MAX_NAME_LENGTH) {
+    if (names.length > MAX_GUESTS_PER_REQUEST) {
       return NextResponse.json(
-        { message: `Name must be ${MAX_NAME_LENGTH} characters or fewer` },
+        { message: `You can add at most ${MAX_GUESTS_PER_REQUEST} guests at once` },
+        { status: 400 }
+      );
+    }
+
+    if (names.some((name) => name.length > MAX_NAME_LENGTH)) {
+      return NextResponse.json(
+        { message: `Each name must be ${MAX_NAME_LENGTH} characters or fewer` },
         { status: 400 }
       );
     }
@@ -73,51 +90,59 @@ export async function POST(
       );
     }
 
-    const member = await prisma.$transaction(async (tx) => {
-      const placeholder = await tx.user.create({
-        data: {
-          name,
-          email: `placeholder+${randomUUID()}@splitkaro.local`,
-          isPlaceholder: true,
-          placeholderGroupId: groupId,
-        },
-      });
+    const members = await prisma.$transaction(async (tx) => {
+      const created = [];
+      for (const name of names) {
+        const placeholder = await tx.user.create({
+          data: {
+            name,
+            email: `placeholder+${randomUUID()}@splitkaro.local`,
+            isPlaceholder: true,
+            placeholderGroupId: groupId,
+          },
+        });
 
-      const groupMember = await tx.groupMember.create({
-        data: {
-          groupId,
-          userId: placeholder.id,
-          role: "MEMBER",
-        },
-        select: {
-          id: true,
-          role: true,
-          createdAt: true,
-          groupId: true,
-          userId: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              upiId: true,
-              isPlaceholder: true,
+        const groupMember = await tx.groupMember.create({
+          data: {
+            groupId,
+            userId: placeholder.id,
+            role: "MEMBER",
+          },
+          select: {
+            id: true,
+            role: true,
+            createdAt: true,
+            groupId: true,
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                upiId: true,
+                isPlaceholder: true,
+              },
             },
           },
-        },
-      });
+        });
+
+        created.push(groupMember);
+      }
 
       await tx.activity.create({
         data: {
           type: "MEMBER_ADDED",
-          message: `${currentUser.name || currentUser.email} added guest ${name}`,
+          message:
+            names.length === 1
+              ? `${currentUser.name || currentUser.email} added guest ${names[0]}`
+              : `${currentUser.name || currentUser.email} added ${names.length} guests: ${names.join(", ")}`,
           groupId,
           userId: currentUser.id,
-          metadata: { placeholderName: name, placeholderId: placeholder.id },
+          metadata: { placeholderNames: names },
         },
       });
 
-      return groupMember;
+      return created;
     });
 
     // No publishUserEvent / invalidateUserCaches for the placeholder: it has no
@@ -127,7 +152,7 @@ export async function POST(
       invalidateGroupCaches(groupId),
     ]);
 
-    return NextResponse.json({ member }, { status: 201 });
+    return NextResponse.json({ members, addedCount: members.length }, { status: 201 });
   } catch (error) {
     console.error("Add placeholder member error:", error);
     return NextResponse.json({ message: "Something went wrong" }, { status: 500 });

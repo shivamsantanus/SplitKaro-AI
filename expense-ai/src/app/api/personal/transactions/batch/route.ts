@@ -28,12 +28,13 @@ export async function POST(req: Request) {
     }
 
     const transactions = await Promise.all(
-      expenses.map((exp: { amount: number; description: string; category: string; transactionDate: string }) =>
+      expenses.map((exp: { amount: number; description: string; category: string; type?: "INCOME" | "EXPENSE"; transactionDate: string }) =>
         personalTransactionService.create({
           ownerId: user.id,
           amount: exp.amount,
           description: exp.description,
           category: exp.category,
+          type: exp.type,
           transactionDate: exp.transactionDate,
         })
       )

@@ -13,10 +13,11 @@ import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
 import { formatCurrency } from "@/lib/currency"
-import { Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2 } from "lucide-react"
+import { Plus, Mic, ChevronLeft, ChevronRight, PieChart, Pencil, Trash2, Users } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePersonalSummaryQuery } from "@/hooks/queries/usePersonalSummary"
+import { useIncludeGroupExpenses } from "@/hooks/useIncludeGroupExpenses"
 import Link from "next/link"
 
 const MONTH_NAMES = [
@@ -39,7 +40,9 @@ export default function PersonalPage() {
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const { data: summary, isLoading: loading } = usePersonalSummaryQuery(month, year)
+  const [includeGroup, setIncludeGroup] = useIncludeGroupExpenses()
+
+  const { data: summary, isLoading: loading } = usePersonalSummaryQuery(month, year, includeGroup)
 
   const invalidateSummary = () =>
     queryClient.invalidateQueries({ queryKey: ["personal", "summary"] })
@@ -121,6 +124,31 @@ export default function PersonalPage() {
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
+
+        <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <span className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              {t("personal.includeGroup.label")}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeGroup}
+            aria-label={t("personal.includeGroup.label")}
+            onClick={() => setIncludeGroup(!includeGroup)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              includeGroup ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                includeGroup ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </label>
       </div>
 
       <div className="px-6 pb-6 max-w-4xl mx-auto space-y-6">
@@ -133,42 +161,90 @@ export default function PersonalPage() {
           <>
             <div className="grid grid-cols-2 gap-4">
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.thisMonth")}</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {formatCurrency(summary.totals.monthlyAmount)}
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500">{t("personal.stats.income")}</p>
+                <p className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(summary.totals.income.monthlyAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {t("personal.stats.entries", { count: summary.totals.monthlyCount })}
+                  {t("personal.stats.entries", { count: summary.totals.income.monthlyCount })}
                 </p>
               </Card>
               <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.lifetime")}</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">
-                  {formatCurrency(summary.totals.lifetimeAmount)}
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-rose-500">{t("personal.stats.expense")}</p>
+                <p className="mt-2 text-2xl font-black text-rose-600 dark:text-rose-400">
+                  {formatCurrency(summary.totals.expense.monthlyAmount)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-slate-400">
-                  {t("personal.stats.lifetimeEntries", { count: summary.totals.lifetimeCount })}
+                  {t("personal.stats.entries", { count: summary.totals.expense.monthlyCount })}
                 </p>
               </Card>
             </div>
 
+            <Card className="p-5 rounded-3xl bg-white border border-slate-100 shadow-sm flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.net")}</p>
+                <p
+                  className={`mt-2 text-2xl font-black ${
+                    summary.totals.net.monthlyAmount >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {summary.totals.net.monthlyAmount >= 0 ? "+" : "−"}
+                  {formatCurrency(Math.abs(summary.totals.net.monthlyAmount))}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">{t("personal.stats.savingsRate")}</p>
+                <p
+                  className={`mt-2 text-2xl font-black ${
+                    summary.totals.savingsRate >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {Math.round(summary.totals.savingsRate * 100)}%
+                </p>
+              </div>
+            </Card>
+
             {summary.monthlySummary.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{t("personal.trend")}</h3>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">{t("personal.trend")}</h3>
+                  <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />{t("personal.stats.income")}
+                    </span>
+                    <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                      <span className="h-2 w-2 rounded-full bg-rose-500" />{t("personal.stats.expense")}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-end gap-2 h-24">
-                  {summary.monthlySummary.map((item: { month: string; amount: number }) => {
-                    const max = Math.max(...summary.monthlySummary.map((entry: { amount: number }) => entry.amount), 1)
-                    const pct = (item.amount / max) * 100
+                  {summary.monthlySummary.map((item: { month: string; income: number; expense: number }) => {
+                    const max = Math.max(
+                      ...summary.monthlySummary.flatMap((entry: { income: number; expense: number }) => [
+                        entry.income,
+                        entry.expense,
+                      ]),
+                      1
+                    )
+                    const incomePct = (item.income / max) * 100
+                    const expensePct = (item.expense / max) * 100
                     const [summaryYear, summaryMonth] = item.month.split("-")
                     const label = new Date(Number(summaryYear), Number(summaryMonth) - 1).toLocaleString("default", { month: "short" })
-                    const isActive = item.month === `${year}-${String(month).padStart(2, "0")}`
 
                     return (
                       <div key={item.month} className="flex flex-col items-center gap-1 flex-1">
-                        <div className="w-full flex items-end justify-center h-16">
+                        <div className="w-full flex items-end justify-center gap-0.5 h-16">
                           <div
-                            className={`w-full rounded-t-lg transition-all ${isActive ? "bg-primary" : "bg-slate-100"}`}
-                            style={{ height: `${Math.max(pct, 4)}%` }}
+                            className="w-1/2 rounded-t-md bg-emerald-500/80 transition-all"
+                            style={{ height: `${item.income > 0 ? Math.max(incomePct, 4) : 0}%` }}
+                          />
+                          <div
+                            className="w-1/2 rounded-t-md bg-rose-500/80 transition-all"
+                            style={{ height: `${item.expense > 0 ? Math.max(expensePct, 4) : 0}%` }}
                           />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-tight text-slate-400">{label}</span>
@@ -179,14 +255,14 @@ export default function PersonalPage() {
               </Card>
             )}
 
-            {summary.categoryBreakdown.length > 0 ? (
+            {summary.expenseByCategory.length > 0 && (
               <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{t("personal.byCategory")}</h3>
                 <div className="space-y-3">
-                  {summary.categoryBreakdown.map((item: any) => {
+                  {summary.expenseByCategory.map((item: any) => {
                     const pct =
-                      summary.totals.monthlyAmount > 0
-                        ? (item.amount / summary.totals.monthlyAmount) * 100
+                      summary.totals.expense.monthlyAmount > 0
+                        ? (item.amount / summary.totals.expense.monthlyAmount) * 100
                         : 0
 
                     return (
@@ -216,7 +292,48 @@ export default function PersonalPage() {
                   })}
                 </div>
               </Card>
-            ) : (
+            )}
+
+            {summary.incomeByCategory.length > 0 && (
+              <Card className="rounded-[2rem] border-slate-100 bg-white p-5 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{t("personal.byIncomeSource")}</h3>
+                <div className="space-y-3">
+                  {summary.incomeByCategory.map((item: any) => {
+                    const pct =
+                      summary.totals.income.monthlyAmount > 0
+                        ? (item.amount / summary.totals.income.monthlyAmount) * 100
+                        : 0
+
+                    return (
+                      <div key={item.category} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <CategoryIcon type="INCOME" category={item.category} className="h-4 w-4 shrink-0 text-emerald-500" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-slate-900">{item.label}</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                {t("personal.categoryEntries", { count: item.count })}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="shrink-0 text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(item.amount)}
+                          </p>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-emerald-500"
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {summary.expenseByCategory.length === 0 && summary.incomeByCategory.length === 0 && (
               <div className="rounded-3xl border border-slate-100 bg-white px-6 py-16 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
                   <PieChart className="h-8 w-8" />
@@ -244,36 +361,68 @@ export default function PersonalPage() {
                       className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
-                          <CategoryIcon category={transaction.category} className="h-4 w-4" />
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ${
+                            transaction.type === "INCOME" ? "text-emerald-500" : "text-primary"
+                          }`}
+                        >
+                          <CategoryIcon type={transaction.type} category={transaction.category} className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold text-slate-900">{transaction.description}</p>
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                            {new Date(transaction.transactionDate).toLocaleDateString()}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                              {new Date(transaction.transactionDate).toLocaleDateString()}
+                            </p>
+                            {transaction.source === "group" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
+                                <Users className="h-2.5 w-2.5" />
+                                {transaction.groupName || t("personal.includeGroup.badge")}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <p className="text-sm font-black text-slate-900">
+                        <p
+                          className={`text-sm font-black ${
+                            transaction.type === "INCOME"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-slate-900"
+                          }`}
+                        >
+                          {transaction.type === "INCOME" ? "+" : "−"}
                           {formatCurrency(transaction.amount)}
                         </p>
-                        <button
-                          onClick={() => setEditingTransaction(transaction)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                          aria-label={`Edit ${transaction.description}`}
-                          title="Edit expense"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingTransaction(transaction)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30"
-                          aria-label={`Delete ${transaction.description}`}
-                          title="Delete expense"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {transaction.source === "group" ? (
+                          <Link
+                            href={`/groups/${transaction.groupId}`}
+                            className="flex h-7 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-black uppercase tracking-wider text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                            aria-label={t("personal.includeGroup.viewInGroup")}
+                            title={t("personal.includeGroup.viewInGroup")}
+                          >
+                            {t("personal.includeGroup.viewInGroup")}
+                          </Link>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setEditingTransaction(transaction)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                              aria-label={t("personal.editEntry", { description: transaction.description })}
+                              title={t("personal.editEntry", { description: transaction.description })}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingTransaction(transaction)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 dark:border-rose-800/40 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30"
+                              aria-label={t("personal.deleteEntry", { description: transaction.description })}
+                              title={t("personal.deleteEntry", { description: transaction.description })}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -316,7 +465,7 @@ export default function PersonalPage() {
             }`}
             style={{ transitionDelay: showExpenseMenu ? "30ms" : "0ms" }}
           >
-            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.addExpense")}</span>
+            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.addTransaction")}</span>
             <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
               <Plus className="w-5 h-5 text-primary" strokeWidth={2.5} />
             </div>
@@ -354,7 +503,7 @@ export default function PersonalPage() {
               onClick={handleDeleteTransaction}
               disabled={isDeleting}
             >
-              {isDeleting ? t("common.deleting") : t("groupDetail.deleteModal.confirmDeleteExpense")}
+              {isDeleting ? t("common.deleting") : t("personal.deleteModal.confirm")}
             </button>
             <Button
               variant="outline"

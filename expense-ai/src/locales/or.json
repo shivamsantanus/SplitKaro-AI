@@ -302,46 +302,69 @@
   },
 
   "personal": {
-    "title": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ",
-    "subtitle": "{name}ଙ୍କ ଖର୍ଚ୍ଚ ଟ୍ରାକର",
+    "title": "ବ୍ୟକ୍ତିଗତ ଅର୍ଥ",
+    "subtitle": "{name}ଙ୍କ କ୍ୟାଶ-ଫ୍ଲୋ ଟ୍ରାକର",
     "fab": {
       "addExpense": "ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
+      "addTransaction": "ଲେଣଦେଣ ଯୋଡ଼ନ୍ତୁ",
       "voiceNote": "ଭଏସ ନୋଟ"
     },
     "stats": {
       "thisMonth": "ଏ ମାସ",
       "entries": "{count} ଏଣ୍ଟ୍ରି",
       "lifetime": "ସବୁ ସମୟ",
-      "lifetimeEntries": "{count} ମୋଟ ଏଣ୍ଟ୍ରି"
+      "lifetimeEntries": "{count} ମୋଟ ଏଣ୍ଟ୍ରି",
+      "income": "ଆୟ",
+      "expense": "ଖର୍ଚ୍ଚ",
+      "net": "ନିଟ ସଞ୍ଚୟ",
+      "savingsRate": "ସଞ୍ଚୟ ହାର"
     },
     "trend": "6 ମାସ ଧାରା",
     "byCategory": "ବର୍ଗ ଅନୁଯାୟୀ",
+    "byIncomeSource": "ଆୟ ଉତ୍ସ ଅନୁଯାୟୀ",
     "categoryEntries": "{count} ଏଣ୍ଟ୍ରି",
     "recent": "ସାମ୍ପ୍ରତିକ",
     "latestCount": "ସର୍ବଶେଷ 8",
     "viewAll": "ସବୁ ଦେଖନ୍ତୁ",
+    "editEntry": "{description} ସଂପାଦନ କରନ୍ତୁ",
+    "deleteEntry": "{description} ଡିଲିଟ କରନ୍ତୁ",
+    "includeGroup": {
+      "label": "ଗୋଷ୍ଠୀ ଖର୍ଚ୍ଚ ଅନ୍ତର୍ଭୁକ୍ତ କରନ୍ତୁ",
+      "badge": "ଗୋଷ୍ଠୀ",
+      "viewInGroup": "ଦେଖନ୍ତୁ"
+    },
     "transactions": {
-      "title": "ସମସ୍ତ ଖର୍ଚ୍ଚ",
+      "title": "ସମସ୍ତ ଲେଣଦେଣ",
       "subtitle": "ସଂପୂର୍ଣ ମାସ ବିବରଣୀ",
       "count": "{count} ଏଣ୍ଟ୍ରି",
+      "filter": {
+        "all": "ସବୁ",
+        "income": "ଆୟ",
+        "expense": "ଖର୍ଚ୍ଚ"
+      },
       "empty": {
-        "title": "ଏ ମାସ କୌଣସି ଖର୍ଚ୍ଚ ନାହିଁ",
-        "description": "ଏ ମାସ ପ୍ରଥମ ଖର୍ଚ୍ଚ ଯୋଡ଼ିବା ପାଇଁ + ଟ୍ୟାପ କରନ୍ତୁ।"
+        "title": "ଏ ମାସ କୌଣସି ଲେଣଦେଣ ନାହିଁ",
+        "description": "ଏ ମାସ ପ୍ରଥମ ଏଣ୍ଟ୍ରି ଯୋଡ଼ିବା ପାଇଁ + ଟ୍ୟାପ କରନ୍ତୁ।"
       }
     },
     "empty": {
-      "title": "ଏ ମାସ କୌଣସି ଖର୍ଚ୍ଚ ନାହିଁ",
-      "description": "ପ୍ରଥମ ଖର୍ଚ୍ଚ ଯୋଡ଼ିବା ପାଇଁ + ଟ୍ୟାପ କରନ୍ତୁ।"
+      "title": "ଏ ମାସ କିଛି ନାହିଁ",
+      "description": "ପ୍ରଥମ ଆୟ କିମ୍ବା ଖର୍ଚ୍ଚ ଯୋଡ଼ିବା ପାଇଁ + ଟ୍ୟାପ କରନ୍ତୁ।"
     },
     "deleteModal": {
-      "title": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ଡିଲିଟ",
-      "description": "ଆପଣ ଏ {description} ଡିଲିଟ କରିବାକୁ ଚାହୁଁଛନ୍ତି?"
+      "title": "ଲେଣଦେଣ ଡିଲିଟ",
+      "description": "ଆପଣ ଏ {description} ଡିଲିଟ କରିବାକୁ ଚାହୁଁଛନ୍ତି?",
+      "confirm": "ଲେଣଦେଣ ଡିଲିଟ"
     }
   },
 
   "personalModal": {
     "addTitle": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ଯୋଡ଼ନ୍ତୁ",
     "editTitle": "ବ୍ୟକ୍ତିଗତ ଖର୍ଚ୍ଚ ସଂପାଦନ",
+    "addIncomeTitle": "ଆୟ ଯୋଡ଼ନ୍ତୁ",
+    "editIncomeTitle": "ଆୟ ସଂପାଦନ",
+    "typeExpense": "ଖର୍ଚ୍ଚ",
+    "typeIncome": "ଆୟ",
     "amount": "ରାଶି",
     "amountPlaceholder": "0.00",
     "date": "ତାରିଖ",
@@ -350,6 +373,8 @@
     "category": "ବର୍ଗ",
     "save": "ଖର୍ଚ୍ଚ ସଞ୍ଚୟ କରନ୍ତୁ",
     "update": "ଖର୍ଚ୍ଚ ଅଦ୍ୟତନ କରନ୍ତୁ",
+    "saveIncome": "ଆୟ ସଞ୍ଚୟ କରନ୍ତୁ",
+    "updateIncome": "ଆୟ ଅଦ୍ୟତନ କରନ୍ତୁ",
     "errors": {
       "required": "ରାଶି ଏବଂ ବିବରଣ ଆବଶ୍ୟକ",
       "saveFailed": "ସଞ୍ଚୟ ବିଫଳ ହୋଇଗଲା",

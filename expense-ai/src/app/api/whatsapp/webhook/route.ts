@@ -17,9 +17,29 @@ import { invalidatePersonalCaches } from "@/lib/cache-invalidation";
 import {
   EXPENSE_CATEGORIES,
   getExpenseCategoryLabel,
+  inferExpenseCategory,
 } from "@/lib/expense-categories";
+import { INCOME_CATEGORIES, getIncomeCategoryLabel } from "@/lib/income-categories";
 import { groupExpenseService } from "@/lib/group-expense-service";
 import { invalidateGroupCaches } from "@/lib/cache-invalidation";
+
+// A group bill is always a shared expense; coerce direction (and category) back.
+function toGroupExpense(e: ParsedExpense): ParsedExpense {
+  const category = EXPENSE_CATEGORIES.some((c) => c.value === e.category)
+    ? e.category
+    : inferExpenseCategory(e.description);
+  return { ...e, type: "EXPENSE", category };
+}
+
+function categoryLabelFor(e: Pick<ParsedExpense, "type" | "category">): string {
+  return e.type === "INCOME"
+    ? getIncomeCategoryLabel(e.category)
+    : getExpenseCategoryLabel(e.category);
+}
+
+function typeTag(type: ParsedExpense["type"]): string {
+  return type === "INCOME" ? "💰 Income" : "💸 Expense";
+}
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_SECRET;
 
@@ -119,10 +139,11 @@ function buildConfirmText(expenses: ParsedExpense[]): string {
   if (expenses.length === 1) {
     const e = expenses[0];
     return [
-      "📝 *New Expense*",
+      `📝 *New ${e.type === "INCOME" ? "Income" : "Expense"}*`,
       "",
+      `Type     : ${typeTag(e.type)}`,
       `Amount   : ₹${e.amount}`,
-      `Category : ${getExpenseCategoryLabel(e.category)}`,
+      `Category : ${categoryLabelFor(e)}`,
       `Note     : ${e.description}`,
       `Date     : ${e.transactionDate}`,
     ].join("\n");
@@ -130,10 +151,10 @@ function buildConfirmText(expenses: ParsedExpense[]): string {
   const lines = expenses
     .map(
       (e, i) =>
-        `${i + 1}. ₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}`
+        `${i + 1}. ${e.type === "INCOME" ? "💰" : "💸"} ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}`
     )
     .join("\n");
-  return `📝 *${expenses.length} Expenses Found*\n\n${lines}`;
+  return `📝 *${expenses.length} Entries Found*\n\n${lines}`;
 }
 
 function buildGroupConfirmText(pending: GroupExpensePending): string {
@@ -244,6 +265,7 @@ async function handleRecent(phone: string, userId: string): Promise<void> {
       description: true,
       amount: true,
       category: true,
+      type: true,
       transactionDate: true,
     },
   });
@@ -251,7 +273,7 @@ async function handleRecent(phone: string, userId: string): Promise<void> {
   if (transactions.length === 0) {
     await sendMessage(
       phone,
-      "No expenses yet. Send me an expense to get started!"
+      "Nothing yet. Send me an expense or income to get started!"
     );
     return;
   }
@@ -261,10 +283,11 @@ async function handleRecent(phone: string, userId: string): Promise<void> {
       day: "numeric",
       month: "short",
     });
-    return `${i + 1}. ₹${t.amount} · ${getExpenseCategoryLabel(t.category)} · ${t.description} (${date})`;
+    const sign = t.type === "INCOME" ? "+" : "−";
+    return `${i + 1}. ${sign}₹${t.amount} · ${categoryLabelFor(t)} · ${t.description} (${date})`;
   });
 
-  await sendMessage(phone, `📋 *Recent Expenses*\n\n${lines.join("\n")}`);
+  await sendMessage(phone, `📋 *Recent Transactions*\n\n${lines.join("\n")}`);
 }
 
 async function handleUnlink(phone: string, userId: string): Promise<void> {
@@ -333,6 +356,7 @@ async function handleSave(phone: string, userId: string): Promise<void> {
         amount: e.amount,
         description: e.description,
         category: e.category,
+        type: e.type,
         transactionDate: e.transactionDate,
       })
     )
@@ -355,8 +379,8 @@ async function handleSave(phone: string, userId: string): Promise<void> {
 
   const savedText =
     expenses.length === 1
-      ? `✅ Saved: ₹${expenses[0].amount} · ${getExpenseCategoryLabel(expenses[0].category)} · ${expenses[0].description}`
-      : `✅ Saved ${expenses.length} expenses`;
+      ? `✅ Saved ${typeTag(expenses[0].type)}: ₹${expenses[0].amount} · ${categoryLabelFor(expenses[0])} · ${expenses[0].description}`
+      : `✅ Saved ${expenses.length} entries`;
 
   await sendMessage(phone, savedText);
 }
@@ -388,13 +412,17 @@ async function handleEdit(phone: string): Promise<void> {
 
   if (expenses.length === 1) {
     const e = expenses[0];
-    await sendButtons(
+    // A list (not buttons) — WhatsApp caps interactive buttons at 3, and the
+    // type toggle makes four options.
+    await sendList(
       phone,
-      `✏️ *Edit Expense*\n\n₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}\n\nWhat would you like to change?`,
+      `✏️ *Edit Entry*\n\n${typeTag(e.type)} · ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}\n\nWhat would you like to change?`,
+      "Edit Field",
       [
         { id: "ef:0:a", title: "💰 Amount" },
         { id: "ef:0:n", title: "📝 Note" },
         { id: "ef:0:c", title: "🏷️ Category" },
+        { id: "ett:0", title: e.type === "INCOME" ? "🔁 Make Expense" : "🔁 Make Income" },
       ]
     );
   } else {
@@ -431,13 +459,15 @@ async function handleEditExpenseSelect(
     return;
   }
 
-  await sendButtons(
+  await sendList(
     phone,
-    `✏️ *Edit Expense ${index + 1}*\n\n₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}\n\nWhat would you like to change?`,
+    `✏️ *Edit Entry ${index + 1}*\n\n${typeTag(e.type)} · ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}\n\nWhat would you like to change?`,
+    "Edit Field",
     [
       { id: `ef:${index}:a`, title: "💰 Amount" },
       { id: `ef:${index}:n`, title: "📝 Note" },
       { id: `ef:${index}:c`, title: "🏷️ Category" },
+      { id: `ett:${index}`, title: e.type === "INCOME" ? "🔁 Make Expense" : "🔁 Make Income" },
     ]
   );
 }
@@ -456,11 +486,14 @@ async function handleEditField(
   }
 
   if (field === "c") {
+    const pendingExpenses = JSON.parse(raw) as ParsedExpense[];
+    const categories =
+      pendingExpenses[index]?.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     await sendList(
       phone,
       "🏷️ Select a category:",
       "Pick Category",
-      EXPENSE_CATEGORIES.map((cat) => ({
+      categories.map((cat) => ({
         id: `ec:${index}:${cat.value}`,
         title: cat.label,
       }))
@@ -504,6 +537,40 @@ async function handleEditCategory(
   }
 
   expenses[index].category = category;
+  await redis.setEx(PENDING_KEY(phone), PENDING_TTL, JSON.stringify(expenses));
+
+  await sendButtons(phone, buildConfirmText(expenses), [
+    { id: "save", title: "✅ Save All" },
+    { id: "edit", title: "✏️ Edit" },
+    { id: "cancel", title: "❌ Cancel" },
+  ]);
+}
+
+async function handleToggleType(phone: string, index: number): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(PENDING_KEY(phone));
+
+  if (!raw) {
+    await sendMessage(phone, "Session expired. Please resend your entries.");
+    return;
+  }
+
+  const expenses = JSON.parse(raw) as ParsedExpense[];
+
+  if (!expenses[index]) {
+    await sendMessage(phone, "Invalid selection.");
+    return;
+  }
+
+  const next: ParsedExpense["type"] = expenses[index].type === "INCOME" ? "EXPENSE" : "INCOME";
+  const validCategories = next === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const category = validCategories.some((c) => c.value === expenses[index].category)
+    ? expenses[index].category
+    : next === "INCOME"
+    ? "OTHER_INCOME"
+    : "OTHER";
+
+  expenses[index] = { ...expenses[index], type: next, category };
   await redis.setEx(PENDING_KEY(phone), PENDING_TTL, JSON.stringify(expenses));
 
   await sendButtons(phone, buildConfirmText(expenses), [
@@ -603,7 +670,7 @@ async function handleGroupCommand(
   await redis.setEx(
     GEXPENSE_KEY(phone),
     GEXPENSE_TTL,
-    JSON.stringify(expenses[0])
+    JSON.stringify(toGroupExpense(expenses[0]))
   );
 
   await sendList(
@@ -904,6 +971,8 @@ async function processMessage(
     } else if (data.startsWith("ec:")) {
       const [, idx, category] = data.split(":");
       await handleEditCategory(phone, parseInt(idx, 10), category);
+    } else if (data.startsWith("ett:")) {
+      await handleToggleType(phone, parseInt(data.slice(4), 10));
     } else if (data.startsWith("gs:")) {
       await handleGroupSelect(phone, user.id, data.slice(3));
     }
@@ -1001,7 +1070,7 @@ async function processMessage(
     await redis.setEx(
       GEXPENSE_KEY(phone),
       GEXPENSE_TTL,
-      JSON.stringify(expenses[0])
+      JSON.stringify(toGroupExpense(expenses[0]))
     );
     await sendList(
       phone,

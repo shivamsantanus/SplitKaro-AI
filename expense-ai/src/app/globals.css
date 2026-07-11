@@ -6,17 +6,18 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   
-  --color-primary-50: #f0fdf4;
-  --color-primary-100: #dcfce7;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efac;
-  --color-primary-400: #4ade80;
-  --color-primary-500: #16a34a;
-  --color-primary-600: #15803d;
-  --color-primary-700: #166534;
-  --color-primary-800: #14532d;
-  --color-primary-900: #14532d;
-  --color-primary-950: #052e16;
+  /* Primary ramp is themeable — resolved at runtime from the active data-theme */
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-primary-950: var(--primary-950);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -63,7 +64,7 @@
   --card-foreground: #1f2937;
   --popover: #ffffff;
   --popover-foreground: #1f2937;
-  --primary: #16a34a;
+  --primary: var(--primary-500);
   --primary-foreground: #ffffff;
   --secondary: #f3f4f6;
   --secondary-foreground: #1f2937;
@@ -75,8 +76,21 @@
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.08);
   --input: rgba(0, 0, 0, 0.1);
-  --ring: #16a34a;
+  --ring: var(--primary-500);
   --radius: 0.75rem;
+
+  /* Default color theme: Emerald. Overridden by [data-theme] blocks below. */
+  --primary-50: #f0fdf4;
+  --primary-100: #dcfce7;
+  --primary-200: #bbf7d0;
+  --primary-300: #86efac;
+  --primary-400: #4ade80;
+  --primary-500: #16a34a;
+  --primary-600: #15803d;
+  --primary-700: #166534;
+  --primary-800: #14532d;
+  --primary-900: #14532d;
+  --primary-950: #052e16;
 }
 
 .dark {

@@ -9,13 +9,41 @@ import {
   Receipt,
   HeartPulse,
   Wallet,
+  Banknote,
+  Laptop,
+  Briefcase,
+  BadgePercent,
+  Gift,
+  PiggyBank,
+  Undo2,
 } from "lucide-react"
 import { getExpenseCategoryIconName } from "@/lib/expense-categories"
+import { getIncomeCategoryIconName } from "@/lib/income-categories"
 
-export function CategoryIcon({ category, className }: { category: string; className?: string }) {
-  const iconName = getExpenseCategoryIconName(category)
+export function CategoryIcon({
+  category,
+  className,
+  type = "EXPENSE",
+}: {
+  category: string
+  className?: string
+  type?: "EXPENSE" | "INCOME"
+}) {
+  if (type === "INCOME") {
+    switch (getIncomeCategoryIconName(category)) {
+      case "salary":    return <Banknote className={className} />
+      case "freelance": return <Laptop className={className} />
+      case "business":  return <Briefcase className={className} />
+      case "cashback":  return <BadgePercent className={className} />
+      case "rewards":   return <Gift className={className} />
+      case "interest":  return <PiggyBank className={className} />
+      case "refund":    return <Undo2 className={className} />
+      case "gift":      return <Gift className={className} />
+      default:          return <Wallet className={className} />
+    }
+  }
 
-  switch (iconName) {
+  switch (getExpenseCategoryIconName(category)) {
     case "food":          return <UtensilsCrossed className={className} />
     case "transport":     return <Bus className={className} />
     case "groceries":     return <ShoppingBasket className={className} />

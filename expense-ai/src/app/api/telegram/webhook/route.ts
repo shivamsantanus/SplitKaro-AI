@@ -16,9 +16,30 @@ import { invalidatePersonalCaches } from "@/lib/cache-invalidation";
 import {
   EXPENSE_CATEGORIES,
   getExpenseCategoryLabel,
+  inferExpenseCategory,
 } from "@/lib/expense-categories";
+import { INCOME_CATEGORIES, getIncomeCategoryLabel } from "@/lib/income-categories";
 import { groupExpenseService } from "@/lib/group-expense-service";
 import { invalidateGroupCaches } from "@/lib/cache-invalidation";
+
+// A group bill is always a shared expense; the parser may have tagged the text
+// as income, so coerce direction (and category) back to expense here.
+function toGroupExpense(e: ParsedExpense): ParsedExpense {
+  const category = EXPENSE_CATEGORIES.some((c) => c.value === e.category)
+    ? e.category
+    : inferExpenseCategory(e.description);
+  return { ...e, type: "EXPENSE", category };
+}
+
+function categoryLabelFor(e: Pick<ParsedExpense, "type" | "category">): string {
+  return e.type === "INCOME"
+    ? getIncomeCategoryLabel(e.category)
+    : getExpenseCategoryLabel(e.category);
+}
+
+function typeTag(type: ParsedExpense["type"]): string {
+  return type === "INCOME" ? "💰 Income" : "💸 Expense";
+}
 
 // Derived from bot token — must match what setup/route.ts sends to Telegram
 const WEBHOOK_SECRET = crypto
@@ -103,10 +124,11 @@ function buildConfirmCard(expenses: ParsedExpense[]): {
   if (expenses.length === 1) {
     const e = expenses[0];
     text = [
-      "📝 <b>New Expense</b>",
+      `📝 <b>New ${e.type === "INCOME" ? "Income" : "Expense"}</b>`,
       "",
+      `Type     : ${typeTag(e.type)}`,
       `Amount   : ₹${e.amount}`,
-      `Category : ${getExpenseCategoryLabel(e.category)}`,
+      `Category : ${categoryLabelFor(e)}`,
       `Note     : ${e.description}`,
       `Date     : ${e.transactionDate}`,
     ].join("\n");
@@ -114,10 +136,10 @@ function buildConfirmCard(expenses: ParsedExpense[]): {
     const lines = expenses
       .map(
         (e, i) =>
-          `${i + 1}. ₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}`
+          `${i + 1}. ${e.type === "INCOME" ? "💰" : "💸"} ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}`
       )
       .join("\n");
-    text = `📝 <b>${expenses.length} Expenses Found</b>\n\n${lines}`;
+    text = `📝 <b>${expenses.length} Entries Found</b>\n\n${lines}`;
   }
 
   return {
@@ -227,6 +249,7 @@ async function handleRecent(chatId: number, userId: string): Promise<void> {
       description: true,
       amount: true,
       category: true,
+      type: true,
       transactionDate: true,
     },
   });
@@ -234,7 +257,7 @@ async function handleRecent(chatId: number, userId: string): Promise<void> {
   if (transactions.length === 0) {
     await sendMessage(
       chatId,
-      "No expenses yet. Send me an expense to get started!"
+      "Nothing yet. Send me an expense or income to get started!"
     );
     return;
   }
@@ -244,10 +267,11 @@ async function handleRecent(chatId: number, userId: string): Promise<void> {
       day: "numeric",
       month: "short",
     });
-    return `${i + 1}. ₹${t.amount} · ${getExpenseCategoryLabel(t.category)} · ${t.description} <i>(${date})</i>`;
+    const sign = t.type === "INCOME" ? "+" : "−";
+    return `${i + 1}. ${sign}₹${t.amount} · ${categoryLabelFor(t)} · ${t.description} <i>(${date})</i>`;
   });
 
-  await sendMessage(chatId, `📋 <b>Recent Expenses</b>\n\n${lines.join("\n")}`);
+  await sendMessage(chatId, `📋 <b>Recent Transactions</b>\n\n${lines.join("\n")}`);
 }
 
 async function handleUnlink(chatId: number, userId: string): Promise<void> {
@@ -320,6 +344,7 @@ async function handleSave(
         amount: e.amount,
         description: e.description,
         category: e.category,
+        type: e.type,
         transactionDate: e.transactionDate,
       })
     )
@@ -343,8 +368,8 @@ async function handleSave(
 
   const savedText =
     expenses.length === 1
-      ? `✅ Saved: ₹${expenses[0].amount} · ${getExpenseCategoryLabel(expenses[0].category)} · ${expenses[0].description}`
-      : `✅ Saved ${expenses.length} expenses`;
+      ? `✅ Saved ${typeTag(expenses[0].type)}: ₹${expenses[0].amount} · ${categoryLabelFor(expenses[0])} · ${expenses[0].description}`
+      : `✅ Saved ${expenses.length} entries`;
 
   await editMessageText(chatId, messageId, savedText);
   await answerCallbackQuery(cbqId);
@@ -384,7 +409,7 @@ async function handleEdit(
     await editMessageText(
       chatId,
       messageId,
-      `✏️ <b>Edit Expense</b>\n\n₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}\n\nWhat would you like to change?`,
+      `✏️ <b>Edit Entry</b>\n\n${typeTag(e.type)} · ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}\n\nWhat would you like to change?`,
       {
         inline_keyboard: [
           [
@@ -393,8 +418,12 @@ async function handleEdit(
           ],
           [
             { text: "📝 Note", callback_data: "ef:0:n" },
-            { text: "← Back", callback_data: "back" },
+            {
+              text: e.type === "INCOME" ? "🔁 Make Expense" : "🔁 Make Income",
+              callback_data: "ett:0",
+            },
           ],
+          [{ text: "← Back", callback_data: "back" }],
         ],
       }
     );
@@ -460,7 +489,7 @@ async function handleEditExpenseSelect(
   await editMessageText(
     chatId,
     messageId,
-    `✏️ <b>Edit Expense ${index + 1}</b>\n\n₹${e.amount} · ${getExpenseCategoryLabel(e.category)} · ${e.description}\n\nWhat would you like to change?`,
+    `✏️ <b>Edit Entry ${index + 1}</b>\n\n${typeTag(e.type)} · ₹${e.amount} · ${categoryLabelFor(e)} · ${e.description}\n\nWhat would you like to change?`,
     {
       inline_keyboard: [
         [
@@ -469,8 +498,12 @@ async function handleEditExpenseSelect(
         ],
         [
           { text: "📝 Note", callback_data: `ef:${index}:n` },
-          { text: "← Back", callback_data: "edit" },
+          {
+            text: e.type === "INCOME" ? "🔁 Make Expense" : "🔁 Make Income",
+            callback_data: `ett:${index}`,
+          },
         ],
+        [{ text: "← Back", callback_data: "edit" }],
       ],
     }
   );
@@ -494,11 +527,14 @@ async function handleEditField(
   }
 
   if (field === "c") {
-    // Show category picker
+    // Show category picker for the item's direction (income vs expense)
+    const pendingExpenses = JSON.parse(raw) as ParsedExpense[];
+    const categories =
+      pendingExpenses[index]?.type === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     const catRows: { text: string; callback_data: string }[][] = [];
-    for (let i = 0; i < EXPENSE_CATEGORIES.length; i += 2) {
+    for (let i = 0; i < categories.length; i += 2) {
       catRows.push(
-        EXPENSE_CATEGORIES.slice(i, i + 2).map((cat) => ({
+        categories.slice(i, i + 2).map((cat) => ({
           text: cat.label,
           callback_data: `ec:${index}:${cat.value}`,
         }))
@@ -559,6 +595,44 @@ async function handleEditCategory(
   const { text, replyMarkup } = buildConfirmCard(expenses);
   await editMessageText(chatId, messageId, text, replyMarkup);
   await answerCallbackQuery(cbqId, "Category updated!");
+}
+
+async function handleToggleType(
+  chatId: number,
+  messageId: number,
+  cbqId: string,
+  index: number
+): Promise<void> {
+  const redis = await ensureRedis();
+  const raw = await redis.get(PENDING_KEY(chatId));
+
+  if (!raw) {
+    await answerCallbackQuery(cbqId, "Session expired. Resend your entries.");
+    return;
+  }
+
+  const expenses = JSON.parse(raw) as ParsedExpense[];
+
+  if (!expenses[index]) {
+    await answerCallbackQuery(cbqId, "Invalid selection.");
+    return;
+  }
+
+  const next: ParsedExpense["type"] = expenses[index].type === "INCOME" ? "EXPENSE" : "INCOME";
+  const validCategories = next === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  // Reset the category if it doesn't belong to the new direction.
+  const category = validCategories.some((c) => c.value === expenses[index].category)
+    ? expenses[index].category
+    : next === "INCOME"
+    ? "OTHER_INCOME"
+    : "OTHER";
+
+  expenses[index] = { ...expenses[index], type: next, category };
+  await redis.setEx(PENDING_KEY(chatId), PENDING_TTL, JSON.stringify(expenses));
+
+  const { text, replyMarkup } = buildConfirmCard(expenses);
+  await editMessageText(chatId, messageId, text, replyMarkup);
+  await answerCallbackQuery(cbqId, `Marked as ${next === "INCOME" ? "income" : "expense"}.`);
 }
 
 async function handleAwaitingInput(
@@ -719,8 +793,8 @@ async function handleGroupCommand(
     return;
   }
 
-  // Group expenses are single — take the first parsed item
-  const expense = expenses[0];
+  // Group expenses are single — take the first parsed item (always an expense)
+  const expense = toGroupExpense(expenses[0]);
   await redis.setEx(GEXPENSE_KEY(chatId), GEXPENSE_TTL, JSON.stringify(expense));
   await showGroupSelection(chatId, groups);
 }
@@ -1052,7 +1126,7 @@ async function processMessage(message: TelegramMessage): Promise<void> {
       );
       return;
     }
-    await redis.setEx(GEXPENSE_KEY(chatId), GEXPENSE_TTL, JSON.stringify(expenses[0]));
+    await redis.setEx(GEXPENSE_KEY(chatId), GEXPENSE_TTL, JSON.stringify(toGroupExpense(expenses[0])));
     await showGroupSelection(chatId, groups);
     return;
   }
@@ -1099,6 +1173,8 @@ async function processCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
       parseInt(idx, 10),
       category
     );
+  } else if (data.startsWith("ett:")) {
+    await handleToggleType(chatId, messageId, cbqId, parseInt(data.slice(4), 10));
   } else if (data.startsWith("gs:")) {
     await handleGroupSelect(chatId, messageId, cbqId, user.id, data.slice(3));
   } else if (data === "gsave") {

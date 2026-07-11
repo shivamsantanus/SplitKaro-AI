@@ -10,6 +10,9 @@ async function deleteUserCacheKeys(userId: string): Promise<void> {
     deleteCache(`analytics:groups:${userId}`),
     deleteCache(`activities:${userId}`),
     deleteCache(`friends:${userId}`),
+    // Personal summaries fold in each member's group-expense share, so a group
+    // mutation can change them for every member.
+    deleteCachePattern(`personal:summary:${userId}:*`),
   ]);
 }
 
@@ -45,7 +48,10 @@ export async function invalidatePersonalCaches(
 ): Promise<void> {
   try {
     await Promise.all([
+      // Clear the specific month key plus the unfiltered ":all:all" summary,
+      // which the totals now depend on — a single-key delete left it stale.
       deleteCache(`personal:summary:${userId}:${year}:${month}`),
+      deleteCachePattern(`personal:summary:${userId}:*`),
       deleteCache(`analytics:overview:${userId}`),
     ]);
   } catch {

@@ -179,6 +179,7 @@ export default function GroupDetailPage() {
 
   // Settlements State
   const [showInsights, setShowInsights] = useState(false)
+  const [showWhoOwes, setShowWhoOwes] = useState(false)
   const [showSettleModal, setShowSettleModal] = useState(false)
   const [settlePayerId, setSettlePayerId] = useState("")
   const [settleReceiverId, setSettleReceiverId] = useState("")
@@ -187,6 +188,7 @@ export default function GroupDetailPage() {
 
   // Guest ("placeholder") members
   const [guestName, setGuestName] = useState("")
+  const [guestNames, setGuestNames] = useState<string[]>([])
   const [isAddingGuest, setIsAddingGuest] = useState(false)
   const [guestError, setGuestError] = useState("")
   const [manageGuest, setManageGuest] = useState<{ memberId: string; name: string } | null>(null)
@@ -831,9 +833,25 @@ export default function GroupDetailPage() {
     }
   }
 
-  const handleAddGuest = async () => {
+  const queueGuestName = () => {
     const name = guestName.trim()
     if (!name) return
+    setGuestNames((current) => [...current, name])
+    setGuestName("")
+    setGuestError("")
+  }
+
+  const resetGuestForm = () => {
+    setGuestName("")
+    setGuestNames([])
+    setGuestError("")
+  }
+
+  const handleAddGuest = async () => {
+    // Include a name still sitting in the input so the user needn't press "Add"
+    // before submitting.
+    const names = [...guestNames, ...(guestName.trim() ? [guestName.trim()] : [])]
+    if (names.length === 0) return
     setIsAddingGuest(true)
     setGuestError("")
 
@@ -841,21 +859,21 @@ export default function GroupDetailPage() {
       const response = await fetch(`/api/groups/${groupId}/members/placeholder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ names }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        setGuestName("")
+        resetGuestForm()
         setShowMemberModal(false)
         invalidateGroup()
       } else {
-        setGuestError(data.message || "Failed to add guest")
+        setGuestError(data.message || "Failed to add guests")
       }
     } catch (err) {
       setGuestError("An error occurred")
-      console.error("Error adding guest:", err)
+      console.error("Error adding guests:", err)
     } finally {
       setIsAddingGuest(false)
     }
@@ -1015,6 +1033,9 @@ export default function GroupDetailPage() {
   const currentUserId = (session?.user as { id?: string } | undefined)?.id
   const currentMembership = group.members.find((member: { userId: string; role: string }) => member.userId === currentUserId)
   const isGroupAdmin = currentMembership?.role === "ADMIN"
+  const otherMemberDebts = ((groupData?.groupDebts ?? []) as any[]).filter(
+    (debt) => debt.fromUserId !== currentUserId && debt.toUserId !== currentUserId
+  )
   const currentMemberEmails = new Set(
     group.members.map((member: any) => String(member.user.email).toLowerCase())
   )
@@ -1186,6 +1207,51 @@ export default function GroupDetailPage() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* Who owes whom — balances between other members (transfers the current
+          user isn't part of, e.g. between guests or a guest and another member).
+          Collapsed by default, tap to expand — mirrors the Insights section. */}
+      {otherMemberDebts.length > 0 && (
+        <div className="bg-white border-b border-slate-100 shrink-0 z-0">
+          <button
+            onClick={() => setShowWhoOwes((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 max-w-4xl mx-auto"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Who Owes Whom</span>
+              <span className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500">
+                {otherMemberDebts.length}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showWhoOwes ? "rotate-180" : ""}`} />
+          </button>
+
+          {showWhoOwes && (
+            <div className="px-4 pb-3 max-w-4xl mx-auto w-full space-y-2">
+              {otherMemberDebts.map((debt: any) => (
+                <div
+                  key={`${debt.fromUserId}-${debt.toUserId}`}
+                  className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+                >
+                  <span className="flex-1 min-w-0 truncate text-sm font-black text-rose-600 text-left">
+                    {debt.fromName}
+                  </span>
+                  <span className="flex items-center gap-1 shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    owes
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                  </span>
+                  <span className="flex-1 min-w-0 truncate text-sm font-black text-emerald-600 text-left">
+                    {debt.toName}
+                  </span>
+                  <span className="shrink-0 text-sm font-black text-slate-900">
+                    {formatCurrency(debt.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1497,7 +1563,7 @@ export default function GroupDetailPage() {
         </div>
       </div>}
       {/* Add Member Modal */}
-      <Modal isOpen={showMemberModal} onClose={() => { setShowMemberModal(false); setGuestName(""); setGuestError("") }} title="Add Friend">
+      <Modal isOpen={showMemberModal} onClose={() => { setShowMemberModal(false); resetGuestForm() }} title="Add Friend">
          <div className="space-y-6">
             <div className="text-center">
                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
@@ -1661,8 +1727,30 @@ export default function GroupDetailPage() {
                {isGroupAdmin && !isSoloGroup && (
                  <div className="rounded-[1.6rem] border border-slate-100 bg-white p-4 shadow-sm">
                     <label htmlFor="guest-name" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
-                      Add a Guest (no account)
+                      Add Guests (no account)
                     </label>
+
+                    {guestNames.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {guestNames.map((name, index) => (
+                          <span
+                            key={`${name}-${index}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50 pl-3 pr-1.5 py-1.5 text-xs font-bold text-amber-700"
+                          >
+                            {name}
+                            <button
+                              type="button"
+                              onClick={() => setGuestNames((current) => current.filter((_, i) => i !== index))}
+                              className="flex h-5 w-5 items-center justify-center rounded-lg text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700"
+                              aria-label={`Remove ${name}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex items-stretch gap-2">
                       <Input
                         id="guest-name"
@@ -1671,22 +1759,36 @@ export default function GroupDetailPage() {
                         value={guestName}
                         maxLength={60}
                         onChange={(e) => { setGuestName(e.target.value); setGuestError("") }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddGuest() } }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); queueGuestName() } }}
                       />
                       <Button
                         type="button"
-                        className="h-14 shrink-0 rounded-2xl px-5 text-sm font-black"
-                        disabled={isAddingGuest || !guestName.trim()}
-                        onClick={handleAddGuest}
+                        variant="outline"
+                        className="h-14 shrink-0 rounded-2xl px-5 text-sm font-black border-slate-200"
+                        disabled={!guestName.trim()}
+                        onClick={queueGuestName}
                       >
-                        {isAddingGuest ? "Adding..." : "Add Guest"}
+                        Add
                       </Button>
                     </div>
                     <p className="mt-2 ml-1 text-[11px] font-medium text-slate-400">
-                      Track someone who isn’t on SplitKaro yet. They can’t log in or pay via UPI — settle manually.
+                      Add several at once — type a name and press Enter or tap Add. They can’t log in or pay via UPI, so settle manually.
                     </p>
                     {guestError && (
                       <p className="text-xs text-rose-500 mt-2 ml-1 font-bold">{guestError}</p>
+                    )}
+
+                    {(guestNames.length > 0 || guestName.trim()) && (
+                      <Button
+                        type="button"
+                        className="mt-3 w-full h-14 rounded-2xl text-base font-black"
+                        disabled={isAddingGuest}
+                        onClick={handleAddGuest}
+                      >
+                        {isAddingGuest
+                          ? "Adding..."
+                          : `Add ${guestNames.length + (guestName.trim() ? 1 : 0)} ${guestNames.length + (guestName.trim() ? 1 : 0) === 1 ? "Guest" : "Guests"}`}
+                      </Button>
                     )}
                  </div>
                )}
