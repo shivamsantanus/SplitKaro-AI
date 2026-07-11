@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { 
@@ -17,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 
 export default function CreateGroupPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { t } = useLanguage()
 
   const groupTypes = [
@@ -45,7 +47,8 @@ export default function CreateGroupPage() {
       })
 
       if (response.ok) {
-        const group = await response.json()
+        await response.json()
+        await queryClient.invalidateQueries({ queryKey: ["groups"] })
         router.push("/dashboard/groups")
       } else {
         const data = await response.json()
