@@ -555,7 +555,7 @@ function GroupsContent() {
               <Input
                 type="number"
                 placeholder="0.00"
-                className="h-20 pl-14 text-3xl font-black rounded-3xl bg-slate-50 border-transparent focus:border-emerald-200"
+                className="h-20 pl-14 text-3xl font-black rounded-3xl bg-slate-50 border-transparent focus:border-primary/40"
                 value={settleInputAmount}
                 onChange={(e) => setSettleInputAmount(e.target.value)}
                 autoFocus
@@ -564,7 +564,7 @@ function GroupsContent() {
 
             <div className="flex flex-col gap-3">
               <Button
-                className="w-full h-14 rounded-2xl text-base font-black shadow-lg shadow-emerald-200 bg-emerald-500 hover:bg-emerald-600 text-white transition-all active:scale-95"
+                className="w-full h-14 rounded-2xl text-base font-black shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 text-white transition-all active:scale-95"
                 disabled={isSettling || !settleInputAmount || parseFloat(settleInputAmount) <= 0}
                 onClick={handlePeerSettle}
               >

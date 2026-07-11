@@ -456,7 +456,16 @@
     "logout": "लॉग आउट",
     "saving": "सहेजा जा रहा है…",
     "saveName": "नाम सहेजें",
-    "saveUpi": "UPI ID सहेजें"
+    "saveUpi": "UPI ID सहेजें",
+    "appearance": "रूप",
+    "themeColor": "एक्सेंट रंग",
+    "darkMode": "डार्क मोड",
+    "themeEmerald": "एमराल्ड",
+    "themeOcean": "ओशन",
+    "themeViolet": "वायलेट",
+    "themeSunset": "सनसेट",
+    "themeRose": "रोज़",
+    "themeTeal": "टील"
   },
 
   "header": {

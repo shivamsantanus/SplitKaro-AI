@@ -456,7 +456,16 @@
     "logout": "ଲଗ ଆଉଟ",
     "saving": "ସଞ୍ଚୟ ହେଉଛି…",
     "saveName": "ନାମ ସଞ୍ଚୟ କରନ୍ତୁ",
-    "saveUpi": "UPI ID ସଞ୍ଚୟ କରନ୍ତୁ"
+    "saveUpi": "UPI ID ସଞ୍ଚୟ କରନ୍ତୁ",
+    "appearance": "ରୂପ",
+    "themeColor": "ଆକ୍ସେଣ୍ଟ ରଙ୍ଗ",
+    "darkMode": "ଡାର୍କ ମୋଡ୍",
+    "themeEmerald": "ଏମେରାଲ୍ଡ",
+    "themeOcean": "ଓସିଆନ୍",
+    "themeViolet": "ଭାଇଓଲେଟ୍",
+    "themeSunset": "ସନ୍‌ସେଟ୍",
+    "themeRose": "ରୋଜ୍",
+    "themeTeal": "ଟିଲ୍"
   },
 
   "header": {

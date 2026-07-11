@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { CalendarDays, LogOut, Mail, Smartphone, Users, Languages, Pencil, Check, X, ChevronDown } from "lucide-react"
+import { CalendarDays, LogOut, Mail, Smartphone, Users, Languages, Pencil, Check, X, ChevronDown, Palette, Moon, Sun } from "lucide-react"
 import { Toast } from "@/components/ui/Toast"
 import { BottomNav } from "@/components/shared/BottomNav"
 import { useToast } from "@/hooks/useToast"
 import { useLanguage, LANGUAGE_NAMES, LANGUAGES } from "@/contexts/LanguageContext"
+import { useTheme, THEMES } from "@/components/providers/ThemeProvider"
 
 const UPI_REGEX = /^[\w.-]+@[\w.-]+$/
 
@@ -18,6 +19,7 @@ export default function MePage() {
   const { data: session, status, update } = useSession()
   const { toast, showToast, dismissToast } = useToast()
   const { t, language, setLanguage } = useLanguage()
+  const { theme, toggle, colorTheme, setColorTheme } = useTheme()
 
   const [groups, setGroups] = useState<GroupSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -290,6 +292,53 @@ export default function MePage() {
                 {language === lang && <Check className="h-3.5 w-3.5 text-primary" />}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Appearance */}
+        <div className="rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-4 py-4">
+          <div className="flex items-center gap-2.5 mb-4">
+            <Palette className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t("profile.appearance")}</span>
+          </div>
+
+          {/* Dark mode toggle */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              {theme === "dark" ? <Moon className="h-4 w-4 text-slate-400" /> : <Sun className="h-4 w-4 text-slate-400" />}
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("profile.darkMode")}</span>
+            </div>
+            <button
+              role="switch"
+              aria-checked={theme === "dark"}
+              onClick={toggle}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${theme === "dark" ? "bg-primary" : "bg-slate-200 dark:bg-slate-600"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${theme === "dark" ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
+
+          {/* Accent color swatches */}
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">{t("profile.themeColor")}</p>
+          <div className="flex flex-wrap gap-3">
+            {THEMES.map((th) => {
+              const label = t(`profile.theme${th.id.charAt(0).toUpperCase()}${th.id.slice(1)}`)
+              const selected = colorTheme === th.id
+              return (
+                <button
+                  key={th.id}
+                  onClick={() => setColorTheme(th.id)}
+                  aria-label={label}
+                  aria-pressed={selected}
+                  title={label}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 transition-transform active:scale-90 ${selected ? "ring-slate-900 dark:ring-white scale-105" : "ring-transparent"}`}
+                  /* dynamic per-theme brand hex — cannot be a static Tailwind class */
+                  style={{ backgroundColor: th.swatch }}
+                >
+                  {selected && <Check className="h-4 w-4 text-white" />}
+                </button>
+              )
+            })}
           </div>
         </div>
 

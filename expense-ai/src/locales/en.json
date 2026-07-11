@@ -456,7 +456,16 @@
     "logout": "Log out",
     "saving": "Saving…",
     "saveName": "Save Name",
-    "saveUpi": "Save UPI ID"
+    "saveUpi": "Save UPI ID",
+    "appearance": "Appearance",
+    "themeColor": "Accent color",
+    "darkMode": "Dark mode",
+    "themeEmerald": "Emerald",
+    "themeOcean": "Ocean",
+    "themeViolet": "Violet",
+    "themeSunset": "Sunset",
+    "themeRose": "Rose",
+    "themeTeal": "Teal"
   },
 
   "header": {

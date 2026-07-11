@@ -48,7 +48,7 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         {/* Apply saved theme before first paint to prevent flash */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}var c=localStorage.getItem('colorTheme');var v=['emerald','ocean','violet','sunset','rose','teal'];document.documentElement.dataset.theme=(c&&v.indexOf(c)>-1)?c:'emerald';}catch(e){}})();` }} />
         {/* iOS home-screen icon — Safari ignores the manifest for this */}
         <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png" />
         {/* Branded splash screens for every major iPhone / iPad */}

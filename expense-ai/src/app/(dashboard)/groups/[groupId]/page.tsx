@@ -2380,7 +2380,7 @@ export default function GroupDetailPage() {
                   <Input
                     type="number"
                     placeholder="0.00"
-                    className="h-20 pl-14 text-3xl font-black rounded-3xl bg-slate-50 border-transparent focus:border-emerald-200"
+                    className="h-20 pl-14 text-3xl font-black rounded-3xl bg-slate-50 border-transparent focus:border-primary/40"
                     value={settleAmount}
                     onChange={(e) => setSettleAmount(e.target.value)}
                     autoFocus
@@ -2389,7 +2389,7 @@ export default function GroupDetailPage() {
             </div>
 
             <Button
-               className="w-full h-16 rounded-3xl text-lg font-black shadow-xl shadow-emerald-200 transition-all active:scale-95 bg-emerald-500 hover:bg-emerald-600 text-white"
+               className="w-full h-16 rounded-3xl text-lg font-black shadow-xl shadow-primary/30 transition-all active:scale-95 bg-primary hover:bg-primary/90 text-white"
                disabled={isSaving || !settleAmount || parseFloat(settleAmount) <= 0}
                onClick={handleSettleUp}
             >
