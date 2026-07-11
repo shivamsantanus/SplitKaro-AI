@@ -151,6 +151,7 @@ export async function GET(
               name: true,
               email: true,
               upiId: true,
+              isPlaceholder: true,
             },
           },
         },

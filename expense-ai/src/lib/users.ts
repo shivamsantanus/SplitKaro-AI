@@ -8,8 +8,10 @@ export function normalizeEmail(email: string) {
 export async function findUserByEmail(email: string) {
   const normalizedEmail = normalizeEmail(email);
 
+  // Excludes placeholders so an OAuth sign-in can never attach to a guest row.
   return prisma.user.findFirst({
     where: {
+      isPlaceholder: false,
       email: {
         equals: normalizedEmail,
         mode: "insensitive",

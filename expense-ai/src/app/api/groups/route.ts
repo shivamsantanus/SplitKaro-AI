@@ -182,6 +182,7 @@ export async function GET(req: Request) {
             select: {
               name: true,
               email: true,
+              isPlaceholder: true,
             },
           },
         },

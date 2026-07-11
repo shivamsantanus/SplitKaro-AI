@@ -31,7 +31,8 @@ export async function GET() {
             some: { userId: user.id }
           }
         },
-        userId: { not: user.id }
+        userId: { not: user.id },
+        user: { isPlaceholder: false }
       },
       select: {
         user: {

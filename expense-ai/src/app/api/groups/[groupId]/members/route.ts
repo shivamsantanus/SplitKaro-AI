@@ -69,9 +69,12 @@ export async function POST(
       );
     }
 
-    // 3. Resolve requested users and reject invalid/already-added ones up front
+    // 3. Resolve requested users and reject invalid/already-added ones up front.
+    // Placeholder ("guest") users are group-scoped and must never be resolvable
+    // by email into another group.
     const targetUsers = await prisma.user.findMany({
       where: {
+        isPlaceholder: false,
         OR: requestedEmails.map((requestedEmail) => ({
           email: {
             equals: requestedEmail,

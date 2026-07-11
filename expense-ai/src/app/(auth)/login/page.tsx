@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signIn } from "next-auth/react"
 import { ArrowLeft } from "lucide-react"
 import { Suspense } from "react"
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton"
+
+const isDevLoginEnabled = process.env.NODE_ENV !== "production"
 
 const oauthErrorMessages: Record<string, string> = {
   OAuthSignin: "Could not start sign-in. Please try again.",
@@ -27,6 +29,27 @@ function LoginForm() {
   const { status } = useSession()
 
   const [error, setError] = useState("")
+  const [devEmail, setDevEmail] = useState("")
+  const [devPassword, setDevPassword] = useState("")
+  const [devSubmitting, setDevSubmitting] = useState(false)
+
+  const handleDevLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setDevSubmitting(true)
+    const res = await signIn("dev-credentials", {
+      email: devEmail,
+      password: devPassword,
+      redirect: false,
+      callbackUrl,
+    })
+    setDevSubmitting(false)
+    if (res?.error) {
+      setError("Invalid dev credentials.")
+    } else {
+      router.replace(callbackUrl)
+    }
+  }
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -68,6 +91,37 @@ function LoginForm() {
           )}
 
           <GoogleSignInButton callbackUrl={callbackUrl} onError={setError} />
+
+          {isDevLoginEnabled && (
+            <form onSubmit={handleDevLogin} className="space-y-3 border-t border-slate-200 pt-6">
+              <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Dev login (local only)
+              </p>
+              <input
+                type="email"
+                required
+                value={devEmail}
+                onChange={(e) => setDevEmail(e.target.value)}
+                placeholder="dummy@test.com"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-primary"
+              />
+              <input
+                type="password"
+                required
+                value={devPassword}
+                onChange={(e) => setDevPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                disabled={devSubmitting}
+                className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+              >
+                {devSubmitting ? "Signing in…" : "Dev sign in"}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

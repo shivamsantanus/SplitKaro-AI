@@ -185,6 +185,15 @@ export default function GroupDetailPage() {
   const [settleAmount, setSettleAmount] = useState("")
   const [isListening, setIsListening] = useState(false)
 
+  // Guest ("placeholder") members
+  const [guestName, setGuestName] = useState("")
+  const [isAddingGuest, setIsAddingGuest] = useState(false)
+  const [guestError, setGuestError] = useState("")
+  const [manageGuest, setManageGuest] = useState<{ memberId: string; name: string } | null>(null)
+  const [guestBalances, setGuestBalances] = useState<{ userId: string; name: string; amount: number }[] | null>(null)
+  const [loadingGuestBalances, setLoadingGuestBalances] = useState(false)
+  const [settlingGuestBalanceId, setSettlingGuestBalanceId] = useState<string | null>(null)
+
   // UPI / payment-return
   const { toast, showToast, dismissToast } = useToast()
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null)
@@ -479,11 +488,15 @@ export default function GroupDetailPage() {
     // I owe them — try UPI flow first
     const amount = Math.abs(debt.amount)
     const receiverMember = group?.members.find((m: any) => m.userId === debt.userId)
+    const receiverIsPlaceholder = Boolean(receiverMember?.user?.isPlaceholder)
     const receiverUpiId  = receiverMember?.user?.upiId as string | undefined
     const receiverName   = (receiverMember?.user?.name as string | undefined) || debt.name || "them"
 
-    if (!receiverUpiId) {
-      showToast("This user hasn't set up their UPI ID yet.", "info")
+    // Guests have no account and can never receive via UPI — always settle manually.
+    if (receiverIsPlaceholder || !receiverUpiId) {
+      if (!receiverIsPlaceholder) {
+        showToast("This user hasn't set up their UPI ID yet.", "info")
+      }
       // Fall back to manual settle
       setSettlePayerId(currentUserId)
       setSettleReceiverId(debt.userId)
@@ -816,6 +829,106 @@ export default function GroupDetailPage() {
     } finally {
       setIsAddingMember(false)
     }
+  }
+
+  const handleAddGuest = async () => {
+    const name = guestName.trim()
+    if (!name) return
+    setIsAddingGuest(true)
+    setGuestError("")
+
+    try {
+      const response = await fetch(`/api/groups/${groupId}/members/placeholder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setGuestName("")
+        setShowMemberModal(false)
+        invalidateGroup()
+      } else {
+        setGuestError(data.message || "Failed to add guest")
+      }
+    } catch (err) {
+      setGuestError("An error occurred")
+      console.error("Error adding guest:", err)
+    } finally {
+      setIsAddingGuest(false)
+    }
+  }
+
+  const loadGuestBalances = async (memberId: string) => {
+    setLoadingGuestBalances(true)
+    try {
+      const response = await fetch(`/api/groups/${groupId}/members/${memberId}/balances`)
+      const data = await response.json()
+      if (response.ok) {
+        setGuestBalances(data.balances || [])
+      } else {
+        setGuestBalances([])
+        setNotice({
+          title: "Couldn’t Load Balances",
+          message: data.message || "The guest’s balances could not be loaded.",
+        })
+      }
+    } catch (error) {
+      setGuestBalances([])
+      console.error("Failed to load guest balances", error)
+    } finally {
+      setLoadingGuestBalances(false)
+    }
+  }
+
+  const openManageGuest = (memberId: string, name: string) => {
+    setManageGuest({ memberId, name })
+    setGuestBalances(null)
+    loadGuestBalances(memberId)
+  }
+
+  const handleSettleGuestBalance = async (balance: { userId: string; amount: number }) => {
+    if (!manageGuest) return
+    const amount = Math.abs(balance.amount)
+    if (amount <= 0) return
+
+    // amount > 0 => counterparty owes the guest (counterparty pays guest);
+    // amount < 0 => guest owes the counterparty (guest pays counterparty).
+    const payerId = balance.amount > 0 ? balance.userId : manageGuest.memberId
+    const receiverId = balance.amount > 0 ? manageGuest.memberId : balance.userId
+
+    setSettlingGuestBalanceId(balance.userId)
+    try {
+      const response = await fetch(`/api/groups/${groupId}/settlements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, payerId, receiverId }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        await loadGuestBalances(manageGuest.memberId)
+        invalidateGroup()
+      } else {
+        setNotice({
+          title: "Couldn’t Record Settlement",
+          message: data.message || "The settlement could not be recorded.",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to settle guest balance", error)
+    } finally {
+      setSettlingGuestBalanceId(null)
+    }
+  }
+
+  const handleRemoveGuest = async () => {
+    if (!manageGuest) return
+    const memberId = manageGuest.memberId
+    setManageGuest(null)
+    setGuestBalances(null)
+    await handleRemoveMember(memberId)
   }
 
   const openExpenseModal = (expense?: any) => {
@@ -1384,7 +1497,7 @@ export default function GroupDetailPage() {
         </div>
       </div>}
       {/* Add Member Modal */}
-      <Modal isOpen={showMemberModal} onClose={() => setShowMemberModal(false)} title="Add Friend">
+      <Modal isOpen={showMemberModal} onClose={() => { setShowMemberModal(false); setGuestName(""); setGuestError("") }} title="Add Friend">
          <div className="space-y-6">
             <div className="text-center">
                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
@@ -1544,6 +1657,39 @@ export default function GroupDetailPage() {
                     <p className="text-xs text-rose-500 mt-2 ml-1 font-bold">{memberError}</p>
                   )}
                </div>
+
+               {isGroupAdmin && !isSoloGroup && (
+                 <div className="rounded-[1.6rem] border border-slate-100 bg-white p-4 shadow-sm">
+                    <label htmlFor="guest-name" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">
+                      Add a Guest (no account)
+                    </label>
+                    <div className="flex items-stretch gap-2">
+                      <Input
+                        id="guest-name"
+                        placeholder="e.g. Rahul"
+                        className="h-14 flex-1 rounded-2xl bg-slate-50 border-transparent focus:border-primary/20 text-base font-medium"
+                        value={guestName}
+                        maxLength={60}
+                        onChange={(e) => { setGuestName(e.target.value); setGuestError("") }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddGuest() } }}
+                      />
+                      <Button
+                        type="button"
+                        className="h-14 shrink-0 rounded-2xl px-5 text-sm font-black"
+                        disabled={isAddingGuest || !guestName.trim()}
+                        onClick={handleAddGuest}
+                      >
+                        {isAddingGuest ? "Adding..." : "Add Guest"}
+                      </Button>
+                    </div>
+                    <p className="mt-2 ml-1 text-[11px] font-medium text-slate-400">
+                      Track someone who isn’t on SplitKaro yet. They can’t log in or pay via UPI — settle manually.
+                    </p>
+                    {guestError && (
+                      <p className="text-xs text-rose-500 mt-2 ml-1 font-bold">{guestError}</p>
+                    )}
+                 </div>
+               )}
             </div>
 
             <Button
@@ -1825,8 +1971,9 @@ export default function GroupDetailPage() {
                                 <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold text-slate-900">
                                    {m.user.name}
                                     {currentUserId === m.userId && <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase font-black">You</span>}
+                                    {m.user.isPlaceholder && <span className="text-[9px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-md uppercase font-black">Guest</span>}
                                 </span>
-                                <span className="break-all text-[10px] font-medium text-slate-400">{m.user.email}</span>
+                                <span className="break-all text-[10px] font-medium text-slate-400">{m.user.isPlaceholder ? "No account" : m.user.email}</span>
                              </div>
                           </div>
                            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -1839,7 +1986,7 @@ export default function GroupDetailPage() {
                                 {m.role === "ADMIN" ? <ShieldCheck className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
                                 <span className="hidden sm:inline">{m.role}</span>
                               </span>
-                              {isGroupAdmin && currentUserId !== m.userId && m.role !== "ADMIN" && (
+                              {isGroupAdmin && currentUserId !== m.userId && m.role !== "ADMIN" && !m.user.isPlaceholder && (
                                 <button
                                   onClick={() => handlePromoteMember(m.userId)}
                                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1853,18 +2000,20 @@ export default function GroupDetailPage() {
                               {isGroupAdmin && currentUserId !== m.userId && (
                                 <button
                                   onClick={() =>
-                                    setPendingAction({
-                                      kind: "remove-member",
-                                      memberId: m.userId,
-                                      title: "Remove Member",
-                                      message: "This member can only be removed after all of their balances in this group are settled.",
-                                      confirmLabel: "Remove Member",
-                                    })
+                                    m.user.isPlaceholder
+                                      ? openManageGuest(m.userId, m.user.name || "Guest")
+                                      : setPendingAction({
+                                          kind: "remove-member",
+                                          memberId: m.userId,
+                                          title: "Remove Member",
+                                          message: "This member can only be removed after all of their balances in this group are settled.",
+                                          confirmLabel: "Remove Member",
+                                        })
                                   }
                                   className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                                   disabled={isSaving}
                                   aria-label={`Remove ${m.user.name} from the group`}
-                                  title="Remove member"
+                                  title={m.user.isPlaceholder ? "Manage guest" : "Remove member"}
                                 >
                                   <UserMinus className="h-4 w-4" />
                                 </button>
@@ -1969,6 +2118,87 @@ export default function GroupDetailPage() {
           >
             OK
           </Button>
+        </div>
+      </Modal>
+
+      {/* Manage Guest Modal */}
+      <Modal
+        isOpen={!!manageGuest}
+        onClose={() => { setManageGuest(null); setGuestBalances(null) }}
+        title="Manage Guest"
+      >
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-3">
+              <User className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">{manageGuest?.name}</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              A guest has no account. Settle all their balances before removing them.
+            </p>
+          </div>
+
+          {loadingGuestBalances ? (
+            <div className="flex items-center justify-center py-6">
+              <RupeeSpinner className="w-6 h-6" />
+            </div>
+          ) : guestBalances && guestBalances.length > 0 ? (
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                Outstanding Balances
+              </label>
+              {guestBalances.map((balance) => (
+                <div
+                  key={balance.userId}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900">{balance.name}</p>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      {balance.amount > 0
+                        ? `Owes ${manageGuest?.name} ${formatCurrency(Math.abs(balance.amount))}`
+                        : `${manageGuest?.name} owes ${formatCurrency(Math.abs(balance.amount))}`}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    className="h-10 shrink-0 rounded-xl px-4 text-xs font-black"
+                    disabled={settlingGuestBalanceId === balance.userId}
+                    onClick={() => handleSettleGuestBalance(balance)}
+                  >
+                    {settlingGuestBalanceId === balance.userId ? "..." : "Mark settled"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-center text-sm font-medium text-slate-500">
+              All settled. This guest can now be removed.
+            </p>
+          )}
+
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              className="w-full h-14 rounded-2xl text-base font-black transition-all active:scale-95 bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-600/20 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleRemoveGuest}
+              disabled={isSaving || loadingGuestBalances || !guestBalances || guestBalances.length > 0}
+            >
+              {isSaving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RupeeSpinner className="w-5 h-5" />
+                  Removing...
+                </span>
+              ) : "Remove Guest"}
+            </button>
+            <Button
+              variant="outline"
+              className="w-full h-14 rounded-2xl text-base font-black border-slate-200"
+              onClick={() => { setManageGuest(null); setGuestBalances(null) }}
+              disabled={isSaving}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </Modal>
 

@@ -21,6 +21,7 @@ export async function GET(req: Request) {
 
     const user = await prisma.user.findFirst({
       where: {
+        isPlaceholder: false,
         email: {
           equals: normalizeEmail(email),
           mode: "insensitive",
