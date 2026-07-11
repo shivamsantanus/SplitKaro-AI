@@ -98,7 +98,7 @@
     },
     "empty": {
       "personal": "No personal activity yet",
-      "personalDescription": "Your latest individual expenses will show here.",
+      "personalDescription": "Your latest income and expenses will show here.",
       "groups": "No group activity yet",
       "groupsDescription": "Group expenses and settlements will show here."
     }
@@ -409,36 +409,36 @@
   },
 
   "voiceModal": {
-    "title": "Voice Expenses",
+    "title": "Voice Entry",
     "idle": {
       "tap": "Tap to start speaking",
-      "description": "Say all your expenses naturally",
-      "example": "e.g. \"Coffee 80, lunch 250 at canteen, Uber 120\""
+      "description": "Say your income and expenses naturally",
+      "example": "e.g. \"Coffee 80, salary 50000, Uber 120\""
     },
     "recording": {
       "status": "Listening — tap to stop",
       "waiting": "Waiting for speech..."
     },
-    "parsing": "Parsing your expenses...",
+    "parsing": "Parsing your entries...",
     "preview": {
-      "found": "Found {count} expense(s)",
+      "found": "Found {count} entries",
       "startOver": "Start over",
       "descriptionPlaceholder": "Description",
       "amountPlaceholder": "0",
-      "addButton": "Add {count} Expense(s)",
+      "addButton": "Add {count} Entries",
       "dismiss": "Dismiss"
     },
-    "saving": "Saving {count} expense(s)...",
+    "saving": "Saving {count} entries...",
     "errors": {
       "browserNotSupported": "Voice input requires Chrome or Edge. Please use one of those browsers.",
       "micPermission": "Microphone permission denied. Please allow microphone access.",
       "micError": "Microphone error: {error}",
       "networkError": "Speech recognition service is unavailable. Please check your connection and try again.",
       "noSpeech": "No speech detected. Please try again.",
-      "parseFailed": "Failed to parse expenses.",
+      "parseFailed": "Failed to parse entries.",
       "serverError": "Failed to reach the server. Please try again.",
       "saveFailed": "Something went wrong while saving.",
-      "partialFail": "{count} expense(s) failed to save. Please retry."
+      "partialFail": "{count} entries failed to save. Please retry."
     }
   },
 
