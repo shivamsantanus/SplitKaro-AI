@@ -90,24 +90,51 @@ export async function POST(
       );
     }
 
-    const members = await prisma.$transaction(async (tx) => {
-      const created = [];
-      for (const name of names) {
-        const placeholder = await tx.user.create({
-          data: {
-            name,
-            email: `placeholder+${randomUUID()}@splitkaro.local`,
+    // IDs are generated here rather than by the DB default so the whole batch can
+    // go through createMany — a per-name create loop costs 2N round-trips and blows
+    // the 5s interactive-transaction timeout well before MAX_GUESTS_PER_REQUEST.
+    const rows = names.map((name) => ({
+      userId: randomUUID(),
+      memberId: randomUUID(),
+      name,
+    }));
+
+    const members = await prisma.$transaction(
+      async (tx) => {
+        await tx.user.createMany({
+          data: rows.map((row) => ({
+            id: row.userId,
+            name: row.name,
+            email: `placeholder+${row.userId}@splitkaro.local`,
             isPlaceholder: true,
             placeholderGroupId: groupId,
+          })),
+        });
+
+        await tx.groupMember.createMany({
+          data: rows.map((row) => ({
+            id: row.memberId,
+            groupId,
+            userId: row.userId,
+            role: "MEMBER",
+          })),
+        });
+
+        await tx.activity.create({
+          data: {
+            type: "MEMBER_ADDED",
+            message:
+              names.length === 1
+                ? `${currentUser.name || currentUser.email} added guest ${names[0]}`
+                : `${currentUser.name || currentUser.email} added ${names.length} guests: ${names.join(", ")}`,
+            groupId,
+            userId: currentUser.id,
+            metadata: { placeholderNames: names },
           },
         });
 
-        const groupMember = await tx.groupMember.create({
-          data: {
-            groupId,
-            userId: placeholder.id,
-            role: "MEMBER",
-          },
+        const created = await tx.groupMember.findMany({
+          where: { id: { in: rows.map((row) => row.memberId) } },
           select: {
             id: true,
             role: true,
@@ -126,24 +153,15 @@ export async function POST(
           },
         });
 
-        created.push(groupMember);
-      }
-
-      await tx.activity.create({
-        data: {
-          type: "MEMBER_ADDED",
-          message:
-            names.length === 1
-              ? `${currentUser.name || currentUser.email} added guest ${names[0]}`
-              : `${currentUser.name || currentUser.email} added ${names.length} guests: ${names.join(", ")}`,
-          groupId,
-          userId: currentUser.id,
-          metadata: { placeholderNames: names },
-        },
-      });
-
-      return created;
-    });
+        // createMany stamps every row with the same createdAt, so restore the
+        // submitted order instead of relying on the findMany result order.
+        const byId = new Map(created.map((member) => [member.id, member]));
+        return rows
+          .map((row) => byId.get(row.memberId))
+          .filter((member): member is NonNullable<typeof member> => Boolean(member));
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
 
     // No publishUserEvent / invalidateUserCaches for the placeholder: it has no
     // SSE channel and no personal caches. Real members refresh via the group event.
