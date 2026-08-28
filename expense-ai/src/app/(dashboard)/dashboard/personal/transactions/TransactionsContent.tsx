@@ -11,9 +11,10 @@ import { BottomNav } from "@/components/shared/BottomNav"
 import { CategoryIcon } from "@/components/shared/CategoryIcon"
 import { PersonalTransactionModal } from "@/components/ui/PersonalTransactionModal"
 import { VoiceExpenseModal } from "@/components/ui/VoiceExpenseModal"
+import { MessageExpenseModal } from "@/components/ui/MessageExpenseModal"
 import { formatCurrency } from "@/lib/currency"
 import { usePersonalTransactionsQuery } from "@/hooks/queries/usePersonalTransactions"
-import { Plus, Mic, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt, Users } from "lucide-react"
+import { Plus, Mic, ClipboardPaste, ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2, Receipt, Users } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useIncludeGroupExpenses } from "@/hooks/useIncludeGroupExpenses"
@@ -41,6 +42,7 @@ export default function TransactionsContent() {
 
   const [showModal, setShowModal] = useState(false)
   const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
   const [showExpenseMenu, setShowExpenseMenu] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<any>(null)
@@ -108,6 +110,11 @@ export default function TransactionsContent() {
       <VoiceExpenseModal
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
+        onSuccess={invalidate}
+      />
+      <MessageExpenseModal
+        isOpen={showMessageModal}
+        onClose={() => setShowMessageModal(false)}
         onSuccess={invalidate}
       />
 
@@ -322,6 +329,20 @@ export default function TransactionsContent() {
             <span className="text-sm font-semibold text-slate-700">{t("personal.fab.voiceNote")}</span>
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
               <Mic className="w-5 h-5 text-white" />
+            </div>
+          </button>
+          <button
+            onClick={() => { setShowExpenseMenu(false); setShowMessageModal(true) }}
+            className={`flex items-center gap-3 bg-white rounded-2xl px-4 py-2.5 shadow-lg border border-slate-100 transition-all duration-300 ease-out origin-bottom-right ${
+              showExpenseMenu
+                ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+                : "opacity-0 translate-y-4 scale-90 pointer-events-none"
+            }`}
+            style={{ transitionDelay: showExpenseMenu ? "55ms" : "0ms" }}
+          >
+            <span className="text-sm font-semibold text-slate-700">{t("personal.fab.pasteMessage")}</span>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+              <ClipboardPaste className="w-5 h-5 text-primary" />
             </div>
           </button>
           <button

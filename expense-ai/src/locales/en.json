@@ -307,7 +307,8 @@
     "fab": {
       "addExpense": "Add Expense",
       "addTransaction": "Add Transaction",
-      "voiceNote": "Voice Note"
+      "voiceNote": "Voice Note",
+      "pasteMessage": "Paste a Message"
     },
     "stats": {
       "thisMonth": "This Month",
@@ -436,6 +437,33 @@
       "networkError": "Speech recognition service is unavailable. Please check your connection and try again.",
       "noSpeech": "No speech detected. Please try again.",
       "parseFailed": "Failed to parse entries.",
+      "serverError": "Failed to reach the server. Please try again.",
+      "saveFailed": "Something went wrong while saving.",
+      "partialFail": "{count} entries failed to save. Please retry."
+    }
+  },
+
+  "messageModal": {
+    "title": "Add from Message",
+    "idle": {
+      "title": "Paste a message",
+      "description": "Paste a bank SMS, WhatsApp payment alert, or any text mentioning an amount",
+      "placeholder": "e.g. \"Rs.450.00 debited from a/c XX1234 on 23-07-26 to SWIGGY\"",
+      "parseButton": "Parse"
+    },
+    "parsing": "Parsing your message...",
+    "preview": {
+      "found": "Found {count} entries",
+      "startOver": "Start over",
+      "descriptionPlaceholder": "Description",
+      "amountPlaceholder": "0",
+      "addButton": "Add {count} Entries",
+      "dismiss": "Dismiss"
+    },
+    "saving": "Saving {count} entries...",
+    "errors": {
+      "empty": "Paste a message first.",
+      "parseFailed": "Couldn't find an expense in that message. Try including the amount and what it was for.",
       "serverError": "Failed to reach the server. Please try again.",
       "saveFailed": "Something went wrong while saving.",
       "partialFail": "{count} entries failed to save. Please retry."

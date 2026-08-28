@@ -11,6 +11,15 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#F8FAFC",
     theme_color: "#16a34a",
     categories: ["finance", "productivity"],
+    share_target: {
+      action: "/share-expense",
+      method: "GET",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+      },
+    },
     icons: [
       {
         src: "/assets/icons/icon-192.png",
