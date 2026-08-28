@@ -41,21 +41,21 @@ export async function GET(
         const [soloExpensesPaid, soloExpensesOwed, soloSettlements] = await Promise.all([
           prisma.expense.findMany({
             where: { groupId: null, paidById: user.id },
-            include: { 
-              payer: { select: { id: true, name: true, email: true } },
-              splits: { include: { user: { select: { id: true, name: true, email: true } } } } 
+            include: {
+              payer: { select: { id: true, name: true, email: true, isPlaceholder: true } },
+              splits: { include: { user: { select: { id: true, name: true, email: true, isPlaceholder: true } } } }
             }
           }),
           prisma.expenseSplit.findMany({
             where: { userId: user.id, expense: { groupId: null, paidById: { not: user.id } } },
-            include: { expense: { include: { 
-              payer: { select: { id: true, name: true, email: true } },
-              splits: { include: { user: { select: { id: true, name: true, email: true } } } } 
+            include: { expense: { include: {
+              payer: { select: { id: true, name: true, email: true, isPlaceholder: true } },
+              splits: { include: { user: { select: { id: true, name: true, email: true, isPlaceholder: true } } } }
             } } }
           }),
           prisma.settlement.findMany({
             where: { groupId: null, OR: [{ payerId: user.id }, { receiverId: user.id }] },
-            include: { payer: { select: { id: true, name: true } }, receiver: { select: { id: true, name: true } } }
+            include: { payer: { select: { id: true, name: true, isPlaceholder: true } }, receiver: { select: { id: true, name: true, isPlaceholder: true } } }
           })
         ]);
 

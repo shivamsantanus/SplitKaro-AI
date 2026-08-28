@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Modal } from "./Modal"
 import { Button } from "./Button"
 import { Input } from "./Input"
-import { User, Search, Check } from "lucide-react"
+import { User, Search, Check, UserPlus } from "lucide-react"
 import { RupeeSpinner } from "@/components/ui/RupeeSpinner"
 import { EXPENSE_CATEGORIES, inferExpenseCategory } from "@/lib/expense-categories"
 
@@ -28,10 +28,15 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
   const [friends, setFriends] = useState<any[]>([])
   const [loadingFriends, setLoadingFriends] = useState(false)
   const [selectedFriend, setSelectedFriend] = useState<any>(null)
+  const [guests, setGuests] = useState<any[]>([])
+  const [showGuestInput, setShowGuestInput] = useState(false)
+  const [newGuestName, setNewGuestName] = useState("")
+  const [isAddingGuest, setIsAddingGuest] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       fetchFriends()
+      fetchGuests()
     }
   }, [isOpen])
 
@@ -47,9 +52,49 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
     }
   }
 
+  const fetchGuests = async () => {
+    try {
+      const res = await fetch("/api/solo/guests")
+      if (res.ok) {
+        const data = await res.json()
+        setGuests((data.guests || []).map((g: any) => ({ ...g, isPlaceholder: true })))
+      }
+    } catch (err) {
+      console.error("Failed to fetch guests")
+    }
+  }
+
+  const handleAddGuest = async () => {
+    const name = newGuestName.trim()
+    if (!name) return
+    setIsAddingGuest(true)
+    setError("")
+    try {
+      const res = await fetch("/api/solo/guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const guest = { ...data.guest, isPlaceholder: true }
+        setGuests((current) => [...current, guest])
+        setSelectedFriend(guest)
+        setNewGuestName("")
+        setShowGuestInput(false)
+      } else {
+        setError(data.message || "Failed to add guest")
+      }
+    } catch (err) {
+      setError("Something went wrong")
+    } finally {
+      setIsAddingGuest(false)
+    }
+  }
+
   const handleSave = async () => {
-    const targetEmail = selectedFriend ? selectedFriend.email : email
-    if (!targetEmail || !amount || !description) {
+    const hasRecipient = selectedFriend ? true : Boolean(email.trim())
+    if (!hasRecipient || !amount || !description) {
       setError("Please fill all fields")
       return
     }
@@ -59,9 +104,10 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
 
     try {
       let friendId = selectedFriend?.id
-      
+
+      // Guests carry their own id — only resolve by email for a typed address.
       if (!friendId) {
-        const userRes = await fetch(`/api/users/find?email=${encodeURIComponent(targetEmail)}`)
+        const userRes = await fetch(`/api/users/find?email=${encodeURIComponent(email.trim())}`)
         if (!userRes.ok) {
             setError("User not found by that email. Ask them to join SplitKaro!")
             setIsSaving(false)
@@ -91,6 +137,8 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
         setTransactionDate(localDateStr())
         setEmail("")
         setSelectedFriend(null)
+        setShowGuestInput(false)
+        setNewGuestName("")
         onSuccess()
         onClose()
       } else {
@@ -121,7 +169,7 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
                Friend
             </label>
             
-            {friends.length > 0 && !selectedFriend && (
+            {(friends.length > 0 || guests.length > 0) && !selectedFriend && (
                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
                  {friends.map(f => (
                    <button
@@ -135,6 +183,19 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
                      <span className="text-xs font-bold text-slate-700 truncate max-w-[100px]">{f.name || f.email}</span>
                    </button>
                  ))}
+                 {guests.map(g => (
+                   <button
+                     key={g.id}
+                     onClick={() => setSelectedFriend(g)}
+                     className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl hover:border-amber-300 transition-all active:scale-95 group text-left"
+                   >
+                     <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-[10px] font-bold text-amber-500">
+                        {g.name?.substring(0, 2).toUpperCase() || "??"}
+                     </div>
+                     <span className="text-xs font-bold text-amber-700 truncate max-w-[100px]">{g.name}</span>
+                     <span className="text-[8px] font-black uppercase tracking-wider text-amber-500 bg-amber-100 px-1 py-0.5 rounded">Guest</span>
+                   </button>
+                 ))}
                </div>
             )}
 
@@ -146,25 +207,66 @@ export function SoloExpenseModal({ isOpen, onClose, onSuccess }: SoloExpenseModa
                   </div>
                   <div>
                     <p className="text-sm font-black text-slate-900 leading-none mb-1">{selectedFriend.name}</p>
-                    <p className="text-[10px] font-bold text-primary/60">{selectedFriend.email}</p>
+                    <p className="text-[10px] font-bold text-primary/60">
+                      {selectedFriend.isPlaceholder ? "Guest · no account" : selectedFriend.email}
+                    </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setSelectedFriend(null)}
                   className="text-[10px] font-black uppercase tracking-tight text-slate-400 hover:text-slate-600 bg-white px-2 py-1 rounded-lg border border-slate-100"
                 >
                   Change
                 </button>
               </div>
-            ) : (
-              <div className="relative">
+            ) : showGuestInput ? (
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3 space-y-2">
+                <div className="flex items-stretch gap-2">
                   <Input
-                      placeholder="Or enter friend's email..."
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-14 rounded-2xl pl-12 bg-slate-50 border-slate-100 focus:bg-white transition-all shadow-sm"
+                    placeholder="Guest name, e.g. Rahul"
+                    value={newGuestName}
+                    maxLength={60}
+                    autoFocus
+                    onChange={(e) => { setNewGuestName(e.target.value); setError("") }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddGuest() } }}
+                    className="h-12 flex-1 rounded-xl bg-white border-amber-200 text-sm font-bold text-slate-700"
                   />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                  <Button
+                    type="button"
+                    onClick={handleAddGuest}
+                    disabled={isAddingGuest || !newGuestName.trim()}
+                    className="h-12 shrink-0 rounded-xl px-4 text-xs font-black"
+                  >
+                    {isAddingGuest ? "..." : "Add"}
+                  </Button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowGuestInput(false); setNewGuestName("") }}
+                  className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                    <Input
+                        placeholder="Or enter friend's email..."
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-14 rounded-2xl pl-12 bg-slate-50 border-slate-100 focus:bg-white transition-all shadow-sm"
+                    />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuestInput(true)}
+                  className="flex items-center gap-1.5 text-[11px] font-black text-amber-600 hover:text-amber-700 ml-1"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add a guest (no account)
+                </button>
               </div>
             )}
           </div>

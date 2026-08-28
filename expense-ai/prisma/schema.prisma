@@ -23,11 +23,15 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Placeholder ("guest") members: name-only users with no account. Scoped to
-  // one group via placeholderGroupId; cascade-deleted when that group is deleted.
+  // Placeholder ("guest") members: name-only users with no account. Scoped
+  // either to one group (placeholderGroupId, for group guests) or to one owning
+  // user (placeholderOwnerId, for individual-payment guests). Cascade-deleted
+  // when that group/owner is deleted.
   isPlaceholder      Boolean @default(false)
   placeholderGroup   Group?  @relation("GroupPlaceholders", fields: [placeholderGroupId], references: [id], onDelete: Cascade)
   placeholderGroupId String?
+  placeholderOwner   User?   @relation("UserPlaceholders", fields: [placeholderOwnerId], references: [id], onDelete: Cascade)
+  placeholderOwnerId String?
 
   // Relations
   groupsCreated       Group[]         @relation("GroupCreator")
@@ -38,8 +42,10 @@ model User {
   settlementsSent     Settlement[]    @relation("SettlementPayer")
   settlementsReceived Settlement[]    @relation("SettlementReceiver")
   activities          Activity[]
+  placeholderGuests   User[]          @relation("UserPlaceholders")
 
   @@index([placeholderGroupId])
+  @@index([placeholderOwnerId])
 }
 
 model Group {

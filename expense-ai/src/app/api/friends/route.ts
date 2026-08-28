@@ -51,8 +51,8 @@ export async function GET() {
         ]
       },
       include: {
-        payer: { select: { id: true, name: true, email: true } },
-        splits: { include: { user: { select: { id: true, name: true, email: true } } } }
+        payer: { select: { id: true, name: true, email: true, isPlaceholder: true } },
+        splits: { include: { user: { select: { id: true, name: true, email: true, isPlaceholder: true } } } }
       }
     });
 
@@ -65,27 +65,33 @@ export async function GET() {
         ]
       },
       include: {
-        payer: { select: { id: true, name: true, email: true } },
-        receiver: { select: { id: true, name: true, email: true } }
+        payer: { select: { id: true, name: true, email: true, isPlaceholder: true } },
+        receiver: { select: { id: true, name: true, email: true, isPlaceholder: true } }
       }
     });
 
     const friendsMap = new Map();
+
+    // Guests (placeholders) are excluded — they are not real, reusable friends
+    // and must never surface in group add-member suggestions.
+    const addFriend = (person: any) => {
+      if (person && !person.isPlaceholder) friendsMap.set(person.id, person);
+    };
 
     groupMembers.forEach(m => {
       friendsMap.set(m.user.id, m.user);
     });
 
     soloExpenses.forEach((exp: any) => {
-      if (exp.paidById !== user.id) friendsMap.set(exp.payer.id, exp.payer);
+      if (exp.paidById !== user.id) addFriend(exp.payer);
       exp.splits.forEach((s: any) => {
-        if (s.userId !== user.id) friendsMap.set(s.userId, s.user);
+        if (s.userId !== user.id) addFriend(s.user);
       });
     });
 
     soloSettlements.forEach((s: any) => {
-      if (s.payerId !== user.id) friendsMap.set(s.payerId, s.payer);
-      if (s.receiverId !== user.id) friendsMap.set(s.receiverId, s.receiver);
+      if (s.payerId !== user.id) addFriend(s.payer);
+      if (s.receiverId !== user.id) addFriend(s.receiver);
     });
 
     const friends = Array.from(friendsMap.values());
