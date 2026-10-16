@@ -7,6 +7,7 @@ import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { NOT_A_PARTICIPANT, validateSoloParticipants } from "@/lib/solo-participants";
 
 export async function POST(req: Request) {
   try {
@@ -76,16 +77,24 @@ export async function POST(req: Request) {
       : inferExpenseCategory(description);
     let expenseSplitData: { userId: string, amount: number }[] = [];
 
-    if (splits && Array.isArray(splits) && splits.length > 0) {
-      const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
-
-      if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
-         return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
+    try {
+      expenseSplitData = await validateSoloParticipants({
+        callerId: user.id,
+        payerId: payerUserId,
+        splits,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        const status = error.message === NOT_A_PARTICIPANT ? 403 : 400;
+        return NextResponse.json({ message: error.message }, { status });
       }
-      
-      expenseSplitData = splits;
-    } else {
-      return NextResponse.json({ message: "Splits are required for individual payments" }, { status:400 });
+      throw error;
+    }
+
+    const totalSplitAmount = expenseSplitData.reduce((sum, split) => sum + split.amount, 0);
+
+    if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
+      return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
     }
 
     // Create the expense and splits in a transaction

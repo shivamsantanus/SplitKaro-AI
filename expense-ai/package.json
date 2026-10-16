@@ -9,7 +9,10 @@
     "start": "next start",
     "lint": "eslint",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:test": "node scripts/seed-test-users.mjs",
+    "seed:test:clean": "node scripts/seed-test-users.mjs --clean",
+    "test:session": "node scripts/mint-test-session.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

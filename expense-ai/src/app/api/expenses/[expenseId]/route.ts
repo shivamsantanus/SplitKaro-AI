@@ -6,6 +6,7 @@ import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { inferExpenseCategory, normalizeExpenseCategory } from "@/lib/expense-categories";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { NOT_A_PARTICIPANT, validateSoloParticipants } from "@/lib/solo-participants";
 
 export async function DELETE(
   req: Request,
@@ -194,13 +195,34 @@ export async function PUT(
       );
     }
 
-    if (splits && Array.isArray(splits) && splits.length > 0) {
+    if (!expense.groupId) {
+      // Re-validate against the incoming payer/splits, not the stored ones: an
+      // edit can otherwise rewrite the caller out of their own payment.
+      try {
+        expenseSplitData = await validateSoloParticipants({
+          callerId: user.id,
+          payerId: payerUserId,
+          splits,
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          const status = error.message === NOT_A_PARTICIPANT ? 403 : 400;
+          return NextResponse.json({ message: error.message }, { status });
+        }
+        throw error;
+      }
+
+      const totalSplitAmount = expenseSplitData.reduce((sum, split) => sum + split.amount, 0);
+
+      if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
+        return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
+      }
+    } else if (splits && Array.isArray(splits) && splits.length > 0) {
       // Validate Custom Splits
       const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
 
       const hasInvalidSplitUser = splits.some(
-        (split) =>
-          !split?.userId || (expense.groupId && !memberIds.has(split.userId))
+        (split) => !split?.userId || !memberIds.has(split.userId)
       );
       if (hasInvalidSplitUser) {
         return NextResponse.json(
@@ -208,24 +230,19 @@ export async function PUT(
           { status: 400 }
         );
       }
-      
+
       // Allow a small margin of error for floating point calculations
       if (Math.abs(totalSplitAmount - parseFloat(amount)) > 0.1) {
          return NextResponse.json({ message: "Split amounts must equal the total expense amount" }, { status: 400 });
       }
       expenseSplitData = splits;
-    } else if (expense.groupId) {
-      // Default behavior
+    } else {
+      // Group expense with no custom splits: fall back to an equal split.
       const splitAmount = parseFloat(amount) / members.length;
       expenseSplitData = members.map((member) => ({
           userId: member.userId,
           amount: splitAmount,
       }));
-    } else {
-      return NextResponse.json(
-        { message: "Splits are required for individual payments" },
-        { status: 400 }
-      );
     }
 
     // Update expense and recreate splits atomically

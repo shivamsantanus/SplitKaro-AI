@@ -6,6 +6,7 @@ import { groupSettlementService } from "@/lib/group-settlement-service";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
 import { findUserByEmailWithSelect } from "@/lib/users";
+import { NOT_A_PARTICIPANT, validateSoloSettlement } from "@/lib/solo-participants";
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     // If the client sent its own session ID as payerId, replace it with the
     // server-verified user.id (found by email). This prevents JWT-token vs
     // database-ID mismatches from breaking the group membership check.
-    const sessionUserId = (session.user as any)?.id as string | undefined
+    const sessionUserId = session.user.id
     const resolvedPayerId = (payerId === sessionUserId || payerId === user.id)
       ? user.id
       : payerId
@@ -67,11 +68,28 @@ export async function POST(req: Request) {
       }
     }
 
+    let settlementAmount: number;
+
+    try {
+      settlementAmount = await validateSoloSettlement({
+        callerId: user.id,
+        payerId: resolvedPayerId,
+        receiverId,
+        amount,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        const status = error.message === NOT_A_PARTICIPANT ? 403 : 400;
+        return NextResponse.json({ message: error.message }, { status });
+      }
+      throw error;
+    }
+
     // Create settlement and log activity
     const settlement = await prisma.$transaction(async (tx) => {
       const newSettlement = await tx.settlement.create({
         data: {
-          amount: parseFloat(amount),
+          amount: settlementAmount,
           groupId: groupId || null,
           payerId: resolvedPayerId,
           receiverId,
@@ -85,10 +103,10 @@ export async function POST(req: Request) {
       await tx.activity.create({
         data: {
           type: "SETTLEMENT_ADDED",
-          message: `${newSettlement.payer.name} paid ₹${amount} to ${newSettlement.receiver.name}`,
+          message: `${newSettlement.payer.name} paid ₹${settlementAmount} to ${newSettlement.receiver.name}`,
           groupId: groupId || null,
           userId: user.id,
-          metadata: { amount: parseFloat(amount), payerId: resolvedPayerId, receiverId }
+          metadata: { amount: settlementAmount, payerId: resolvedPayerId, receiverId }
         }
       });
 

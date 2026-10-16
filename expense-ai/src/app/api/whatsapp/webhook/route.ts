@@ -42,6 +42,24 @@ function typeTag(type: ParsedExpense["type"]): string {
 }
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_SECRET;
+const APP_SECRET = process.env.WHATSAPP_APP_SECRET;
+
+// Meta signs every webhook POST with an HMAC over the raw body. Without this
+// check anyone can POST a forged payload and act as any linked phone number.
+function hasValidSignature(rawBody: string, header: string | null): boolean {
+  if (!APP_SECRET || !header) return false;
+
+  const expected = `sha256=${crypto
+    .createHmac("sha256", APP_SECRET)
+    .update(rawBody, "utf8")
+    .digest("hex")}`;
+
+  const received = Buffer.from(header);
+  const digest = Buffer.from(expected);
+
+  // timingSafeEqual throws on length mismatch, so compare lengths first.
+  return received.length === digest.length && crypto.timingSafeEqual(received, digest);
+}
 
 // ── Redis key helpers ──────────────────────────────────────────────────────
 
@@ -1092,7 +1110,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+  // Guard on VERIFY_TOKEN so an unset env var cannot let an absent token match.
+  if (mode === "subscribe" && VERIFY_TOKEN && token === VERIFY_TOKEN) {
     return new NextResponse(challenge, { status: 200 });
   }
 
@@ -1100,9 +1119,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Fail closed: a missing app secret must not silently disable verification.
+  if (!APP_SECRET) {
+    console.error("WHATSAPP_APP_SECRET is not configured - rejecting webhook");
+    return NextResponse.json({ error: "Not configured" }, { status: 500 });
+  }
+
+  const rawBody = await req.text();
+
+  if (!hasValidSignature(rawBody, req.headers.get("x-hub-signature-256"))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let payload: WhatsAppWebhookPayload;
   try {
-    payload = await req.json();
+    payload = JSON.parse(rawBody) as WhatsAppWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
