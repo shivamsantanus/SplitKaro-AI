@@ -5,16 +5,11 @@ import prisma from "@/lib/prisma";
 import { ensureUserCanExitGroup } from "@/lib/group-membership";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { invalidateGroupCaches, invalidateUserCaches } from "@/lib/cache-invalidation";
-import { normalizeEmail } from "@/lib/users";
+import { emailMatches } from "@/lib/users";
 
 async function getRequestContext(groupId: string, memberId: string, email: string) {
   const requester = await prisma.user.findFirst({
-    where: {
-      email: {
-        equals: normalizeEmail(email),
-        mode: "insensitive",
-      },
-    },
+    where: emailMatches(email),
     select: {
       id: true,
       name: true,

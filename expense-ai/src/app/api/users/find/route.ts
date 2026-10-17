@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { normalizeEmail } from "@/lib/users";
+import { emailMatches } from "@/lib/users";
 
 export async function GET(req: Request) {
   try {
@@ -22,10 +22,7 @@ export async function GET(req: Request) {
     const user = await prisma.user.findFirst({
       where: {
         isPlaceholder: false,
-        email: {
-          equals: normalizeEmail(email),
-          mode: "insensitive",
-        },
+        ...emailMatches(email),
       },
       select: {
         id: true,

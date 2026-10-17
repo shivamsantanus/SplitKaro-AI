@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { publishGroupEvent, publishUserEvent } from "@/lib/realtime";
 import { invalidateGroupCaches } from "@/lib/cache-invalidation";
-import { findUserByEmailWithSelect, normalizeEmail } from "@/lib/users";
+import { emailMatches, findUserByEmailWithSelect, normalizeEmail } from "@/lib/users";
 
 export async function POST(
   req: Request,
@@ -75,12 +75,7 @@ export async function POST(
     const targetUsers = await prisma.user.findMany({
       where: {
         isPlaceholder: false,
-        OR: requestedEmails.map((requestedEmail) => ({
-          email: {
-            equals: requestedEmail,
-            mode: "insensitive",
-          },
-        })),
+        OR: requestedEmails.map((requestedEmail) => emailMatches(requestedEmail)),
       },
       select: {
         id: true,
